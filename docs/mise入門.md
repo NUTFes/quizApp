@@ -143,7 +143,44 @@ PATH = [ 自分で入れたpnpm 9.x, ... ]  ←元通り
 
 つまりバージョン固定の実体は「**mise.tomlという1つのファイルを、全員の手元とCIの全箇所が参照する**」こと。ファイルを1箇所直せば全員が揃い、逆に「揃っていない状態」を作るほうが難しい構造になっている。
 
-## 6. よくある質問
+## 6. 各タスクのコマンド対応表 — `mise run ○○` の中身
+
+まず混同しやすい点をひとつ: **`mise install` はDockerコマンドを実行しない**。
+
+| コマンド | 対応する仕事 | やること |
+|---|---|---|
+| `mise install` | ②バージョン固定 | `[tools]` に書かれたGo/Node/pnpmを指定バージョンで倉庫にインストールするだけ(Docker無関係) |
+| `mise run ○○` | ①タスクランナー | `[tasks]` に登録されたコマンド(中身は主にDocker操作)を実行する |
+
+以下が `mise run` 系タスクと中身のDockerコマンドの対応表。
+
+| タスク | 中身のコマンド | 何が起きるか |
+|---|---|---|
+| `mise run up` | `docker compose up -d --build` | 3つの箱(frontend/backend/db)をまとめて起動。`-d`=バックグラウンド起動、`--build`=起動前にイメージを作り直す(Dockerfileや依存が変わっていても常に最新で起動) |
+| `mise run down` | `docker compose down` | 3つの箱を停止・削除。**DBのデータは消えない**(名前付きボリューム=外付け保存領域に入っているため) |
+| `mise run logs` | `docker compose logs -f` | 3つの箱のログをまとめて流し見る(`-f`=流れ続けるのを追いかける)。「なんか動かない」時に最初に打つコマンド |
+| `mise run db:migrate` | `docker compose exec backend migrate -path /app/migrations -database $DATABASE_URL up` | 動いているbackendの箱**の中で** golang-migrate を実行し、`migrations/` のSQLを未適用分だけ順にDBへ適用 |
+| `mise run db:seed` | `docker compose exec backend go run ./cmd/seed` | backendの箱の中でサンプル問題投入プログラムを実行(スプシ同期なしで画面開発できるように) |
+| `mise run db:reset` | `docker compose down -v db && up -d db && migrate && seed` | dbの箱を**ボリューム(保存データ)ごと削除**して作り直し→migrate→seed。**唯一データが消えるタスク**なので「DBをまっさらにしたい」時専用 |
+| `mise run lint` | `docker compose exec backend go vet ./...` + `pnpm --dir frontend lint` | Go側は箱の中で、フロント側は手元のpnpm(miseが固定したバージョン)でチェック |
+| `mise run test` | `docker compose exec backend go test ./...` + `pnpm --dir frontend test` | 同上の構図でテスト実行 |
+
+`docker compose exec backend <コマンド>` は「**動いているbackendの箱の中に入ってコマンドを実行する**」という意味。migrateなどの道具は箱の中に入っているので、各自のPCにインストールする必要がない。
+
+### 初回セットアップの全体像(どこでDockerが動き始めるか)
+
+```
+1. Docker Desktop と mise をインストール(手作業。1回だけ)
+2. git clone
+3. mise install       ← Go/Node/pnpmが倉庫に揃う(Dockerはまだ動かない)
+4. mise run up        ← ここで初めてDockerが動く
+5. mise run db:migrate → mise run db:seed   ← DBに構造とサンプルデータが入る
+6. ブラウザで http://localhost:5173 を開くと動いている
+```
+
+※ 4と5は自動化して「upだけ」にもできるが、v1は**魔法を減らして各段階を見える化**する方針(何が起きているか分かる方が初心者チーム向き)。
+
+## 7. よくある質問
 
 **Q. mise自体のインストールは?**
 Windowsの人はWSL2の中に、Macの人はそのままインストールする。手順はリポジトリのREADMEに載せる。1回やれば以後のプロジェクトでも使い回せる。
