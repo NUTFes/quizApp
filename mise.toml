@@ -1,0 +1,57 @@
+# ============================================================
+# mise.toml — ツールのバージョン固定 + コマンドのメニュー表
+#
+# 初めての人は docs/mise入門.md を先に読むこと。
+#   mise install  → [tools] のツールが指定バージョンで入る
+#   mise run ○○   → [tasks] に登録されたコマンドが動く
+#   mise tasks    → タスクの一覧を表示(困ったらこれ)
+# ============================================================
+
+[tools]
+go = "1.25"    # バックエンド言語(コンテナ外でのエディタ補完・go get 用)
+node = "22"    # フロントの道具が動く土台(LTS)
+pnpm = "10"    # フロントのパッケージ管理
+
+# ---- 日常操作 ----------------------------------------------
+
+[tasks.up]
+description = "開発環境を起動する(frontend/backend/db の3コンテナ。初回・変更時はビルドも実行)"
+run = "docker compose up -d --build"
+
+[tasks.down]
+description = "開発環境を停止する(DBのデータは消えない)"
+run = "docker compose down"
+
+[tasks.logs]
+description = "3コンテナのログを流し見る(「なんか動かない」時はまずこれ)"
+run = "docker compose logs -f"
+
+# ---- データベース ------------------------------------------
+
+[tasks."db:migrate"]
+description = "migrations/ のSQLを未適用分だけDBに適用する"
+run = "docker compose exec backend sh -c 'migrate -path /app/migrations -database \"$DATABASE_URL\" up'"
+
+[tasks."db:seed"]
+description = "開発用のサンプル問題データをDBに投入する"
+run = "docker compose exec backend go run ./cmd/seed"
+
+[tasks."db:reset"]
+description = "【データが消える】DBをまっさらに作り直して migrate + seed までやり直す"
+run = "docker compose down -v && docker compose up -d --build && mise run db:migrate && mise run db:seed"
+
+# ---- チェック(CIと同じ内容を手元で先に回す) ----------------
+
+[tasks.lint]
+description = "コードチェック(バック: go vet / フロント: ESLint)"
+run = [
+  "docker compose exec backend go vet ./...",
+  "pnpm --dir frontend lint",
+]
+
+[tasks.test]
+description = "テストを実行(バック: go test / フロント: vitest)"
+run = [
+  "docker compose exec backend go test ./...",
+  "pnpm --dir frontend test",
+]

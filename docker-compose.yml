@@ -1,0 +1,52 @@
+# ============================================================
+# docker-compose.yml — 開発用の「箱の編成表+配線図」
+#
+# 初めての人は docs/docker-compose入門.md を先に読むこと。
+# ①〜⑥の番号は入門mdの「composeが決めること6項目」に対応。
+# 起動は直接 docker compose ではなく mise run up を使う。
+# ============================================================
+
+services:                            # ① 並べる箱の一覧。名前がそのまま通信の宛先になる
+
+  frontend:
+    build: ./frontend                # ② 中身は frontend/Dockerfile の手順書で自作
+    ports:
+      - "5173:5173"                  # ③ PCの5173番 → 箱の5173番(Vite開発サーバー)
+    volumes:
+      - ./frontend:/app              # ④(a) ソースを箱に直結(保存した瞬間ホットリロード)
+      - /app/node_modules            #     箱の中のnode_modulesをホスト側と衝突させない
+    environment:
+      - VITE_API_URL=http://localhost:3000   # ⑤ フロントが叩くAPIの場所(開発用の値)
+
+  backend:
+    build: ./backend                 # ② backend/Dockerfile(air入り)で自作。CMDはair起動
+    ports:
+      - "3000:3000"                  # ③ PCの3000番 → 箱の3000番(Gin)
+    volumes:
+      - ./backend:/app               # ④(a) ソース直結(保存するとairが自動再ビルド)
+    environment:                     # ⑤ 開発用の設定値。本番は別の値を注入する
+      - DATABASE_URL=postgresql://quiz:quiz@db:5432/quiz?sslmode=disable
+      - ADMIN_PASSWORD=dev-password
+      - GOOGLE_CREDENTIALS_JSON=     # スプシ同期用。開発では空でよい(同期機能だけ無効になる)
+      - SPREADSHEET_ID=
+    depends_on:
+      db:
+        condition: service_healthy   # ⑥ dbが「接続を受け付けられる状態」になってから起動
+
+  db:
+    image: postgres:16               # ② 公式の完成品イメージを借りる(手順書不要)
+    ports:
+      - "5432:5432"                  # ③ DBクライアントツールで手元から覗きたい時用
+    environment:                     # ⑤ 初回起動時に作られるユーザー/DB名(開発専用の値)
+      - POSTGRES_USER=quiz
+      - POSTGRES_PASSWORD=quiz
+      - POSTGRES_DB=quiz
+    volumes:
+      - db-data:/var/lib/postgresql/data   # ④(b) データの外付け保存(downしても消えない)
+    healthcheck:                     # ⑥ 「健康」の判定方法: 3秒おきに接続可能かを確認
+      test: ["CMD-SHELL", "pg_isready -U quiz"]
+      interval: 3s
+      retries: 10
+
+volumes:
+  db-data:                           # ④(b) で使う外付け保存領域の宣言
