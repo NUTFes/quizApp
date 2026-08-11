@@ -2,8 +2,10 @@
 FROM golang:1.25
 WORKDIR /app
 
-# air(ホットリロード)を入れる
-RUN go install github.com/air-verse/air@latest
+# air(ホットリロード)を入れる。
+# @latest にしないこと: air v1.67.2 以降は Go 1.26 以上を要求するため、
+# このイメージ(golang:1.25)ではビルドが失敗する。Goを上げるまではここを固定する。
+RUN go install github.com/air-verse/air@v1.67.1
 
 # 依存の一覧をコピー(今は標準ライブラリだけなので中身は最小)
 COPY go.mod ./
