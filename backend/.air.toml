@@ -1,0 +1,10 @@
+# air = Goのホットリロード。ファイルを保存すると自動で再ビルド&再起動する。
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/main ./cmd/server"
+  bin = "./tmp/main"
+  include_ext = ["go"]
+  exclude_dir = ["tmp"]
+  delay = 300

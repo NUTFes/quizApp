@@ -1,0 +1,18 @@
+# 依存パッケージ(各自の環境で入れ直すのでコミットしない)
+node_modules/
+
+# ビルド成果物・一時ファイル
+dist/
+backend/tmp/
+
+# 環境変数(秘密を含むのでコミットしない。.env.example だけ共有する)
+.env
+.env.prod
+.env.local
+
+# Google認証情報(絶対にコミットしない)
+*credentials*.json
+
+# OS が作るゴミファイル
+.DS_Store
+Thumbs.db

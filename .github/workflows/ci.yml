@@ -1,0 +1,32 @@
+name: CI
+
+# PRを出したとき と main に入ったとき に自動チェックする。
+# 解説 → docs/CI・コードチェック入門.md
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2 # mise.toml を読んで Node/pnpm を入れる(手元と同じ版)
+      - run: pnpm install
+      - run: pnpm build
+
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2 # mise.toml を読んで Go を入れる
+      - run: test -z "$(gofmt -l .)" # 整形されていない.goファイルがあれば失敗
+      - run: go vet ./...
+      - run: go build ./...
