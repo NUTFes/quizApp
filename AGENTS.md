@@ -91,13 +91,20 @@ quizApp/
 
 ---
 
-## 4. 現在の状態(2026-08-11時点)
+## 4. 現在の状態(2026-08-12時点)
 
 ### できていること
 
 - ドキュメント一式(要件・技術・API仕様書 第4版・実装要件・初心者タスク)
 - 基盤ファイル一式(mise.toml / docker-compose.yml / frontend最小構成 / backend最小構成 / .gitignore等 / README / CI / テンプレート)
 - backend最小サーバー: `GET /api/health`(`{"status":"ok"}`)+ SSE `GET /api/events`(接続挨拶 + 15秒ハートビート)
+- **WSL2への移行が完了**。作業場所は WSL2 内の `/home/naoto/quizApp`。mise 導入済みで `mise tasks` が引ける
+- **`mise run up` による起動検収が完了(2026-08-12 実測)**。3コンテナすべて起動し、以下を確認済み:
+  - `http://localhost:3000/api/health` → `{"status":"ok"}`
+  - `http://localhost:5173/` → HTML が返り `<title>技大祭クイズ</title>`(Vite正常稼働)
+  - SSE `http://localhost:3000/api/events` → `event: hello` / `{"message":"SSE接続できました"}`
+  - db コンテナは healthy 判定を通過
+  → **基盤づくりは検収済み。§5 の旧タスク1〜3は完了した。**
 
 ### ⚠️ backendが標準ライブラリのみな理由(誤解しないこと)
 
@@ -105,19 +112,15 @@ quizApp/
 Gin/GORMを go.mod に入れると **go.sum(検証ハッシュ台帳)が必要**になり、これは `go get` を実行しないと生成できない。ファイルを手書きしただけの状態で `mise run up` すると go.sum が無くて止まる。
 → **標準ライブラリのみなら go.sum 不要で確実に起動する**。Gin/GORMは WSL2 で実際に `go get` するときに go.sum ごと正しく入る。本物のエンドポイント実装に着手する最初のステップが「Gin/GORM/golang-migrate を go get する」こと。
 
-### まだ動かしていない(次の関門)
-
-`mise run up` による起動確認は**まだWSL2で実行していない**。これが基盤づくりの最後の検収。
-
 ---
 
 ## 5. すぐ次にやること(優先順)
 
-1. **未コミット分をコミット & push**(基盤ファイル群とドキュメント群は分けると履歴が読みやすい)
-2. **WSL2へ移行**: WindowsユーザーはWSL2内にcloneする必要がある(Windows側フォルダだとDockerのホットリロードが遅い/効かない)。手順: WSL2にmise導入 → `git clone` → `mise trust` → `mise install` → `mise run up`
-3. **検収**: http://localhost:5173 で「技大祭クイズ 🎉」、http://localhost:3000/api/health で `{"status":"ok"}` が出れば基盤完成
-4. **GitHubでmainブランチ保護**(PR必須・CI必須。GitHub UIでの手作業)
-5. その後の開発: バックは Gin/GORM 導入 → 見本エンドポイント `GET /api/admin/state` をリーダー+まとめ役で作る(初心者タスクの写経元)。フロントはモックで各画面。
+1. **`fix/air-version-pin` を main にマージする**(最優先)。air のバージョン固定(`v1.67.1`)は**これが無いと backend のビルドが通らない**修正だが、まだ origin/main に入っていない(origin/main の先頭は「AGENTS.md を追加」のまま)。この状態で他メンバーが main から clone すると起動できない。ブランチ → PR → approve → squash merge の流れで入れる。
+2. **GitHubでmainブランチ保護**(PR必須・CI必須。GitHub UIでの手作業)。※CLI(`gh`)は未認証なので、確認・設定はブラウザで行う。
+3. **バックエンド着手**: `go get` で Gin / GORM / golang-migrate を導入(go.sum がここで正しく生成される。§4の注意書き参照)→ 見本エンドポイント `GET /api/admin/state` をリーダー+まとめ役で作る(初心者タスクの写経元)。
+4. **`backend/migrations/` を作る**: `mise.toml` に `db:migrate` / `db:seed` タスクは既にあるが、**migrationsディレクトリ自体がまだ無い**ので今叩くと失敗する。golang-migrate 導入とセットで用意する。
+5. **フロントエンド着手**: モックデータで各画面(スマホ / monitor / admin)を作る。React Router・Tailwind の導入もこのタイミング。
 
 ### 未解決の宿題
 
