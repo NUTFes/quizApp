@@ -1,5 +1,10 @@
 package question
 
+type Choice struct {
+	ID string `json:"id"`
+	Text string `json:"text"`
+	ImageURL *string `json:"imageUrl"`
+}
 type Question struct {
     ID              uint     `json:"id"`
     Number          int      `json:"number"`
