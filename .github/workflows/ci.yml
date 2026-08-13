@@ -16,8 +16,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: jdx/mise-action@v2 # mise.toml を読んで Node/pnpm を入れる(手元と同じ版)
-      - run: pnpm install
-      - run: pnpm build
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check # ① 書式(Prettier)。整形されていなければ失敗
+      - run: pnpm lint # ② リンター(ESLint)。危ないコードの癖を検出
+      - run: pnpm typecheck # ③ 型チェック(tsc --noEmit)
+      - run: pnpm build # ④ ビルドが通るか
 
   backend:
     runs-on: ubuntu-latest
