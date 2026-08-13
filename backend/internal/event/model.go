@@ -5,6 +5,6 @@ type State struct{
 	RemainingPlayers int `json:"remainingPlayers"`
 	TimeLimitSec int `json:"timeLimitSec"`
 	QuestionStartedAt *string `json:"questionStartedAt"`
-	RevealdSegments int `json:"revealdSegments"`
+	RevealedSegments int `json:"revealedSegments"`
 	Question *Question `json:"question"`
 }
