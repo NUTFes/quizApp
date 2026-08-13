@@ -56,12 +56,21 @@ quizApp/
 ## 開発のルール
 
 1. **新しい機能は feature フォルダに新フォルダを切る**(front: `src/features/`、back: `internal/`)。既存フォルダに別機能を混ぜない
-2. **API仕様を変えるときは `docs/API仕様書.md` を先に直す**(実装とずれたら仕様書が正)
+2. **API仕様を変えるときは `docs/実装要件/API仕様書.md` を先に直す**(実装とずれたら仕様書が正)
 3. `main` へは直接pushせず、ブランチ→PR→レビュー1件→squash merge
 4. コミット/PRは「何をしたか分かる日本語1行」でよい
 
+詳しい手順 → [`docs/ガイドライン/開発フローガイド.md`](docs/ガイドライン/開発フローガイド.md)
+
+## メンバー
+
+<!-- 練習用Issueで、自分の行を1行追加する。担当は フロント / バック / インフラ / レビュー から -->
+
+| 名前 | 担当 | ひとこと |
+|---|---|---|
+| naoto-anzai | PM・インフラ | よろしくお願いします |
+
 ## まだ準備中のもの
 
-- ESLint / Prettier の設定(整うまで CI の lint は最小構成)
 - Tailwind CSS・React Router(最小構成が動いてから追加)
 - 本番用の `docker-compose.prod.yml` と `docs/deploy.md`
