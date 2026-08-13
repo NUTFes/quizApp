@@ -7,24 +7,24 @@ import (
 )
 
 // DB に保存するための構造体
-type EventState struct{
-	ID uint `gorm:"primaryKey"`
-	Phase string 
+type EventState struct {
+	ID                uint `gorm:"primaryKey"`
+	Phase             string
 	CurrentQuestionID *uint
-	RemainingPlayers *int 
-	TimeLimitSec int 
-	QuestionStartedAt *time.Time 
-	RevealedSegments int 
+	RemainingPlayers  *int
+	TimeLimitSec      int
+	QuestionStartedAt *time.Time
+	RevealedSegments  int
 }
 
 // API で返すための構造体
-type State struct{
-	Phase string `json:"phase"`
-	ServerTime time.Time `json:"serverTime"`
-	RemainingPlayers *int `json:"remainingPlayers"`
-	TimeLimitSec int `json:"timeLimitSec"`
-	QuestionStartedAt *time.Time `json:"questionStartedAt"`
-	RevealedSegments int `json:"revealedSegments"`
-	TotalSegments int `json:"totalSegments"`
-	Question *question.Question `json:"question"`
+type State struct {
+	Phase             string             `json:"phase"`
+	ServerTime        time.Time          `json:"serverTime"`
+	RemainingPlayers  *int               `json:"remainingPlayers"`
+	TimeLimitSec      int                `json:"timeLimitSec"`
+	QuestionStartedAt *time.Time         `json:"questionStartedAt"`
+	RevealedSegments  int                `json:"revealedSegments"`
+	TotalSegments     int                `json:"totalSegments"`
+	Question          *question.Question `json:"question"`
 }
