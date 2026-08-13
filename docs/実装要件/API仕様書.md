@@ -74,7 +74,7 @@
     { "id": "D", "text": "選択肢D", "imageUrl": null }
   ],
   "correctChoiceId": "B",
-  "note": "司会者向け補足(豆知識など)。無ければ null"
+  "explanation": "正答の解説。ある問題だけ。無ければ null"
 }
 ```
 
@@ -88,6 +88,7 @@
 | `imageUrl` | 問題画像。無ければ `null`。パスはサーバー上の静的ファイル |
 | `choices` | 2択なら要素2個(○×は `text` に `"○"` `"×"`)。4択なら4個。arunashiは2個(`text` は§3.5.6の書式)。**hayaoshiは `[]`**(選択肢なし・判定は人力) |
 | `correctChoiceId` | 正解の選択肢id。**管理者向けにしか出さない**(§2.2参照)。**hayaoshiのみ `null`**(正答の表示方法はフェーズ2実装時に決定) |
+| `explanation` | 正答の解説。**ほとんどの問題は `null`**(スプシの `explanation` 列が空)。**`answer` phase の閲覧者にだけ配信する**(§2.2)。解説文は正答を含みうるため、question phase では送らない |
 
 ### State(現在の状態)— アプリの中心
 
@@ -97,7 +98,6 @@
 {
   "phase": "question",
   "serverTime": "2026-09-13T13:05:10+09:00",
-  "remainingPlayers": 24,
   "timeLimitSec": 30,
   "questionStartedAt": "2026-09-13T13:05:00+09:00",
   "revealedSegments": 2,
@@ -107,7 +107,6 @@
 ```
 
 - `phase` が `waiting` / `finished` のとき: `question` `questionStartedAt` は `null`、`revealedSegments` `totalSegments` は `0`。**キーは残る**。
-- `remainingPlayers` は管理者が手入力する表示用数値(§3.6)。未入力なら `null`。
 
 ---
 
@@ -127,7 +126,8 @@
 
 1. `question.textSegments` には**表示済みセグメントだけ**を入れる(未公開の続きはネットワーク上に流れない)
 2. `correctChoiceId` は `answer` オブジェクトの中にのみ存在し、`answer` phase になるまで `answer: null`。**question phase中の閲覧者向けJSONに正解情報のキーは存在しない**
-3. `difficulty` `note` `totalSegments` は閲覧者に送らない
+3. `difficulty` `totalSegments` は閲覧者に送らない
+3'. **`explanation` は `answer` phase の閲覧者向けJSONにのみ含める。** question phase では**キーごと存在しない**。解説文は正答を含みうるため、正答と同じ扱いにする
 4. **type=hayaoshi のとき、`view=phone` の `textSegments` は常に空配列**(スマホは type を見て「モニターをご覧ください」を表示する)。`view=monitor` には通常どおり表示済みセグメントを送る。手元で先に読めると早押しが成立しないため(→ docs/画面・要件.md §5)。※hayaoshi自体がフェーズ2実装
 
 **モニタ向け実例(`view=monitor`, phase=question)**:
@@ -136,7 +136,6 @@
 {
   "phase": "question",
   "serverTime": "2026-09-13T13:05:10+09:00",
-  "remainingPlayers": 24,
   "timeLimitSec": 30,
   "questionStartedAt": "2026-09-13T13:05:00+09:00",
   "joinUrl": "https://quiz.example.jp/play",
@@ -162,11 +161,10 @@
 {
   "phase": "answer",
   "serverTime": "2026-09-13T13:06:02+09:00",
-  "remainingPlayers": 24,
   "timeLimitSec": 30,
   "questionStartedAt": "2026-09-13T13:05:00+09:00",
   "joinUrl": "https://quiz.example.jp/play",
-  "question": { …同上(textSegmentsは全セグメント公開済み)… },
+  "question": { …同上(textSegmentsは全セグメント公開済み。**ここで初めて `explanation` が入る**)… },
   "answer": { "correctChoiceId": "B" }
 }
 ```
@@ -177,7 +175,6 @@
 {
   "phase": "waiting",
   "serverTime": "2026-09-13T12:50:00+09:00",
-  "remainingPlayers": null,
   "timeLimitSec": null,
   "questionStartedAt": null,
   "joinUrl": "https://quiz.example.jp/play",
@@ -274,7 +271,7 @@ GAS側でシートを読み、**この形に整形してから**送る。列→J
         { "id": "D", "text": "10000人", "imageUrl": null }
       ],
       "correctChoiceId": "B",
-      "note": null
+      "explanation": null
     }
   ]
 }
@@ -361,22 +358,12 @@ GAS側でシートを読み、**この形に整形してから**送る。列→J
 | correct | 正解の列名 | B |
 | imageUrl | 問題画像パス(任意) | /images/q5.png |
 | imageA〜imageD | 選択肢画像パス(任意) | |
-| note | 司会者向け補足(任意) | |
+| explanation | 正答の解説(任意)。**入っている問題だけ、answer phase で画面に表示される** | |
 
 - 1行目はヘッダ行。GASは2行目以降を読む(`sourceRow` は実際の行番号)。
 - **arunashi の選択肢の書式**(2026-08-07決定): `ラベル:項目/項目/項目`(ラベルと項目群の区切りは**コロン `:`**、項目どうしの区切りは**スラッシュ `/`**)。例: choiceA=「ある:いか/くも/あり」/ choiceB=「ない:アルパカ/くま/マントヒヒ」。項目区切りは早押しの `textSegments` 区切りと同じ `/` に統一(入稿者は「区切りはスラッシュ」で覚えられる)。GASはこの書式をバリデーションし、違反行はエラーにする(フロントはこの書式を前提に分解表示してよい)。
 - **GASコードの管理**: GASのコードはGoogleサーバー上にありgit管理から漏れるため、コピーをリポジトリ(`tools/gas/`)にコミットし、更新のたびに同期する。
 - **GAS側の設定**: サーバーURLとAPIキーはコードに直書きせず、スクリプトプロパティ(`PropertiesService.getScriptProperties()`)に置く。シートを共有した相手にキーが渡らないようにするため。
-
-### 3.6 POST /api/admin/remaining-players
-
-進行ダッシュボードに表示する残り人数を手入力で更新する。
-
-**リクエスト**: `{ "remainingPlayers": 24 }`(`null` でクリア)
-
-| 状況 | ステータス | code |
-| --- | --- | --- |
-| 負の数・数値以外 | 400 | `INVALID_REQUEST` |
 
 ---
 
@@ -405,7 +392,7 @@ GAS側でシートを読み、**この形に整形してから**送る。列→J
 
 ### 4.2 GET /api/admin/questions/:id
 
-1問の詳細(§1のQuestionフル形、`correctChoiceId` `note` 含む)。出題前の内容確認用。
+1問の詳細(§1のQuestionフル形、`correctChoiceId` `explanation` 含む)。出題前の内容確認用。
 
 | 状況 | ステータス | code |
 | --- | --- | --- |
@@ -459,7 +446,7 @@ GAS側でシートを読み、**この形に整形してから**送る。列→J
                 "correctChoiceId": "B", "difficulty": "hard", … } }
 ```
 
-スマホに届く `state`(抜粋)— **`correctChoiceId` も3つ目のセグメントも存在しない**:
+スマホに届く `state`(抜粋)— **`correctChoiceId` も3つ目のセグメントも `explanation` も存在しない**:
 
 ```json
 { "phase": "question",
@@ -490,6 +477,7 @@ GAS側でシートを読み、**この形に整形してから**送る。列→J
 
 ## 変更履歴(新しい順)
 
+- 2026-08-13 第5版。①**`note`(司会者向け補足)を廃止し `explanation`(解説)に一本化**。当日司会者は何も参照できないため非公開メモは不要と判断。スプシの `explanation` 列と名前が一致し、`画面・要件.md` §6「解説はある問題だけanswerフェーズで表示」の受け皿が仕様書に無かった問題も解消。**解説文は正答を含みうるため、`answer` phase の閲覧者にのみ配信**する(question phaseではキーごと存在しない=正答と同じ扱い) ②**`remainingPlayers` と `POST /api/admin/remaining-players` を廃止**。`画面・要件.md` に表示要素としての記述が無く、裏方1人オペで「誰も見ない数字を人力で数えて入力する」操作を残す意味が無いため。API本数 **9本+閲覧2本 → 8本+閲覧2本**
 - 2026-08-07 第4版(まとめ役レビュー反映)。①type に `hayaoshi` を追加(**実装はフェーズ2**。v1は投入時に弾く。choices空/correctChoiceId nullの形だけ先に確保し、`view=phone` へは textSegments を送らない原則を§2.2に追加) ②GAS push方式を追認、GASコードの `tools/gas/` 管理を追記 ③認証はBearerで確定、トークン運用ルール3点を§0に追記 ④`show-question` に任意 `timeLimitSec`(省略時30・範囲5〜120)を追加 ⑤type に `arunashi` を追加(形はtwo_choiceと同じ・入稿書式ルールを§3.5.6に追加)。レビュー詳細は `dev_policy/API仕様書レビュー結果.md`
 - 2026-08-06 第3版。**Cookie/セッションを全廃**し、管理者APIを `Authorization: Bearer` トークンに一本化。`ADMIN_TOKEN` / `IMPORT_TOKEN` の2種。login・logoutを廃止し `GET /api/admin/verify` に置換。SSE管理者チャンネルのみ `?token=` クエリ。§3.5.5の代替エンドポイントは不要になり統合(APIは計10本+閲覧2本 → **9本+閲覧2本**)
 - 2026-08-06 初版。決定事項: 4択/2択のみ / 回答APIなし / 遷移は全て手動 / スプシ同期+画像はURL参照 / タイマーイベント廃止(クライアント計算) / login・remaining-players APIを追加(計10本+閲覧2本)
