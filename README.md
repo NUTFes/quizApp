@@ -3,9 +3,9 @@
 技大祭(NUTFES / nutmeg)向けのリアルタイムクイズ大会アプリ。
 モニタ(会場の大画面)・スマホ(参加者の手元ミラー)・管理者画面の3画面を、裏方1人の操作で一斉に切り替える。
 
-- 何を作るか → [`docs/画面・要件.md`](docs/画面・要件.md)
-- 使っている技術 → [`docs/技術スタック.md`](docs/技術スタック.md)
-- API仕様(フロント/バックの契約) → [`docs/API仕様書.md`](docs/API仕様書.md)
+- 何を作るか → [`docs/実装要件/画面・要件.md`](docs/実装要件/画面・要件.md)
+- 使っている技術 → [`docs/実装要件/技術スタック.md`](docs/実装要件/技術スタック.md)
+- API仕様(フロント/バックの契約) → [`docs/実装要件/API仕様書.md`](docs/実装要件/API仕様書.md)
 
 ---
 
@@ -14,14 +14,14 @@
 ### 用意するもの(各自1回だけ)
 
 1. **Docker Desktop**
-2. **mise**(ツールのバージョン管理+コマンド集約 → [`docs/mise入門.md`](docs/mise入門.md))
+2. **mise**(ツールのバージョン管理+コマンド集約 → [`docs/入門/mise入門.md`](docs/入門/mise入門.md))
 3. **Windowsの人は WSL2**。リポジトリは **WSL2の中に** clone すること
-   (Windows側フォルダだと Docker のホットリロードが遅い/効かない → [`docs/docker-compose入門.md`](docs/docker-compose入門.md))
+   (Windows側フォルダだと Docker のホットリロードが遅い/効かない)
 
 ### 立ち上げ手順
 
 ```bash
-git clone https://github.com/naoto-anzai/quizApp.git
+git clone https://github.com/NUTFes/quizApp.git
 cd quizApp
 
 mise trust        # このリポジトリの mise.toml を信用する(初回のみ)

@@ -25,7 +25,7 @@
 - 3画面: **モニタ**(会場の85インチ大画面・主役)/ **スマホ**(参加者の手元ミラー・操作要素ゼロ)/ **管理者**(裏方1人の操作盤)。
 - 規模: 例年 約200人。SSE同時接続=参加人数分。
 
-詳細な要件 → [`docs/画面・要件.md`](docs/画面・要件.md)(画面仕様の**正**)
+詳細な要件 → [`docs/実装要件/画面・要件.md`](docs/実装要件/画面・要件.md)(画面仕様の**正**)
 
 ---
 
@@ -40,7 +40,7 @@
 | 問題入稿 | Googleスプレッドシート → GAS が整形 → `PUT /api/admin/questions` でpush投入 |
 | 環境 | Docker Compose(frontend/backend/db)+ mise(コマンド集約・バージョン固定) |
 
-詳細 → [`docs/技術スタック.md`](docs/技術スタック.md) / [`docs/mise入門.md`](docs/mise入門.md) / [`docs/docker-compose入門.md`](docs/docker-compose入門.md)
+詳細 → [`docs/実装要件/技術スタック.md`](docs/実装要件/技術スタック.md) / [`docs/入門/mise入門.md`](docs/入門/mise入門.md)
 
 ### 確定済みの重要な設計判断
 
@@ -64,26 +64,31 @@ quizApp/
 │   └── src/            …   将来 features/ types/ lib/ shared/ を切る
 ├── backend/            … Go。cmd/server/main.go が入口
 │   └── (将来) internal/{question,event,admin,sheetsync,sse,platform}/, migrations/
-├── docs/               … 確定版ドキュメント(下記)
+├── docs/               … 確定版ドキュメント(下記。3フォルダに分類)
+│   ├── ガイドライン/    …   開発フロー・レビュー・運用の設計意図
+│   ├── 入門/           …   Git・mise・CI の初心者向け解説
+│   └── 実装要件/       …   API仕様書・画面要件・実装要件
 ├── dev_policy/         … 検討過程・方針メモ(下記)
-└── .github/            … CI(ci.yml)・PR/Issueテンプレート
+└── .github/            … CI(ci.yml)・PR/Issueテンプレート・CODEOWNERS
 ```
 
 ### docs/(確定版・メンバー配布用)
 
 | ファイル | 内容 |
 |---|---|
-| `画面・要件.md` | 何を作るか。**画面仕様の正** |
-| `技術スタック.md` | 使う技術と理由(HTML/CSS経験者向け) |
-| `API仕様書.md` | **フロント/バックの契約書。最重要。第4版**。変更はここを先に直す |
-| `バックエンド実装要件.md` | 契約に書かない実装側の要件(nullable設計・検証・出し分け等) |
-| `フロントエンド実装要件.md` | 同・フロント側(state全再描画・タイマー計算・型別表示等) |
-| `バックエンド初心者タスク.md` | API仕様から割った初心者向けIssue案7本 |
-| `mise入門.md` / `docker-compose入門.md` / `CI・コードチェック入門.md` | 初心者向け技術解説 |
+| `実装要件/画面・要件.md` | 何を作るか。**画面仕様の正** |
+| `実装要件/技術スタック.md` | 使う技術と理由(HTML/CSS経験者向け) |
+| `実装要件/API仕様書.md` | **フロント/バックの契約書。最重要。第4版**。変更はここを先に直す |
+| `実装要件/バックエンド実装要件.md` | 契約に書かない実装側の要件(nullable設計・検証・出し分け等) |
+| `実装要件/フロントエンド実装要件.md` | 同・フロント側(state全再描画・タイマー計算・型別表示等) |
+| `ガイドライン/開発フローガイド.md` | **開発者が読む手順書**。Issue→ブランチ→Draft PR→PR→マージの①〜⑨ |
+| `ガイドライン/レビューガイド.md` | レビューする側の手引き(観点3つ・prefix記法・12時間SLA) |
+| `ガイドライン/GitHub運用ガイド.md` | **なぜこの運用にしたかの設計文書**。決定14件と却下案の記録 |
+| `入門/Git入門.md` / `入門/mise入門.md` / `入門/CI・コードチェック入門.md` | 初心者向け技術解説 |
 
 ### dev_policy/(検討過程・TODO)
 
-`README.md`(索引)、`画面・要件確定_policy.md`、`API・データ設計_policy.md`、`技術スタック_policy.md`、`フォルダ構成_policy.md`、`開発環境_policy.md`、`Git運用・CI_policy.md`、`タスク分割・進め方_policy.md`、`インフラ・デプロイ_policy.md`、`API設計完了の基準.md`、`API仕様書レビュー結果.md`。
+`README.md`(索引)、`画面・要件確定_policy.md`、`API・データ設計_policy.md`、`技術スタック_policy.md`、`フォルダ構成_policy.md`、`開発環境_policy.md`、`Git運用・CI_policy.md`、`GitHub運用_草案.md`、`GitHub設定手順.md`(**GitHub設定の作業手順+実施状況**)、`タスク分割・進め方_policy.md`、`バックエンド初心者タスク.md`(**Issue起票元**)、`インフラ・デプロイ_policy.md`、`API設計完了の基準.md`。
 
 ### 姉妹フォルダ(git管理外)
 
@@ -91,41 +96,73 @@ quizApp/
 
 ---
 
-## 4. 現在の状態(2026-08-12時点)
+## 4. 現在の状態(2026-08-13時点)
 
 ### できていること
 
 - ドキュメント一式(要件・技術・API仕様書 第4版・実装要件・初心者タスク)
-- 基盤ファイル一式(mise.toml / docker-compose.yml / frontend最小構成 / backend最小構成 / .gitignore等 / README / CI / テンプレート)
-- backend最小サーバー: `GET /api/health`(`{"status":"ok"}`)+ SSE `GET /api/events`(接続挨拶 + 15秒ハートビート)
-- **WSL2への移行が完了**。作業場所は WSL2 内の `/home/naoto/quizApp`。mise 導入済みで `mise tasks` が引ける
-- **`mise run up` による起動検収が完了(2026-08-12 実測)**。3コンテナすべて起動し、以下を確認済み:
-  - `http://localhost:3000/api/health` → `{"status":"ok"}`
-  - `http://localhost:5173/` → HTML が返り `<title>技大祭クイズ</title>`(Vite正常稼働)
-  - SSE `http://localhost:3000/api/events` → `event: hello` / `{"message":"SSE接続できました"}`
-  - db コンテナは healthy 判定を通過
-  → **基盤づくりは検収済み。§5 の旧タスク1〜3は完了した。**
+- **GitHub運用ドキュメント4本**(開発フローガイド / レビューガイド / GitHub運用ガイド / Git入門)
+- 基盤ファイル一式(mise.toml / docker-compose.yml / frontend / backend / CI / テンプレート)
+- backend最小サーバー: `GET /api/health` + SSE `GET /api/events`(接続挨拶 + 15秒ハートビート)
+- **`mise run up` で3コンテナが起動し、検収済み**(5173でフロント / 3000でhealth / SSEもhello受信)
+- **ESLint + Prettier + tsc を導入し、CIで回る状態**(PR #3)
+- **GitHub設定完了**: main保護(approve1・CI必須・**管理者にも適用**)、squash merge固定、ラベル8個
+
+### ⚠️ リポジトリは public
+
+無料プランのプライベートリポジトリでは**ブランチ保護もCODEOWNERSも使えない**ため、public に変更した。
+**本番の問題データと正答は絶対にコミットしないこと。**
 
 ### ⚠️ backendが標準ライブラリのみな理由(誤解しないこと)
 
 現状の `backend/cmd/server/main.go` は **Gin/GORMを使わず net/http だけ**で書いてある。これは意図的:
-Gin/GORMを go.mod に入れると **go.sum(検証ハッシュ台帳)が必要**になり、これは `go get` を実行しないと生成できない。ファイルを手書きしただけの状態で `mise run up` すると go.sum が無くて止まる。
-→ **標準ライブラリのみなら go.sum 不要で確実に起動する**。Gin/GORMは WSL2 で実際に `go get` するときに go.sum ごと正しく入る。本物のエンドポイント実装に着手する最初のステップが「Gin/GORM/golang-migrate を go get する」こと。
+Gin/GORMを go.mod に入れると **go.sum(検証ハッシュ台帳)が必要**になり、これは `go get` を実行しないと生成できない。
+→ **標準ライブラリのみなら go.sum 不要で確実に起動する**。本物のエンドポイント実装に着手する最初のステップが「Gin/GORM/golang-migrate を go get する」こと。
 
 ---
 
 ## 5. すぐ次にやること(優先順)
 
-1. **`fix/air-version-pin` を main にマージする**(最優先)。air のバージョン固定(`v1.67.1`)は**これが無いと backend のビルドが通らない**修正だが、まだ origin/main に入っていない(origin/main の先頭は「AGENTS.md を追加」のまま)。この状態で他メンバーが main から clone すると起動できない。ブランチ → PR → approve → squash merge の流れで入れる。
-2. **GitHubでmainブランチ保護**(PR必須・CI必須。GitHub UIでの手作業)。※CLI(`gh`)は未認証なので、確認・設定はブラウザで行う。
-3. **バックエンド着手**: `go get` で Gin / GORM / golang-migrate を導入(go.sum がここで正しく生成される。§4の注意書き参照)→ 見本エンドポイント `GET /api/admin/state` をリーダー+まとめ役で作る(初心者タスクの写経元)。
-4. **`backend/migrations/` を作る**: `mise.toml` に `db:migrate` / `db:seed` タスクは既にあるが、**migrationsディレクトリ自体がまだ無い**ので今叩くと失敗する。golang-migrate 導入とセットで用意する。
-5. **フロントエンド着手**: モックデータで各画面(スマホ / monitor / admin)を作る。React Router・Tailwind の導入もこのタイミング。
+**ゴールは「タスクを配るだけ」の状態。** ボトルネックは下の2(PMの実装作業)。
 
-### 未解決の宿題
+### 1. 待ち時間が長いので今すぐ投げる
 
-- **`explanation`(解説)フィールドがAPI仕様書に無い**。`docs/画面・要件.md` §6 では「解説はある問題だけanswerフェーズで表示」が確定事項。仕様書の `note`(司会者向け)とは別物。**リーダーに意図を確認**して仕様書 or 画面・要件.md のどちらかを直す必要がある。
-- インフラ運用者への確認Q1〜Q6(→ `dev_policy/インフラ・デプロイ_policy.md`)。GAS push方式のため**公開HTTPS URLが準備期間中に必要**になり優先度が上がっている。
+- **`explanation`(解説)フィールドの確認**(→ キンギョ)。`docs/実装要件/画面・要件.md` §6 では「解説はある問題だけanswerフェーズで表示」が確定なのに、`API仕様書.md` にフィールドが無い。**契約が宙ぶらりんだと該当タスクを配れない**
+- **インフラ運用者への確認Q1〜Q6**(→ `dev_policy/インフラ・デプロイ_policy.md`)。GAS push方式のため**公開HTTPS URLが準備期間中に必要**
+
+### 2. PMが先に作らないとタスクを配れないもの(最大の残り)
+
+方針は「**設計はPMが先に済ませ、メンバーには『作るだけ』を渡す**」「**モックの差し替え口はPMが最初に作る**」(→ `dev_policy/タスク分割・進め方_policy.md`)。
+
+**バックエンド(PM + キンギョ)**
+1. `go get` で Gin / GORM / golang-migrate を導入(go.sumを正しく生成)
+2. `internal/` の骨格(`question` / `event` / `admin` / `sse` / `platform`)
+3. `migrations/` とテーブル定義
+4. **見本エンドポイント `GET /api/admin/state` を1本**(初心者タスク7本の写経元)
+
+**フロントエンド(PM)**
+1. **型定義**(API仕様書から起こす)。メンバーは「型を使う人」なのでこれが無いと着手できない
+2. **`lib/` のAPIクライアント層 + モックの仕組み**(モックファースト開発の前提)
+3. React Router で `/` `/monitor` `/admin` の3ルート
+4. `features/` の骨格と**見本の1画面**
+
+### 3. 残っている設定・ドキュメント作業
+
+- **CODEOWNERSのユーザー名3つ**が `@REPLACE_ME_*` のまま(→ `dev_policy/GitHub設定手順.md` 手順7)
+- コラボレーター招待の確認(org移管でorg側のメンバー管理になっている可能性)
+- マイルストーンは**保留**(タスクを起票してから期限を引き直す)
+
+### 4. Issue起票 ═══ ここが「タスクを配るだけ」ライン ═══
+
+- バックは `dev_policy/バックエンド初心者タスク.md` の7本を落とすだけ
+- **フロント側の初心者タスク案が存在しない**。同じ粒度で作る必要がある
+- 練習Issue 1個(READMEに名前を追加するだけ)
+- 全Issueにラベル付与
+
+### 5. メンバー側
+
+- 全員の環境構築(WSL2/Docker/mise)。**動作確認できているのはPMの環境だけ**
+- ドキュメント4本の配布 → 練習Issueで1周
 
 ---
 
