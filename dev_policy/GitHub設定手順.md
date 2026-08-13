@@ -14,7 +14,7 @@
 > |---|---|
 > | 1. コラボレーター招待 | ⬜️ 未(org移管により、org側のメンバー管理になっている可能性あり) |
 > | 2. マージ方式の固定 | ✅ 完了(squashのみ / PR_TITLE / 自動削除ON) |
-> | 3. mainブランチ保護 | ✅ 完了(approve1 / 管理者にも適用 / force push禁止) |
+> | 3. mainブランチ保護 | ✅ 完了(approve1 / 管理者にも適用 / force push禁止 / **PMのみapprove bypass可**) |
 > | 4. CI必須チェック | ✅ 完了(`frontend` + `backend`) |
 > | 5. ラベル | ✅ 完了(難易度3 + 領域4 + `bug`) |
 > | 6. マイルストーン | ⏸ **保留**(タスクを起票してから期限を引き直す) |
@@ -134,6 +134,7 @@ CI導入のPRがまだマージされていない段階では、手順4だけ飛
 | └ (チェック名の指定) | **手順4で行う** | |
 | **Require conversation resolution before merging** | ☑️ ON | 未解決コメントを残したままマージできない |
 | **Do not allow bypassing the above settings** | ☑️ **ON** | **PM自身にも適用される。重要** |
+| └ Allow specified actors to bypass required pull requests | ☑️ ON / **`naoto-anzai`** | **準備期間中の例外。** approve待ちだけをPMに免除(CI必須・直接push禁止は残る)→ 運用ガイド3-2 |
 | Allow force pushes | ⬜️ OFF | 履歴の破壊を防ぐ |
 | Allow deletions | ⬜️ OFF | mainブランチ自体の削除を防ぐ |
 
