@@ -53,7 +53,7 @@ type Question = {
   id: number
   type: 'four_choice' | 'two_choice' | 'arunashi'  // ← ③ ユニオン型(このどれか、という意味)
   textSegments: string[]                            // ← 文字列の配列
-  correctChoiceId: number | null                    // ← ④ null が入りうる
+  correctChoiceId: string | null                    // ← ④ null が入りうる(idは "A"〜"D" の文字列)
 }
 
 // ⑤ 関数の型
