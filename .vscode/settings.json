@@ -1,0 +1,30 @@
+{
+  // ============================================================
+  // 全員のエディタで同じ動きをさせるための設定(リポジトリにコミットしてある)
+  // 解説 → docs/CI・コードチェック入門.md §3【1】エディタ
+  //
+  // これが効いていると、保存した瞬間に自動整形されるので、
+  // 書式のことを一切考えなくてよくなる。
+  // ============================================================
+
+  // 保存時に Prettier で自動整形する
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  // 保存時に ESLint が自動で直せるものを直す
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+
+  // frontend/ 配下の設定ファイルを見つけられるようにする
+  "eslint.workingDirectories": ["./frontend"],
+  "prettier.configPath": "./frontend/.prettierrc",
+
+  // Go は gofmt が標準搭載なので、保存時に整形する
+  "[go]": {
+    "editor.formatOnSave": true
+  },
+
+  // 改行コードを LF に統一(Windows と Mac/Linux の混在対策)
+  "files.eol": "\n"
+}

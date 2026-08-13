@@ -1,0 +1,11 @@
+{
+  // このリポジトリを VS Code で開いたときに「入れませんか?」と推奨表示される拡張機能。
+  // 全員が同じ道具を使うことで、手元のチェックの動きが揃う。
+  "recommendations": [
+    "esbenp.prettier-vscode", // Prettier(自動整形)
+    "dbaeumer.vscode-eslint", // ESLint(危ないコードの指摘)
+    "golang.go", // Go(補完・gofmt・go vet)
+    "ms-azuretools.vscode-docker", // Docker(コンテナの状態を見る)
+    "ms-vscode-remote.remote-wsl" // WSL2(Windowsの人はこれが無いと始まらない)
+  ]
+}

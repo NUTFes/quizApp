@@ -43,15 +43,21 @@ run = "docker compose down -v && docker compose up -d --build && mise run db:mig
 # ---- チェック(CIと同じ内容を手元で先に回す) ----------------
 
 [tasks.lint]
-description = "コードチェック(バック: go vet / フロント: ESLint)"
+description = "コードチェック(CIと同じ内容。PRを出す前にこれを通す)"
 run = [
+  "docker compose exec backend sh -c 'test -z \"$(gofmt -l .)\"'",
   "docker compose exec backend go vet ./...",
   "pnpm --dir frontend lint",
+  "pnpm --dir frontend format:check",
+  "pnpm --dir frontend typecheck",
 ]
 
-[tasks.test]
-description = "テストを実行(バック: go test / フロント: vitest)"
+[tasks.fix]
+description = "自動で直せる書式・コードの問題を直す(gofmt / Prettier / ESLint)"
 run = [
-  "docker compose exec backend go test ./...",
-  "pnpm --dir frontend test",
+  "docker compose exec backend gofmt -w .",
+  "pnpm --dir frontend format",
+  "pnpm --dir frontend lint:fix",
 ]
+
+# テスト(vitest / go test)は未導入。導入時にここへ [tasks.test] を追加する。
