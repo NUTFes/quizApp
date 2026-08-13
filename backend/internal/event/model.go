@@ -8,12 +8,13 @@ import (
 
 // DB に保存するための構造体
 type EventState struct{
+	ID uint `gorm:"primaryKey"`
 	Phase string 
+	CurrentQuestionID *uint
 	RemainingPlayers *int 
 	TimeLimitSec int 
 	QuestionStartedAt *time.Time 
 	RevealedSegments int 
-	Question *question.Question 
 }
 
 // API で返すための構造体
