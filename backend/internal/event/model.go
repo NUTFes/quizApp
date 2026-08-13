@@ -8,12 +8,12 @@ import (
 
 // DB に保存するための構造体
 type EventState struct{
-	Phase string `json:"phase"`
-	RemainingPlayers *int `json:"remainingPlayers"`
-	TimeLimitSec int `json:"timeLimitSec"`
-	QuestionStartedAt *time.Time `json:"questionStartedAt"`
-	RevealedSegments int `json:"revealedSegments"`
-	Question *question.Question `json:"question"`
+	Phase string 
+	RemainingPlayers *int 
+	TimeLimitSec int 
+	QuestionStartedAt *time.Time 
+	RevealedSegments int 
+	Question *question.Question 
 }
 
 // API で返すための構造体

@@ -10,9 +10,9 @@ type Question struct {
     Number          int      `json:"number"`
     Type            string   `json:"type"`
     Difficulty      string   `json:"difficulty"`
-    TextSegments    []string `json:"textSegments"`
+    TextSegments    []string `json:"textSegments" gorm:"serializer:json"`
     ImageURL        *string  `json:"imageUrl"`
-    Choices         []Choice `json:"choices"`
+    Choices         []Choice `json:"choices" gorm:"serializer:json"`
     CorrectChoiceID *string  `json:"correctChoiceId"`
     Note            *string  `json:"note"`
 }
