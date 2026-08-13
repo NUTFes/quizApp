@@ -1,0 +1,25 @@
+# CODEOWNERS — 変更された場所に応じて、レビュワーを自動で指名する設定
+#
+# 仕組み: PRが出されると、変更されたファイルのパスをこの表と照合し、
+#         該当する人に自動でレビュー依頼が飛ぶ。PRを出す側は誰も選ばなくてよい。
+# 解説 → docs/レビューガイド.md §1
+#
+# 注意1: 下から順に照合され、**最後にマッチした行が勝つ**。順番を入れ替えないこと。
+# 注意2: ここに書くユーザーは、リポジトリのコラボレーター(write権限)である必要がある。
+#        招待していない人を書いても、レビュー依頼は飛ばない。
+# 注意3: 指名は2人でも、**approve は1件で通る**(mainブランチ保護の設定による)。
+#
+# ⚠️ TODO: 下の @REPLACE_ME_* を、実際のGitHubユーザー名に置き換えてから使うこと。
+
+# --- 既定(下のどれにも当てはまらないファイル: docker-compose.yml, mise.toml など) ---
+*                   @hengin-eer @QwerTayu
+
+# --- フロントエンド ---
+/frontend/          @naoto-anzai @hengin-eer
+
+# --- バックエンド ---
+/backend/           @Gold-Fish2000 @QwerTayu
+
+# --- ドキュメント ---
+/docs/              @naoto-anzai @hengin-eer @QwerTayu
+/dev_policy/        @naoto-anzai @hengin-eer @QwerTayu
