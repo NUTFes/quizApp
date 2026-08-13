@@ -122,6 +122,17 @@ PATH = [ フォルダA, フォルダB, フォルダC, ... ]
 1. `mise install` は、mise.toml指定バージョンのGo/Node/pnpmを**mise専用の倉庫**(`~/.local/share/mise/installs/` 配下)に保管する。PCに既に入っている別バージョンとは共存(上書きしない)
 2. **プロジェクトのフォルダに cd した瞬間**、miseがそのフォルダの mise.toml を読み、指定バージョンの置き場所を**PATHの先頭に差し込む**
 
+> ### ⚠️ この「割り込み」は、有効化しないと起きない
+>
+> miseを**インストールしただけでは、この仕組みは動かない。** シェルの設定ファイルに1行足して「有効化」して初めて、cdに反応するようになる。
+>
+> ```bash
+> echo 'eval "$(~/.local/bin/mise activate bash)"' >> ~/.bashrc && exec bash
+> ```
+>
+> 有効化を忘れると **`go: command not found`** が出る(mise自体は入っていて `mise ls` にも表示されるので、「入れたはずなのに無い」と混乱しやすい)。
+> → 手順は [`../../README.md`](../../README.md) の「mise を入れたら、最初に有効化する」
+
 ```
 quiz-app/ の中にいるとき:
 PATH = [ miseの倉庫のpnpm 10.x ←先頭に割り込み, 自分で入れたpnpm 9.x, ... ]

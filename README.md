@@ -18,6 +18,21 @@
 3. **Windowsの人は WSL2**。リポジトリは **WSL2の中に** clone すること
    (Windows側フォルダだと Docker のホットリロードが遅い/効かない)
 
+### ⚠️ mise を入れたら、最初に「有効化」する(全員必須・1回だけ)
+
+**mise はインストールしただけでは効きません。** シェルに1行足して初めて、指定バージョンの Go / Node / pnpm にパスが通ります。
+これをやらないと **`go: command not found`** や、自前の古い pnpm が動いてしまう事故が起きます(仕組み → [`docs/入門/mise入門.md`](docs/入門/mise入門.md) §5)。
+
+```bash
+# bash を使っている人(WSL2の初期状態はこれ)
+echo 'eval "$(~/.local/bin/mise activate bash)"' >> ~/.bashrc && exec bash
+
+# zsh を使っている人(Macの初期状態はこれ)
+echo 'eval "$(~/.local/bin/mise activate zsh)"' >> ~/.zshrc && exec zsh
+```
+
+> `~/.local/bin/mise` の部分は mise を入れた場所。`which mise` で確認できる。
+
 ### 立ち上げ手順
 
 ```bash
@@ -28,6 +43,16 @@ mise trust        # このリポジトリの mise.toml を信用する(初回の
 mise install      # Go / Node / pnpm を指定バージョンで入れる
 mise run up       # 3つのコンテナ(frontend / backend / db)を起動
 ```
+
+**`mise install` のあと、バージョンが揃っているか確認する:**
+
+```bash
+go version    # go1.25.x
+node -v       # v22.x
+pnpm -v       # 10.x
+```
+
+ここで `command not found` が出たら、**上の「有効化」をやっていない**。
 
 起動したら:
 
