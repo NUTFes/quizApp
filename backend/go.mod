@@ -1,3 +1,3 @@
 module github.com/naoto-anzai/quizApp/backend
 
-go 1.25
+go 1.25.0
