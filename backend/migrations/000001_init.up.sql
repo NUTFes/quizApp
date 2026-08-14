@@ -13,9 +13,9 @@ CREATE TABLE questions (
 
 CREATE TABLE event_states (
 	id                  SERIAL PRIMARY KEY,
-	phase               TEXT NOT NULL,
+	phase               TEXT NOT NULL DEFAULT "waiting",
 	current_question_id INTEGER REFERENCES questions(id) ON DELETE SET NULL,
-	time_limit_sec      INTEGER NOT NULL ,
+	time_limit_sec      INTEGER NOT NULL DEFAULT 30,
 	question_started_at TIMESTAMPTZ,
 	revealed_segments   INTEGER NOT NULL,
 
