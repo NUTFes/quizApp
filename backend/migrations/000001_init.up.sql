@@ -1,6 +1,6 @@
 CREATE TABLE questions (
 	id                  SERIAL PRIMARY KEY,
-	number              INTEGER NOT NULL,
+	number              INTEGER NOT NULL UNIQUE,
 	type                TEXT NOT NULL,
 	difficulty          TEXT NOT NULL,
 	text_segments       JSONB NOT NULL DEFAULT '[]',
@@ -15,9 +15,10 @@ CREATE TABLE event_states (
 	id                  SERIAL PRIMARY KEY,
 	phase               TEXT NOT NULL,
 	current_question_id INTEGER REFERENCES questions(id) ON DELETE SET NULL,
-	time_limit_sec      INTEGER NOT NULL,
+	time_limit_sec      INTEGER NOT NULL ,
 	question_started_at TIMESTAMPTZ,
 	revealed_segments   INTEGER NOT NULL,
 
     CONSTRAINT event_states_singleton CHECK (id = 1)
 );
+
