@@ -11,7 +11,6 @@ type EventState struct {
 	ID                uint `gorm:"primaryKey"`
 	Phase             string
 	CurrentQuestionID *uint
-	RemainingPlayers  *int
 	TimeLimitSec      int
 	QuestionStartedAt *time.Time
 	RevealedSegments  int
@@ -21,11 +20,10 @@ type EventState struct {
 type State struct {
 	Phase             string             `json:"phase"`
 	ServerTime        time.Time          `json:"serverTime"`
-	RemainingPlayers  *int               `json:"remainingPlayers"`
 	TimeLimitSec      int                `json:"timeLimitSec"`
 	QuestionStartedAt *time.Time         `json:"questionStartedAt"`
 	RevealedSegments  int                `json:"revealedSegments"`
 	TotalSegments     int                `json:"totalSegments"`
 	Question          *question.Question `json:"question"`
-	AskedCount		  int				 `json:"asked_count"`
+	AskedCount        int                `json:"askedCount"`
 }
