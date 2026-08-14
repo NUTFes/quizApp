@@ -74,7 +74,8 @@
     { "id": "D", "text": "選択肢D", "imageUrl": null }
   ],
   "correctChoiceId": "B",
-  "explanation": "正答の解説。ある問題だけ。無ければ null"
+  "explanation": "正答の解説。ある問題だけ。無ければ null",
+  "asked": false
 }
 ```
 
@@ -89,6 +90,7 @@
 | `choices` | 2択なら要素2個(○×は `text` に `"○"` `"×"`)。4択なら4個。arunashiは2個(`text` は§3.5.6の書式)。**hayaoshiは `[]`**(選択肢なし・判定は人力) |
 | `correctChoiceId` | 正解の選択肢id。**管理者向けにしか出さない**(§2.2参照)。**hayaoshiのみ `null`**(正答の表示方法はフェーズ2実装時に決定) |
 | `explanation` | 正答の解説。**ほとんどの問題は `null`**(スプシの `explanation` 列が空)。**`answer` phase の閲覧者にだけ配信する**(§2.2)。解説文は正答を含みうるため、question phase では送らない |
+| `asked` | このゲーム中に出題済みか。**スプシ由来ではなくサーバーが管理する**(投入時は必ず `false`)。`show-question` で `true`、`reset` で全問 `false` に戻る。管理者の問題一覧で「もう出した問題」を潰すために使い、**`askedCount`(State)の集計元**でもある |
 
 ### State(現在の状態)— アプリの中心
 
@@ -102,11 +104,15 @@
   "questionStartedAt": "2026-09-13T13:05:00+09:00",
   "revealedSegments": 2,
   "totalSegments": 3,
+  "askedCount": 3,
   "question": { …Questionの形そのまま(correctChoiceId含む)… }
 }
 ```
 
 - `phase` が `waiting` / `finished` のとき: `question` `questionStartedAt` は `null`、`revealedSegments` `totalSegments` は `0`。**キーは残る**。
+- `askedCount` は**「今何問目か」**。`asked` が `true` の問題を数えた値で、`asked` から**毎回導出する**(この数を別途保存しない。二重管理を避けるため)。**出題中の問題自身を含む**ので、1問目を出している最中は `1`(`0` ではない)。画面には「第1問」と出る。
+  - **同じ問題を `show-question` し直しても増えない**(`asked` が既に `true` のため)。`reset` すると `0` に戻る。
+  - **総問題数(分母)は持たない。** 勝ち残り式で当日その場で出題を増減させるため、「全N問」を先に確定できない。画面表示は「第3問」のように分子だけを出す(→ `画面・要件.md` §6)。
 
 ---
 
@@ -126,8 +132,9 @@
 
 1. `question.textSegments` には**表示済みセグメントだけ**を入れる(未公開の続きはネットワーク上に流れない)
 2. `correctChoiceId` は `answer` オブジェクトの中にのみ存在し、`answer` phase になるまで `answer: null`。**question phase中の閲覧者向けJSONに正解情報のキーは存在しない**
-3. `difficulty` `totalSegments` は閲覧者に送らない
+3. `difficulty` `totalSegments` は閲覧者に送らない。`question.asked` も送らない(管理者の一覧専用)
 3'. **`explanation` は `answer` phase の閲覧者向けJSONにのみ含める。** question phase では**キーごと存在しない**。解説文は正答を含みうるため、正答と同じ扱いにする
+3''. **`askedCount` は閲覧者にも送る。** モニタ/スマホが「第3問」を表示するのに使う。秘密情報ではないので削らない。**フロント側で数えてはいけない**(QRから途中参加した端末・再接続した端末が別の数を表示してしまうため)
 4. **type=hayaoshi のとき、`view=phone` の `textSegments` は常に空配列**(スマホは type を見て「モニターをご覧ください」を表示する)。`view=monitor` には通常どおり表示済みセグメントを送る。手元で先に読めると早押しが成立しないため(→ docs/画面・要件.md §5)。※hayaoshi自体がフェーズ2実装
 
 **モニタ向け実例(`view=monitor`, phase=question)**:
@@ -138,6 +145,7 @@
   "serverTime": "2026-09-13T13:05:10+09:00",
   "timeLimitSec": 30,
   "questionStartedAt": "2026-09-13T13:05:00+09:00",
+  "askedCount": 3,
   "joinUrl": "https://quiz.example.jp/play",
   "question": {
     "number": 12,
@@ -163,6 +171,7 @@
   "serverTime": "2026-09-13T13:06:02+09:00",
   "timeLimitSec": 30,
   "questionStartedAt": "2026-09-13T13:05:00+09:00",
+  "askedCount": 3,
   "joinUrl": "https://quiz.example.jp/play",
   "question": { …同上(textSegmentsは全セグメント公開済み。**ここで初めて `explanation` が入る**)… },
   "answer": { "correctChoiceId": "B" }
@@ -177,6 +186,7 @@
   "serverTime": "2026-09-13T12:50:00+09:00",
   "timeLimitSec": null,
   "questionStartedAt": null,
+  "askedCount": 0,
   "joinUrl": "https://quiz.example.jp/play",
   "question": null,
   "answer": null
@@ -206,6 +216,7 @@
 | timeLimitSec が範囲外(5〜120秒以外・数値以外) | 400 | `INVALID_REQUEST` |
 
 - **連打・再実行**: すでに同じ問題を出題中でも 200(その問題を最初からやり直す)。別問題なら即座に切り替わる。`answer` phase から呼べば次の問題へ進む操作になる。
+- **その問題の `asked` を `true` にする。** これにより `askedCount`(§1)が1つ進む。すでに `true` の問題を出し直した場合は**変化しない**ので、やり直しで「第4問」に飛ぶことはない。
 
 ### 3.2 POST /api/admin/advance-text
 
@@ -242,6 +253,7 @@
 | `to` が `waiting`/`finished` 以外 | 400 | `INVALID_REQUEST` |
 
 - 個別の問題のやり直しはresetではなく `show-question` の再実行で行う(§3.1)。
+- **全問題の `asked` を `false` に戻す**(`to` が `waiting` / `finished` のどちらでも)。結果として `askedCount` は `0` になる。
 
 ### 3.5 PUT /api/admin/questions
 
@@ -387,7 +399,7 @@ GAS側でシートを読み、**この形に整形してから**送る。列→J
 }
 ```
 
-- `textPreview` はセグメント結合済みの全文。`asked` はこのゲーム中に出題済みか(resetでリセット)。
+- `textPreview` はセグメント結合済みの全文。`asked` は§1のとおり(このゲーム中に出題済みか。`show-question` で `true`、`reset` で `false`)。裏方が「もう出した問題」を潰すために使う。
 - 0件なら `"questions": []`。
 
 ### 4.2 GET /api/admin/questions/:id
@@ -441,15 +453,15 @@ GAS側でシートを読み、**この形に整形してから**送る。列→J
 管理者に届く `state`(抜粋):
 
 ```json
-{ "phase": "question", "revealedSegments": 2, "totalSegments": 3,
+{ "phase": "question", "revealedSegments": 2, "totalSegments": 3, "askedCount": 3,
   "question": { "textSegments": ["この問題文は", "スラッシュ区切りで", "少しずつ表示される"],
-                "correctChoiceId": "B", "difficulty": "hard", … } }
+                "correctChoiceId": "B", "difficulty": "hard", "asked": true, … } }
 ```
 
-スマホに届く `state`(抜粋)— **`correctChoiceId` も3つ目のセグメントも `explanation` も存在しない**:
+スマホに届く `state`(抜粋)— **`correctChoiceId` も3つ目のセグメントも `explanation` も存在しない。`askedCount` は同じ値が届く**:
 
 ```json
-{ "phase": "question",
+{ "phase": "question", "askedCount": 3,
   "question": { "textSegments": ["この問題文は", "スラッシュ区切りで"], … },
   "answer": null }
 ```
@@ -477,6 +489,7 @@ GAS側でシートを読み、**この形に整形してから**送る。列→J
 
 ## 変更履歴(新しい順)
 
+- 2026-08-14 第6版。**モニタ/スマホに「今何問目か」を表示する**ため、State に `askedCount` を追加。①集計元の **`asked` を §1 Question に正式に追加**した(これまで §4.1 の一覧レスポンスにしか書かれておらず、保存が必要な値なのにデータモデルに載っていなかった)。②`askedCount` は `asked` から**毎回導出**し、カウンタを別に保存しない(同じ事実を2箇所に持つとズレるため。`show-question` のやり直しで増えない挙動も自動的に満たせる)。③**フロント側での集計を禁止**。QRから途中参加した端末・再接続した端末が別の数を表示してしまうため、サーバーが配る値を表示するだけにする。④**総問題数(分母)は持たない**。勝ち残り式で当日その場で出題数を増減させるため「全N問」を先に確定できず、表示は「第3問」のように分子のみとする
 - 2026-08-13 第5版。①**`note`(司会者向け補足)を廃止し `explanation`(解説)に一本化**。当日司会者は何も参照できないため非公開メモは不要と判断。スプシの `explanation` 列と名前が一致し、`画面・要件.md` §6「解説はある問題だけanswerフェーズで表示」の受け皿が仕様書に無かった問題も解消。**解説文は正答を含みうるため、`answer` phase の閲覧者にのみ配信**する(question phaseではキーごと存在しない=正答と同じ扱い) ②**`remainingPlayers` と `POST /api/admin/remaining-players` を廃止**。`画面・要件.md` に表示要素としての記述が無く、裏方1人オペで「誰も見ない数字を人力で数えて入力する」操作を残す意味が無いため。API本数 **9本+閲覧2本 → 8本+閲覧2本**
 - 2026-08-07 第4版(まとめ役レビュー反映)。①type に `hayaoshi` を追加(**実装はフェーズ2**。v1は投入時に弾く。choices空/correctChoiceId nullの形だけ先に確保し、`view=phone` へは textSegments を送らない原則を§2.2に追加) ②GAS push方式を追認、GASコードの `tools/gas/` 管理を追記 ③認証はBearerで確定、トークン運用ルール3点を§0に追記 ④`show-question` に任意 `timeLimitSec`(省略時30・範囲5〜120)を追加 ⑤type に `arunashi` を追加(形はtwo_choiceと同じ・入稿書式ルールを§3.5.6に追加)。レビュー詳細は `dev_policy/API仕様書レビュー結果.md`
 - 2026-08-06 第3版。**Cookie/セッションを全廃**し、管理者APIを `Authorization: Bearer` トークンに一本化。`ADMIN_TOKEN` / `IMPORT_TOKEN` の2種。login・logoutを廃止し `GET /api/admin/verify` に置換。SSE管理者チャンネルのみ `?token=` クエリ。§3.5.5の代替エンドポイントは不要になり統合(APIは計10本+閲覧2本 → **9本+閲覧2本**)
