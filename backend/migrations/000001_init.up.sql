@@ -14,7 +14,7 @@ CREATE TABLE questions (
 CREATE TABLE event_states (
 	id                  SERIAL PRIMARY KEY,
 	phase               TEXT NOT NULL,
-	current_question_id INTEGER NOT NULL,
+	current_question_id INTEGER,
 	time_limit_sec      INTEGER NOT NULL,
 	question_started_at TIMESTAMPTZ,
 	revealed_segments   INTEGER NOT NULL
