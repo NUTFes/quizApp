@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS event_states;
+DROP TABLE IF EXISTS questions;
