@@ -27,4 +27,5 @@ type State struct {
 	RevealedSegments  int                `json:"revealedSegments"`
 	TotalSegments     int                `json:"totalSegments"`
 	Question          *question.Question `json:"question"`
+	AskedCount		  int				 `json:"asked_count"`
 }
