@@ -8,12 +8,12 @@ CREATE TABLE questions (
 	choices             JSONB NOT NULL DEFAULT '[]',
 	correct_choice_id   TEXT,
 	explanation         TEXT,
-    asked_at            BOOLEAN NOT NULL DEFAULT false
+    asked               BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE event_states (
-	id                SERIAL PRIMARY KEY,
-	phase             TEXT NOT NULL,
+	id                  SERIAL PRIMARY KEY,
+	phase               TEXT NOT NULL,
 	current_question_id INTEGER NOT NULL,
 	time_limit_sec      INTEGER NOT NULL,
 	question_started_at TIMESTAMPTZ,
