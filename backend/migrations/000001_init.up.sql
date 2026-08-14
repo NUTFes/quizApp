@@ -22,3 +22,4 @@ CREATE TABLE event_states (
     CONSTRAINT event_states_singleton CHECK (id = 1)
 );
 
+INSERT INTO event_states (id) VALUES (1);
