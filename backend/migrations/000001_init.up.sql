@@ -17,7 +17,7 @@ CREATE TABLE event_states (
 	current_question_id INTEGER REFERENCES questions(id) ON DELETE SET NULL,
 	time_limit_sec      INTEGER NOT NULL DEFAULT 30,
 	question_started_at TIMESTAMPTZ,
-	revealed_segments   INTEGER NOT NULL,
+	revealed_segments   INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT event_states_singleton CHECK (id = 1)
 );
