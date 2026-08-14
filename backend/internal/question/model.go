@@ -14,5 +14,6 @@ type Question struct {
 	ImageURL        *string  `json:"imageUrl"`
 	Choices         []Choice `json:"choices" gorm:"serializer:json"`
 	CorrectChoiceID *string  `json:"correctChoiceId"`
-	Note            *string  `json:"note"`
+	Explanation     *string  `json:"explanation"`
+	Asked           bool     `json:"asked"`
 }
