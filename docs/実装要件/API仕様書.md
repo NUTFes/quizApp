@@ -97,7 +97,7 @@
 
 ### State(現在の状態)— アプリの中心
 
-管理者向けのフル形。閲覧者(モニタ/スマホ)向けは§2.2で削った形になる。
+管理者向けのフル形。**フロントの型名は `AdminState`**。閲覧者(モニタ/スマホ)向けは別の形になるので、§2.2 に `ViewerState` として別途定義する(**同じ型を使い回せない**)。
 
 ```json
 {
@@ -112,7 +112,19 @@
 }
 ```
 
-- `phase` が `waiting` / `finished` のとき: `question` `questionStartedAt` は `null`、`revealedSegments` `totalSegments` は `0`。**キーは残る**。
+| フィールド | 型 | 説明 |
+| --- | --- | --- |
+| `phase` | `"waiting"` \| `"question"` \| `"answer"` \| `"finished"` | 現在の進行状態。遷移は**すべて管理者の操作**で、時間切れによる自動遷移は無い(→§0の遷移図) |
+| `serverTime` | `string` | サーバーの現在時刻(ISO 8601)。**端末時計のずれを補正する基準**。state を受け取るたびに更新する(→§0) |
+| `timeLimitSec` | `number \| null` | 制限時間の秒数。既定30、範囲5〜120(→§3.1)。**`waiting` / `finished` では `null`** |
+| `questionStartedAt` | `string \| null` | タイマーの起点(ISO 8601)。`waiting` / `finished` では `null` |
+| `revealedSegments` | `number` | 現在何セグメントまで公開しているか。`waiting` / `finished` では `0` |
+| `totalSegments` | `number` | 出題中の問題のセグメント総数。`waiting` / `finished` では `0`。**閲覧者には送らない**(§2.2) |
+| `askedCount` | `number` | 今何問目か。詳細は下記 |
+| `question` | `Question \| null` | 出題中の問題(§1の形そのまま。`correctChoiceId` を含む)。`waiting` / `finished` では `null` |
+
+- **キーは消えない。** `waiting` / `finished` でも上記8つのキーはすべて存在し、値が `null` / `0` になるだけ(→§0)。
+- `phase` が `waiting` / `finished` のとき: `question` `questionStartedAt` `timeLimitSec` は `null`、`revealedSegments` `totalSegments` は `0`。**キーは残る**。
 - `askedCount` は**「今何問目か」**。`asked` が `true` の問題を数えた値で、`asked` から**毎回導出する**(この数を別途保存しない。二重管理を避けるため)。**出題中の問題自身を含む**ので、1問目を出している最中は `1`(`0` ではない)。画面には「第1問」と出る。
   - **同じ問題を `show-question` し直しても増えない**(`asked` が既に `true` のため)。`reset` すると `0` に戻る。
   - **総問題数(分母)は持たない。** 勝ち残り式で当日その場で出題を増減させるため、「全N問」を先に確定できない。画面表示は「第3問」のように分子だけを出す(→ `画面・要件.md` §6)。
@@ -197,6 +209,42 @@
 ```
 
 **スマホ向け(`view=phone`)**: モニタ向けから `joinUrl` を除いた形(自分がすでにそのURLにいるため)。それ以外は完全に同一。
+
+#### 2.2.1 ViewerState の定義
+
+**§1 の `AdminState` とは別の形。同じ型を使い回せない。** フロントの型名は `ViewerState`。
+
+| フィールド | 型 | 説明 |
+| --- | --- | --- |
+| `phase` | `Phase` | §1と同じ |
+| `serverTime` | `string` | §1と同じ |
+| `timeLimitSec` | `number \| null` | §1と同じ |
+| `questionStartedAt` | `string \| null` | §1と同じ |
+| `askedCount` | `number` | §1と同じ。**閲覧者にも送る**(原則3''。「第3問」の表示に使う) |
+| `joinUrl` | `string` | 参加用URL。QRコードの生成元。**`view=monitor` にのみ存在し、`view=phone` には無い** |
+| `question` | `ViewerQuestion \| null` | 下記。**§1の `Question` とは別の形** |
+| `answer` | `{ "correctChoiceId": string } \| null` | 正答。**`answer` phase になるまで `null`**(原則2)。`hayaoshi` の扱いはフェーズ2で決定 |
+
+**§1 に有って ViewerState に無いもの**: `revealedSegments` / `totalSegments`(原則1により `textSegments` が既に公開分だけに削られているため、フロントが自分で切り出す必要が無い)。
+
+**§1 に無くて ViewerState に有るもの**: `joinUrl`(monitorのみ)/ `answer`。
+
+#### 2.2.2 ViewerQuestion の定義
+
+閲覧者向けに削った `Question`。フロントの型名は `ViewerQuestion`。
+
+| フィールド | 型 | 説明 |
+| --- | --- | --- |
+| `number` | `number` | 表示用のクイズ番号 |
+| `type` | `QuestionType` | §1と同じ |
+| `textSegments` | `string[]` | **表示済みセグメントだけ**(原則1)。`hayaoshi` かつ `view=phone` では常に `[]`(原則4) |
+| `imageUrl` | `string \| null` | §1と同じ |
+| `choices` | `Choice[]` | §1と同じ |
+| `explanation` | `string \| null` | **`answer` phase の閲覧者向けJSONにのみ存在する**(原則3')。question phase では**キーごと無い** |
+
+**§1 の `Question` に有って `ViewerQuestion` に無いもの**: `id` / `difficulty` / `asked` / `correctChoiceId`(原則2・3)。
+
+> **`explanation` だけキーの有無が phase で変わる**(他は値が `null` になるだけ)。§0の「キーは消さない」の唯一の例外で、正答と同じ扱いにするための措置。フロントは `explanation` を省略可能(`?`)として扱うこと。
 
 ---
 
@@ -501,6 +549,7 @@ GAS側でシートを読み、**この形に整形してから**送る。列→J
 
 ## 変更履歴(新しい順)
 
+- 2026-08-16 第8版。**§1 State と §2.2 閲覧者向けstateに項目表を追加**した。①`Question` には項目表があるのに `State` は JSON実例と補足だけで、**`phase` の取りうる値が §1 に一度も列挙されていなかった**(§0の遷移図と `画面・要件.md` §4 にしか無かった)。データモデルの節だけを見て型が書けない状態だったため、`Question` と同じ形式の表を追加 ②**`timeLimitSec` の null が未定義だった**。§1の補足は `waiting`/`finished` で null になるものとして `question`・`questionStartedAt` しか挙げていないが、§2.2 の waiting 実例は `"timeLimitSec": null` であり矛盾していた。**`number | null` で確定**とし表に明記 ③**閲覧者向けstateに定義が無く、JSON実例3つと文章だけだった**。§1の State とは形が異なる(`joinUrl`・`answer` が増え、`revealedSegments`・`totalSegments` が消え、`question` の中身も別物)にもかかわらず区別する名前が無く、**フロントが §1 だけを見て型を書くとモニタ・スマホの2画面で合わない**。§2.2.1 `ViewerState` / §2.2.2 `ViewerQuestion` として項目表を新設し、`AdminState` と併せて型名を仕様書側で確定させた ④`explanation` のみ phase でキーの有無が変わる点(§0「キーは消さない」の唯一の例外)を明記。**API・サーバー・既存フロントの挙動変更はゼロ。既に決まっていたことを書き起こしただけ**
 - 2026-08-16 第7版。**スプレッドシートの difficulty 列を日本語(`簡単`/`普通`/`難しい`)に変更**し、GASが `easy`/`normal`/`hard` へ変換して送る形にした。①入稿するのは非エンジニアの運営メンバーであり、英語を打たせると表記ゆれ(`Hard` `HARD` `hard␣`)が事故要因になる。**入力する人に合わせ、コード側の都合をシートに押し付けない**という判断 ②変換はGASで行う。`API仕様書.md` §3.5.1 が既に「列→JSONの変換はGASの責務」と定めており、`text`→`textSegments`・`correct`→`correctChoiceId` と同じ扱いに収まる(新しい仕組みは不要) ③**API・DB・フロントの内部表現は英語1種類のまま**。契約に表記を2種類持たせず、「入り口で正規化して中は1種類」を保つ。**サーバー・フロントの実装変更はゼロ** ④管理者画面の問題一覧では逆に日本語へ引き直して表示する(当日焦っている裏方が読むため)
 - 2026-08-14 第6版。**モニタ/スマホに「今何問目か」を表示する**ため、State に `askedCount` を追加。①集計元の **`asked` を §1 Question に正式に追加**した(これまで §4.1 の一覧レスポンスにしか書かれておらず、保存が必要な値なのにデータモデルに載っていなかった)。②`askedCount` は `asked` から**毎回導出**し、カウンタを別に保存しない(同じ事実を2箇所に持つとズレるため。`show-question` のやり直しで増えない挙動も自動的に満たせる)。③**フロント側での集計を禁止**。QRから途中参加した端末・再接続した端末が別の数を表示してしまうため、サーバーが配る値を表示するだけにする。④**総問題数(分母)は持たない**。勝ち残り式で当日その場で出題数を増減させるため「全N問」を先に確定できず、表示は「第3問」のように分子のみとする ⑤**「締切」表示を追加**(時間切れの瞬間に画面が何も変わらず会場の空気が途切れるため)。ただし**`close` phaseは作らない**。残り0秒は `questionStartedAt` から各端末が計算で復元できるので、③と同じ基準で**クライアント側の表示状態**とした。**API・サーバーの変更はゼロ**(§0・`画面・要件.md` §4)
 - 2026-08-13 第5版。①**`note`(司会者向け補足)を廃止し `explanation`(解説)に一本化**。当日司会者は何も参照できないため非公開メモは不要と判断。スプシの `explanation` 列と名前が一致し、`画面・要件.md` §6「解説はある問題だけanswerフェーズで表示」の受け皿が仕様書に無かった問題も解消。**解説文は正答を含みうるため、`answer` phase の閲覧者にのみ配信**する(question phaseではキーごと存在しない=正答と同じ扱い) ②**`remainingPlayers` と `POST /api/admin/remaining-players` を廃止**。`画面・要件.md` に表示要素としての記述が無く、裏方1人オペで「誰も見ない数字を人力で数えて入力する」操作を残す意味が無いため。API本数 **9本+閲覧2本 → 8本+閲覧2本**
