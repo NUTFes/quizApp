@@ -9,7 +9,7 @@ export type ViewerState = {
   askedCount: number
   question: ViewerQuestion | null
   answer: {
-    correctChoiceId: string
+    correctChoiceId: string | null
     explanation: string | null
   } | null
 }
