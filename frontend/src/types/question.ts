@@ -1,6 +1,4 @@
-import { Choice } from "./choice"
-import { Difficulty } from "./difficulty"
-import { QuestionType } from "./questionType"
+import type { QuestionType, Difficulty, Choice } from "../types"
 
 export type Question  = {
   id: number,
