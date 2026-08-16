@@ -1,7 +1,7 @@
 import { Phase } from "./phase"
 import { Question } from "./question"
 
-export type State = {
+export type AdminState = {
   phase: Phase,
   serverTime: string,
   timeLimitSec: number | null,
