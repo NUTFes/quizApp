@@ -58,8 +58,8 @@ pnpm -v       # 10.x
 
 | URL | 何が見えるか |
 |---|---|
-| http://localhost:5173 | フロント(「技大祭クイズ 🎉」が出れば成功) |
-| http://localhost:3000/api/health | バックエンド(`{"status":"ok"}` が返れば成功) |
+| <http://localhost:5173> | フロント(「技大祭クイズ 🎉」が出れば成功) |
+| <http://localhost:3000/api/health> | バックエンド(`{"status":"ok"}` が返れば成功) |
 
 止めるときは `mise run down`。困ったら `mise run logs` でログを見る。
 使えるコマンド一覧は `mise tasks`。
@@ -94,7 +94,9 @@ quizApp/
 | 名前 | 担当 | ひとこと |
 |---|---|---|
 | naoto-anzai | PM・インフラ・フロント・バック | みんなタスク割遅くなってごめん！ |
-
+| hengin-eer | レビュー・フロント・バック | レビューをスパスパ捌くので皆はじゃんじゃんPR投げてきてね！ |
+| sanpayy | フロント | 怖がらずにガンガンやって早めに慣れていきましょう！ | 
+| keigo-take | バック | タスク頑張ります！|
 ## まだ準備中のもの
 
 - Tailwind CSS・React Router(最小構成が動いてから追加)
