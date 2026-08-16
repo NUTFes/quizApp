@@ -1,10 +1,11 @@
 import { Choice } from "./choice"
 import { Difficulty } from "./difficulty"
+import { QuestionType } from "./questionType"
 
 export type Question  = {
   id: number,
   number: number,
-  type: 'four_choice' | 'two_choice' | 'arunashi' | 'hayaoshi',
+  type: QuestionType,
   difficulty: Difficulty,
   textSegments: string[],
   imageUrl: string | null,
