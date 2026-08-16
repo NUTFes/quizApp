@@ -20,7 +20,7 @@ type EventState struct {
 type State struct {
 	Phase             string             `json:"phase"`
 	ServerTime        time.Time          `json:"serverTime"`
-	TimeLimitSec      *int                `json:"timeLimitSec"`
+	TimeLimitSec      *int               `json:"timeLimitSec"`
 	QuestionStartedAt *time.Time         `json:"questionStartedAt"`
 	RevealedSegments  int                `json:"revealedSegments"`
 	TotalSegments     int                `json:"totalSegments"`
