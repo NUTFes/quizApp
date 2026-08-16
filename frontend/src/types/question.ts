@@ -8,7 +8,7 @@ export type Question  = {
   textSegments: string[],
   imageUrl: string | null,
   choices: Choice[],
-  correctChoiceId: string,
+  correctChoiceId: string | null,
   explanation: string | null,
   asked: boolean
 }
