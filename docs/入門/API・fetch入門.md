@@ -325,44 +325,157 @@ export const reset = (to: 'waiting' | 'finished' = 'waiting') =>
 | `res.ok` のチェック | 認証が要るか |
 | `res.json()` | 戻り値の型 |
 
-左を共通化したものが `request()`、**右の一覧がそのまま引数**になる。
+左を共通化したものが `request()`、**右の一覧がそのまま引数(`Options`)**になる。
+
+**ただし、この形を先に覚えても意味がない。** 次節で、空の関数から7段階で組み立てる。
+
+### 要件から1段ずつ組み立てる
+
+**完成形を写経するのではなく、「これが要るから、これを足す」を7回繰り返す。** 各段階でコードが動く状態を保つ。
+
+#### R1. サーバーの場所を1箇所で持ちたい
+
+本番URLに切り替えるとき10箇所直したくない。→ **定数にする**(→ `React・TypeScript入門.md` §8)
 
 ```ts
-type Options = {
-  method?: 'GET' | 'POST' | 'PUT'
-  body?: unknown
-  auth?: boolean
+const BASE = import.meta.env.VITE_API_URL
+
+async function request(path: string) {
+  const res = await fetch(`${BASE}${path}`)
+  return res.json()
 }
 ```
 
-`Options` は先に設計したものではなく、**「10本を並べたら違いが3つだった」という観察の結果**。
+**この時点で `getState()` は動く。** GET・認証なしのAPIは、もうこれで足りる。
 
-### `ApiError` が必要な理由
+#### R2. 失敗したことを知りたい
 
-§2 のとおり、画面は **`code` で分岐**したい。ところが標準の `Error` は `message` しか持てない。
+§3の落とし穴①。`fetch` は404でも例外を投げないので、**`res.ok` を自分で見る**。
 
 ```ts
-throw new Error('QUESTION_NOT_FOUND')   // ❌ message に詰め込む → 文字列比較になる
+  const res = await fetch(`${BASE}${path}`)
+  if (!res.ok) throw new Error(res.statusText)   // ← 追加
+  return res.json()
 ```
 
-**運びたいものが足りないから、自分で作る。**
+> ここで初めて `throw` が出てくる。**「失敗を呼び出し元に伝える手段」が要るから**であって、非同期だからではない(→§4)。
+
+#### R3. 失敗の理由で画面の出し分けをしたい
+
+`Error` は `message` しか運べない。しかし画面は **`code` で分岐**したい(→§2)。
+
+→ **運びたいものが足りないので、自分でエラー型を作る。**
 
 ```ts
 export class ApiError extends Error {
-  constructor(
-    readonly code: string,    // 画面が分岐に使う
-    readonly status: number,  // 401 判定に使う
-    message: string,          // ログ用。表示しない
-  ) {
+  constructor(readonly code: string, readonly status: number, message: string) {
     super(message)
   }
 }
 ```
+```ts
+  if (!res.ok) {
+    const data = await res.json()
+    throw new ApiError(data.error.code, res.status, data.error.message)
+  }
+```
 
-### まとめると
+`status` も持たせるのは、**401 のときだけトークン入力画面に戻す**必要があるから(→§5 `verify`)。
+
+#### R4. サーバーが壊れてJSONを返さない場合に備えたい
+
+`res.json()` は、返ってきたのがHTMLだと**それ自体が例外を投げる**。すると本来のエラー(500)が握りつぶされ、画面には「JSONのパースに失敗」とだけ出る。当日これが起きると原因が追えない。
+
+```ts
+    const data = await res.json().catch(() => null)   // 失敗したら null にする
+    throw new ApiError(
+      data?.error?.code ?? 'UNKNOWN',
+      res.status,
+      data?.error?.message ?? res.statusText,
+    )
+```
+
+`?.` と `??` で「無ければ既定値」にしておく。**エラー処理の中で例外を出さない**のが鉄則。
+
+#### R5. GET以外も送りたい
+
+`showQuestion` は POST でボディが要る。**呼ぶ側ごとに変わるので引数にする。**
+
+```ts
+type Options = { method?: 'GET' | 'POST' | 'PUT'; body?: unknown }
+
+async function request(path: string, opts: Options = {}) {
+  const { method = 'GET', body } = opts
+  const res = await fetch(`${BASE}${path}`, {
+    method,
+    headers: body !== undefined ? { 'Content-Type': 'application/json' } : {},
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+```
+
+`= {}` を付けているので、**`getState` のような呼び出しは今までどおり第2引数なしで動く。**
+
+`body` があるときだけ `Content-Type` を付けるのは、`advanceText()` のように**ボディ無しのAPIがある**ため(→§5)。
+
+#### R6. 管理者APIにだけ認証を付けたい
+
+10本中9本が認証必須で、`getState` だけ不要(→§0)。**これも呼ぶ側で変わるので引数**。
+
+```ts
+type Options = { method?: …; body?: unknown; auth?: boolean }   // ← 3つ目
+
+  const { method = 'GET', body, auth = false } = opts
+  const headers: Record<string, string> = {}
+  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  if (auth) headers['Authorization'] = `Bearer ${localStorage.getItem('adminToken') ?? ''}`
+```
+
+**ここで `Options` が3つ揃う。** 先に設計したのではなく、R5・R6 で「呼ぶ側ごとに変わるもの」を足していった結果。
+
+> 既定値を `auth = false` にしてあるのが安全側。**書き忘れたら認証が付かない**(=401で気づく)。逆にしていたら、閲覧系にトークンが漏れる。
+
+#### R7. 戻り値に型を付けたい
+
+このままだと戻り値が `any` / `unknown` で、STEP1 の型が活きない。→ **ジェネリクス**
+
+```ts
+async function request<T>(path: string, opts: Options = {}): Promise<T> {
+  …
+  return res.json() as Promise<T>
+}
+```
+```ts
+export const getAdminState = () => request<AdminState>('/api/admin/state', { auth: true })
+const state = await getAdminState()
+state.askedCount    // ← 補完が効く
+```
+
+### 対応表
+
+| 要件 | 足したもの | 根拠 |
+| --- | --- | --- |
+| R1 サーバーの場所を1箇所に | `BASE` | `React・TypeScript入門.md` §8 |
+| R2 失敗を検出する | `res.ok` チェック | §3 落とし穴① |
+| R3 理由で画面を出し分ける | `ApiError`(`code` / `status`) | `API仕様書.md` §0 |
+| R4 壊れた応答に備える | `.catch(() => null)` と `??` | — |
+| R5 GET以外を送る | `Options.method` / `body` | `API仕様書.md` §3 |
+| R6 認証を出し分ける | `Options.auth` | `API仕様書.md` §0 |
+| R7 型を効かせる | `<T>` | STEP1 の型 |
+
+**この7つ以外は要らない。** リトライ・タイムアウト・キャッシュ・インターセプタは、ライブラリには付いているがこのアプリでは使わない(必要になってから足す)。
+
+### 完成形
 
 ```ts
 const BASE = import.meta.env.VITE_API_URL
+
+export class ApiError extends Error {
+  constructor(readonly code: string, readonly status: number, message: string) {
+    super(message)
+  }
+}
+
+type Options = { method?: 'GET' | 'POST' | 'PUT'; body?: unknown; auth?: boolean }
 
 async function request<T>(path: string, opts: Options = {}): Promise<T> {
   const { method = 'GET', body, auth = false } = opts
@@ -390,18 +503,9 @@ async function request<T>(path: string, opts: Options = {}): Promise<T> {
 }
 ```
 
-`.catch(() => null)` が付いているのは、**エラー時にJSONが返ってこない場合がある**ため(サーバーが落ちてHTMLを返す等)。ここで例外が出ると、本来のエラーが握りつぶされる。
+**40行に満たない。** この規模だからライブラリを入れずに手で書いている(→§10)。
 
-### `<T>` について
-
-`request<AdminState>(...)` の `<T>` は**ジェネリクス**。「返ってくる型を呼び出し側が指定する」仕組み。
-
-```ts
-const state = await getAdminState()   // state は AdminState 型になる
-state.askedCount                       // ← 補完が効く
-```
-
-**STEP1 で作った型が、ここで初めて仕事をする。**
+`<T>` は**ジェネリクス**で、「返ってくる型を呼び出し側が指定する」仕組み。**STEP1 で作った型が、ここで初めて仕事をする。**
 
 ---
 
@@ -409,7 +513,7 @@ state.askedCount                       // ← 補完が効く
 
 1. **呼ぶ側を先に書く。** `await showQuestion(5)` と書きたい、を決める
 2. 1本だけベタ書きして動かす
-3. 10本並べて、違うところを数える → `Options` が決まる
+3. 10本並べて、違うところを数える → `Options` の中身が見える(§6 R5・R6)
 4. `code` で分岐したいと気づく → `ApiError` が決まる
 5. **骨組みだけ作る**(`request` の中身は `throw new Error('未実装')` でよい)。`pnpm typecheck` を通す
 6. 型を埋める
@@ -440,6 +544,27 @@ state.askedCount                       // ← 補完が効く
 | エラーの `message` を画面に出す | **`code` で分岐**して、日本語はフロントが持つ |
 | `async` の中で `new Promise` を書く | `return` と `throw` で足りる |
 | 401 の処理を `api.ts` に書く | `api.ts` は `ApiError` を投げるまで。**画面側の仕事** |
+
+---
+
+## 10. なぜライブラリを使わないのか
+
+「APIクライアントのテンプレはないのか」への答え。**あるが、このアプリでは使わない。**
+
+| 手段 | してくれること | 判断 |
+| --- | --- | --- |
+| **OpenAPI + 自動生成** | 仕様(YAML)から型もクライアントも生成 | ❌ 仕様書が2つになる |
+| **tRPC** | サーバーと型を自動共有 | ❌ バックがGoなので使えない |
+| **axios / ky / ofetch** | `fetch` の薄い包み | ❌ §6の40行と同等。依存が増えるだけ |
+| **TanStack Query** | キャッシュ・再取得・重複排除 | ❌ SSEでpushされるので出番がない |
+
+**OpenAPI は本来の正解**ではある。ただし `API仕様書.md` は型の一覧ではなく、「なぜ `explanation` を `answer` に入れるのか」といった**判断の記録**が本体で、これはYAMLで表現できない。導入すると仕様書が2つになり、片方だけ直して食い違う。生成されたコードは中身が読めないので、**当日エラーを踏んだときに追えない**という問題もある。
+
+長期運用する業務システムなら OpenAPI が正解。**3ヶ月で作って1日使うイベントアプリ**では、二重管理のコストが勝つ。
+
+`axios` を入れても `ApiError` は自分で書くことになる。**エラーの形はこのアプリ固有**(`{ error: { code, message } }`)で、どのライブラリも知らないため。
+
+> 将来の選択肢として、Goの実装から OpenAPI を出力する道はある(`swaggo` など)。**Goが正**になるので二重管理にならない。ただし #9 以降の話。
 
 ---
 
