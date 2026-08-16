@@ -127,6 +127,7 @@
 - `phase` が `waiting` / `finished` のとき: `question` `questionStartedAt` `timeLimitSec` は `null`、`revealedSegments` `totalSegments` は `0`。**キーは残る**。
 - `askedCount` は**「今何問目か」**。`asked` が `true` の問題を数えた値で、`asked` から**毎回導出する**(この数を別途保存しない。二重管理を避けるため)。**出題中の問題自身を含む**ので、1問目を出している最中は `1`(`0` ではない)。画面には「第1問」と出る。
   - **同じ問題を `show-question` し直しても増えない**(`asked` が既に `true` のため)。`reset` すると `0` に戻る。
+  - したがって **`waiting` / `finished` では必ず `0`**(`finished` へは `reset {"to":"finished"}` でしか入らないため)。**画面には `question` / `answer` でのみ表示する**(そのまま出すと「第0問」になる。→ `画面・要件.md` §4)。
   - **総問題数(分母)は持たない。** 勝ち残り式で当日その場で出題を増減させるため、「全N問」を先に確定できない。画面表示は「第3問」のように分子だけを出す(→ `画面・要件.md` §6)。
 
 ---
@@ -221,13 +222,15 @@
 | `timeLimitSec` | `number \| null` | §1と同じ |
 | `questionStartedAt` | `string \| null` | §1と同じ |
 | `askedCount` | `number` | §1と同じ。**閲覧者にも送る**(原則3''。「第3問」の表示に使う) |
-| `joinUrl` | `string` | 参加用URL。QRコードの生成元。**`view=monitor` にのみ存在し、`view=phone` には無い** |
+| `joinUrl` | `string` | 参加用URL。QRコードの生成元。**`view=monitor` にのみ存在し、`view=phone` には無い**。**phaseによらず常に送る**が、`finished` では画面に出さない(→ `画面・要件.md` §4) |
 | `question` | `ViewerQuestion \| null` | 下記。**§1の `Question` とは別の形** |
 | `answer` | `{ "correctChoiceId": string \| null, "explanation": string \| null } \| null` | 正答と解説。**`answer` phase になるまで `null`**(原則2・3')。`correctChoiceId` は `hayaoshi` のみ `null`(扱いはフェーズ2で決定)、`explanation` は解説の無い問題で `null` |
 
 **§1 に有って ViewerState に無いもの**: `revealedSegments` / `totalSegments`(原則1により `textSegments` が既に公開分だけに削られているため、フロントが自分で切り出す必要が無い)。
 
 **§1 に無くて ViewerState に有るもの**: `joinUrl`(monitorのみ)/ `answer`。
+
+> **アンケートURLはstateに入らない。** フロントの環境変数 `VITE_SURVEY_URL` から読む(当日までURLが決まらず、決まってもアプリの再デプロイなしに差し替えたいため)。サーバーは一切関与しない。
 
 **モニタ向けとスマホ向けの差は `joinUrl` の有無だけ**なので、別々の型として全項目を書き下さず、**`ViewerState` を拡張する**:
 
@@ -557,6 +560,7 @@ GAS側でシートを読み、**この形に整形してから**送る。列→J
 
 ## 変更履歴(新しい順)
 
+- 2026-08-16 第10版。**`finished` フェーズの表示要素を確定**した(仕様の抜けの補完。**API・型の変更はゼロ**)。①`finished` は「終了メッセージ+アンケート誘導」としか決まっておらず、**参加用QR(`joinUrl`)を出し続けるのかが未定**だった。参加QRは「途中参加者向け」であり終わったクイズに参加する人はいないこと、`finished` ではアンケートQRを出すため**同じ画面にQRが2つ並ぶと85インチの遠くからどちらを読むか判別できない**ことから、**`finished` では参加QRを出さずアンケートQRに差し替える**と決定 ②ただし**APIは全フェーズで `joinUrl` を送る**(§0「キーは消さない」を維持)。**「送るか」ではなく「画面に出すか」の話**であり、出し分けはフロントの責務であることを §2.2.1 に明記 ③**`askedCount` は `waiting` / `finished` で必ず `0`** になる(`finished` へは `reset {"to":"finished"}` でしか入らず、`reset` が全問の `asked` を `false` に戻すため)。素直に表示すると「**第0問**」と出るため、**問題番号は `question` / `answer` でのみ表示する**と明記 ④**アンケートURLはstateに入らない**(フロントの環境変数 `VITE_SURVEY_URL`)。当日までURLが決まらず、決まってもアプリの再デプロイなしに差し替えたいため。`画面・要件.md` §4 に全フェーズ×表示要素の対応表を新設
 - 2026-08-16 第9版。**閲覧者向けの `explanation` を `question` から `answer` オブジェクトの中へ移した。** 第8版では `explanation` だけ phase でキーの有無が変わり、§0「キーは消さない」の唯一の例外として注記していたが、**例外にする必要が無かった**。①解説文は正答を含みうるため隠す理由は `correctChoiceId` と同一であり、公開されるタイミング(`answer` phase)も同一。**同じ理由・同じタイミングで出し入れするものを、別の仕組みで表現していた**のが誤り ②`answer` という入れ物は、§0を守りながら中身のキーを一度も露出させないための仕組み(原則2)。`explanation` も同じ入れ物に入れれば済む ③結果として**§0の例外がゼロになり**、`ViewerQuestion` から省略可能(`?`)フィールドが消え、**閲覧者向けJSON全体で「キーが生え消えするフィールド」が無くなった** ④隠すべき情報が `answer` の中1箇所に集約されるため、**バックの出し分けは「answer が null なら中身を作らない」の1判定で済む**(#11)。**`AdminState` 側は変更なし**(管理者には `question.explanation` として従来どおり届く)。`correctChoiceId` が既に `question`(管理者)→ `answer`(閲覧者)と移動しているため、新しい不揃いは生まれない
 - 2026-08-16 第8版。**§1 State と §2.2 閲覧者向けstateに項目表を追加**した。①`Question` には項目表があるのに `State` は JSON実例と補足だけで、**`phase` の取りうる値が §1 に一度も列挙されていなかった**(§0の遷移図と `画面・要件.md` §4 にしか無かった)。データモデルの節だけを見て型が書けない状態だったため、`Question` と同じ形式の表を追加 ②**`timeLimitSec` の null が未定義だった**。§1の補足は `waiting`/`finished` で null になるものとして `question`・`questionStartedAt` しか挙げていないが、§2.2 の waiting 実例は `"timeLimitSec": null` であり矛盾していた。**`number | null` で確定**とし表に明記 ③**閲覧者向けstateに定義が無く、JSON実例3つと文章だけだった**。§1の State とは形が異なる(`joinUrl`・`answer` が増え、`revealedSegments`・`totalSegments` が消え、`question` の中身も別物)にもかかわらず区別する名前が無く、**フロントが §1 だけを見て型を書くとモニタ・スマホの2画面で合わない**。§2.2.1 `ViewerState` / §2.2.2 `ViewerQuestion` として項目表を新設し、`AdminState` と併せて型名を仕様書側で確定させた ④`explanation` のみ phase でキーの有無が変わる点(§0「キーは消さない」の唯一の例外)を明記 ⑤モニタ向けとスマホ向けの差は `joinUrl` の有無だけなので、**`MonitorState = ViewerState & { joinUrl }` と拡張で表す**ことを明記(全項目をコピーした型を作ると二重管理になるため。`joinUrl` を `?` で持たせる案も、スマホ向けにキーごと無いこととモニタ向けに必ず有ることを同時に表せないため不可)。**API・サーバー・既存フロントの挙動変更はゼロ。既に決まっていたことを書き起こしただけ**
 - 2026-08-16 第7版。**スプレッドシートの difficulty 列を日本語(`簡単`/`普通`/`難しい`)に変更**し、GASが `easy`/`normal`/`hard` へ変換して送る形にした。①入稿するのは非エンジニアの運営メンバーであり、英語を打たせると表記ゆれ(`Hard` `HARD` `hard␣`)が事故要因になる。**入力する人に合わせ、コード側の都合をシートに押し付けない**という判断 ②変換はGASで行う。`API仕様書.md` §3.5.1 が既に「列→JSONの変換はGASの責務」と定めており、`text`→`textSegments`・`correct`→`correctChoiceId` と同じ扱いに収まる(新しい仕組みは不要) ③**API・DB・フロントの内部表現は英語1種類のまま**。契約に表記を2種類持たせず、「入り口で正規化して中は1種類」を保つ。**サーバー・フロントの実装変更はゼロ** ④管理者画面の問題一覧では逆に日本語へ引き直して表示する(当日焦っている裏方が読むため)
