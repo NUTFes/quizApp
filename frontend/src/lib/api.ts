@@ -1,10 +1,19 @@
+import { data } from "react-router-dom"
+
 const BASE = import.meta.env.VITE_API_URL
 
+// Error を自作、 code で分岐できるようにする
+export class ApiError extends Error {
+  constructor(readonly code: string, readonly status: number, message: string) {
+    super(message)
+  }
+}
 // 共通機能部分をrequest 関数でまとめる
 async function request(path: string) {
     const res = await fetch(`${BASE}${path}`)
     if(!res.ok){
-        throw new Error(res.statusText)
+        const data = await res.json()
+        throw new ApiError(data.error.code, res.status, data.error.message)
     }
     return res.json()
 }
