@@ -3,7 +3,7 @@
 function App() {
   return (
     <div>
-      <h1>技大祭クイズ 🎉</h1>
+      <h1 className="text-4xl font-bold text-cyan-500">技大祭クイズ 🎉</h1>
       <p>フロントエンドの箱が動きました!</p>
     </div>
   )
