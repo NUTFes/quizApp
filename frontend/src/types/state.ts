@@ -4,7 +4,7 @@ import { Question } from "./question"
 export type State = {
   phase: Phase,
   serverTime: string,
-  timeLimitSec: number,
+  timeLimitSec: number | null,
   questionStartedAt: string | null,
   revealedSegments: number,
   totalSegments: number,
