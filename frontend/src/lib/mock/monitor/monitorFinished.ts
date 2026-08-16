@@ -5,7 +5,7 @@ export const monitorFinished: MonitorState = {
   serverTime: '2026-09-13T14:50:00+09:00',
   timeLimitSec: null,
   questionStartedAt: null,
-  askedCount: 20,
+  askedCount: 0,
   joinUrl: 'https://quiz.example.jp/play',
   question: null,
   answer: null,

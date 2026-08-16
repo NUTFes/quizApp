@@ -19,7 +19,10 @@ export const monitorAnswerAri: MonitorState = {
       { id: 'D', text: '選択肢D', imageUrl: null },
     ],
   },
-  answer: { correctChoiceId: 'B', explanation: '解説文。無い問題では null' },
+  answer: {
+    correctChoiceId: 'B',
+    explanation: 'うしろに「屋」をつけると、お店の名前になります(本屋・花屋・パン屋・靴屋)。',
+  },
 }
 
 export const monitorAnswerNashi: MonitorState = {

@@ -1,4 +1,4 @@
-import { monitorFinished } from "../monitor/monitorFinished";
-import { toPhone } from "./func";
+import { monitorFinished } from '../monitor/monitorFinished'
+import { toPhone } from './toPhone'
 
-export const phoneFinished = toPhone(monitorFinished);
+export const phoneFinished = toPhone(monitorFinished)

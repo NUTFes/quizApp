@@ -52,11 +52,11 @@ export const monitorQuestionArunashi: MonitorState = {
   question: {
     number: 13,
     type: 'arunashi',
-    textSegments: ['[あるなしクイズ]～～はある？なし？'],
+    textSegments: ['「ある」と「ない」に分かれています。', 'では「くつ」はどちらでしょう?'],
     imageUrl: null,
     choices: [
-      { id: 'aru', text: 'ある : ある１/ある２/ある３', imageUrl: null },
-      { id: 'nashi', text: 'なし : なし１/なし２/なし３', imageUrl: null },
+      { id: 'A', text: 'ある:ほん/はな/パン', imageUrl: null },
+      { id: 'B', text: 'ない:つくえ/いす/まど', imageUrl: null },
     ],
   },
   answer: null,

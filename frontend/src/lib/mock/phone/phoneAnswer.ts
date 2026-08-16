@@ -1,5 +1,5 @@
-import { monitorAnswerAri, monitorAnswerNashi } from "../monitor/monitorAnswer";
-import { toPhone } from "./func";
+import { monitorAnswerAri, monitorAnswerNashi } from '../monitor/monitorAnswer'
+import { toPhone } from './toPhone'
 
-export const phoneAnswerAri = toPhone(monitorAnswerAri);
-export const phoneAnswerNashi = toPhone(monitorAnswerNashi);
+export const phoneAnswerAri = toPhone(monitorAnswerAri)
+export const phoneAnswerNashi = toPhone(monitorAnswerNashi)

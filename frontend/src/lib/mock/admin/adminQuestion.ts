@@ -76,4 +76,3 @@ export const adminQuestionArunashi: AdminState = {
     asked: true,
   },
 }
-
