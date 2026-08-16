@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { tailwindcss } from '@tailwindcss/vite'
+import tailwindcss from '@tailwindcss/vite'
 
 // 開発サーバーの設定。Docker越しでもブラウザから見えるようにする。
 export default defineConfig({
