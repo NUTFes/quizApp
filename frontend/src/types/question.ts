@@ -1,6 +1,6 @@
-import { Choice } from './choice'
-import { Difficulty } from './difficulty'
-import { QuestionType } from './questionType'
+import type { Choice } from './choice'
+import type { Difficulty } from './difficulty'
+import type { QuestionType } from './questionType'
 
 export type Question = {
   id: number

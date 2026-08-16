@@ -1,5 +1,5 @@
-import { Phase } from './phase'
-import { ViewerQuestion } from './viewerQuestion'
+import type { Phase } from './phase'
+import type { ViewerQuestion } from './viewerQuestion'
 
 export type ViewerState = {
   phase: Phase

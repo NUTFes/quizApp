@@ -1,5 +1,5 @@
-import { Phase } from './phase'
-import { Question } from './question'
+import type { Phase } from './phase'
+import type { Question } from './question'
 
 export type AdminState = {
   phase: Phase

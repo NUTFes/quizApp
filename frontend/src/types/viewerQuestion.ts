@@ -1,5 +1,5 @@
-import { Choice } from './choice'
-import { QuestionType } from './questionType'
+import type { Choice } from './choice'
+import type { QuestionType } from './questionType'
 
 export type ViewerQuestion = {
   number: number
