@@ -1,5 +1,5 @@
 import { data } from "react-router-dom"
-import { MonitorState, ViewerState } from "../types"
+import { AdminState, MonitorState, ViewerState } from "../types"
 
 const BASE = import.meta.env.VITE_API_URL
 
@@ -45,7 +45,10 @@ export const getViewerState = () =>
   request<ViewerState>('/api/state?view=phone')
 export const getMonitorState = () => 
   request<MonitorState>('/api/state?view=monitor')
-export const getAdminState = () => request()
+export const getAdminState = () => 
+  request<AdminState>('/api/admin/state',{
+    auth:true
+  })
 export const showQuestion = () => request()
 export const advanceText = () => request()
 export const showAnswer = () => request()
