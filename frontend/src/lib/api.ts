@@ -1,4 +1,4 @@
-import { AdminState, MonitorState, ViewerState } from '../types'
+import { AdminState, MonitorState, Question, ViewerState } from '../types'
 import { QuestionImport } from '../types/questionImport'
 import { ImportResult } from '../types/importResult'
 import { QuestionListItem } from '../types/questionLinstItem'
@@ -92,4 +92,5 @@ export const getQuestions = () =>
   request<{'questions':QuestionListItem[]}>('/api/admin/questions', {
     auth:true
   })
-export const getQuestion = () => request()
+export const getQuestionById = (id: number) => 
+  request<Question>(`/api/admin/questions/:${id}`)
