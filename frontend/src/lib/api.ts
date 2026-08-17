@@ -1,7 +1,12 @@
-import { AdminState, MonitorState, Question, ViewerState } from '../types'
-import { QuestionImport } from '../types/questionImport'
-import { ImportResult } from '../types/importResult'
-import { QuestionListItem } from '../types/questionLinstItem'
+import type {
+  AdminState,
+  ImportResult,
+  MonitorState,
+  Question,
+  QuestionImport,
+  QuestionListItem,
+  ViewerState,
+} from '../types'
 
 const BASE = import.meta.env.VITE_API_URL
 
@@ -92,11 +97,11 @@ export const getQuestions = () =>
   request<{ questions: QuestionListItem[] }>('/api/admin/questions', {
     auth: true,
   })
-export const getQuestionById = (id: number) => 
+export const getQuestionById = (id: number) =>
   request<Question>(`/api/admin/questions/${id}`, {
-    auth:true
+    auth: true,
   })
 export const verify = () =>
-  request<{ok: true}>('/api/admin/verify', {
-    auth:true
+  request<{ ok: true }>('/api/admin/verify', {
+    auth: true,
   })
