@@ -1,7 +1,7 @@
-import { data } from 'react-router-dom'
-import { AdminState, MonitorState, Question, ViewerState } from '../types'
+import { AdminState, MonitorState, ViewerState } from '../types'
 import { QuestionImport } from '../types/questionImport'
 import { ImportResult } from '../types/importResult'
+import { QuestionListItem } from '../types/questionLinstItem'
 
 const BASE = import.meta.env.VITE_API_URL
 
@@ -88,5 +88,8 @@ export const putQuestions = (questions: QuestionImport[]) =>
     },
     auth: true,
   })
-export const getQuestions = () => request()
+export const getQuestions = () => 
+  request<{'questions':QuestionListItem[]}>('/api/admin/questions', {
+    auth:true
+  })
 export const getQuestion = () => request()
