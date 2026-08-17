@@ -63,7 +63,11 @@ export const advanceText = () =>
     method:'POST',
     auth:true
   })
-export const showAnswer = () => request()
+export const showAnswer = () => 
+  request<AdminState>('/api/admin/show-answer', {
+    method:'POST',
+    auth:true
+  })
 export const reset = () => request()
 export const putQuestions = () => request()
 export const getQuestions = () => request()
