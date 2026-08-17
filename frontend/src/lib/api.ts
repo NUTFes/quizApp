@@ -5,6 +5,7 @@ const BASE = import.meta.env.VITE_API_URL
 type Options = {
   method?: 'GET' | 'POST' | 'PUT'
   body?: unknown
+  auth?: boolean
 }
 
 // Error を自作、 code で分岐できるようにする
@@ -15,10 +16,17 @@ export class ApiError extends Error {
 }
 // 共通機能部分をrequest 関数でまとめる
 async function request(path: string, opts: Options = {}) {
-    const {method = 'GET', body} = opts 
+    const {method = 'GET', body, auth=false} = opts 
+    const headers: Record<string, string> = {}// 型宣言をすることで{}初期化後のキー指定エラーを避ける
+    if(body !== undefined){
+      headers['Content-Type'] = 'application/json'
+    }
+    if(auth){
+      headers['Authorization'] = `Bearer ${localStorage.getItem('adminToken') ?? ''}`
+    }
     const res = await fetch(`${BASE}${path}`, {
       method,
-      headers: body !== undefined ? { 'Content-Type': 'application/json' } : {},
+      headers: headers,
       body: body !== undefined ? JSON.stringify(body) : undefined
     })
     if(!res.ok){
