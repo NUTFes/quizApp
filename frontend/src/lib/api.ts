@@ -88,9 +88,8 @@ export const putQuestions = (questions: QuestionImport[]) =>
     },
     auth: true,
   })
-export const getQuestions = () => 
-  request<{'questions':QuestionListItem[]}>('/api/admin/questions', {
-    auth:true
+export const getQuestions = () =>
+  request<{ questions: QuestionListItem[] }>('/api/admin/questions', {
+    auth: true,
   })
-export const getQuestionById = (id: number) => 
-  request<Question>(`/api/admin/questions/:${id}`)
+export const getQuestionById = (id: number) => request<Question>(`/api/admin/questions/:${id}`)
