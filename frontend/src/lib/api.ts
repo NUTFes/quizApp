@@ -58,7 +58,10 @@ export const showQuestion = (questionId: number, timeLimitSecond?: number) =>
     },
     auth:true
   })
-export const advanceText = () => request()
+export const advanceText = () => 
+  request<AdminState>('/api/admin/advance-text', {
+    auth:true
+  })
 export const showAnswer = () => request()
 export const reset = () => request()
 export const putQuestions = () => request()
