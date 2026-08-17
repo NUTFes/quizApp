@@ -12,8 +12,12 @@ export class ApiError extends Error {
 async function request(path: string) {
     const res = await fetch(`${BASE}${path}`)
     if(!res.ok){
-        const data = await res.json()
-        throw new ApiError(data.error.code, res.status, data.error.message)
+        const data = await res.json().catch(() => null)
+        throw new ApiError(
+          data?.error?.code ?? 'UNKNOWN', 
+          res.status, 
+          data?.error?.message ?? res.statusText,
+        )
     }
     return res.json()
 }
