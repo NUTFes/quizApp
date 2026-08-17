@@ -50,11 +50,11 @@ export const getAdminState = () =>
     auth:true
   })
 export const showQuestion = (questionId: number, timeLimitSecond?: number) => 
-  request('/api/admin/show-question', {
+  request<AdminState>('/api/admin/show-question', {
     method:'POST',
     body:{
       questionId,
-      timeLimitSecond 
+      timeLimitSecond // undefined の時、自動的にキーは削除される（JSON.stringfy()）ため、そのまま書く
     },
     auth:true
   })
