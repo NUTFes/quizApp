@@ -49,7 +49,15 @@ export const getAdminState = () =>
   request<AdminState>('/api/admin/state',{
     auth:true
   })
-export const showQuestion = () => request()
+export const showQuestion = (questionId: number, timeLimitSecond?: number) => 
+  request('/api/admin/show-question', {
+    method:'POST',
+    body:{
+      questionId,
+      timeLimitSecond 
+    },
+    auth:true
+  })
 export const advanceText = () => request()
 export const showAnswer = () => request()
 export const reset = () => request()
