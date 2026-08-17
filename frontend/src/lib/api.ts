@@ -26,7 +26,7 @@ async function request<Type>(path: string, opts: Options = {}) {
     }
     const res = await fetch(`${BASE}${path}`, {
       method,
-      headers: headers,
+      headers,
       body: body !== undefined ? JSON.stringify(body) : undefined
     })
     if(!res.ok){
