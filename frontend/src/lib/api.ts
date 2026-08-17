@@ -68,7 +68,14 @@ export const showAnswer = () =>
     method:'POST',
     auth:true
   })
-export const reset = () => request()
+export const reset = (to: 'waiting' | 'finished' = 'waiting') => 
+  request<AdminState>('/api/admin/reset', {
+    method:'POST',
+    body:{
+      to
+    },
+    auth:true
+  })
 export const putQuestions = () => request()
 export const getQuestions = () => request()
 export const getQuestion = () => request()
