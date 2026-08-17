@@ -15,7 +15,7 @@ export class ApiError extends Error {
   }
 }
 // 共通機能部分をrequest 関数でまとめる
-async function request(path: string, opts: Options = {}) {
+async function request<Type>(path: string, opts: Options = {}) {
     const {method = 'GET', body, auth=false} = opts 
     const headers: Record<string, string> = {}// 型宣言をすることで{}初期化後のキー指定エラーを避ける
     if(body !== undefined){
@@ -37,7 +37,7 @@ async function request(path: string, opts: Options = {}) {
           data?.error?.message ?? res.statusText,
         )
     }
-    return res.json()
+    return res.json() as Promise<Type>
 }
 
 export const getState = () => request()
