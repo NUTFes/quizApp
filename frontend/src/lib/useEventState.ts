@@ -13,18 +13,22 @@ import { phoneQuestionFour, phoneQuestionArunashi } from "./mock/phone/phoneQues
 import { phoneAnswerAri, phoneAnswerNashi } from "./mock/phone/phoneAnswer"
 import { phoneFinished } from "./mock/phone/phoneFinished"
 
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
+
 function useEventState<Type>(testSteps: {at:number, mock:Type}[]) :Type | null{
     const [state, setState] = useState<Type | null>(null)
     useEffect(() =>{
-        const ts:ReturnType<typeof setTimeout>[] = []
-        for(const {at, mock} of testSteps){
-            ts.push(setTimeout(() => setState(mock), at))
-        }
-        return () => {
-            console.log("in useEffect.return() 接続解除のため通信切断")
-            for(const [i,t] of ts.entries()){
-                clearTimeout(t)
-                console.log(`t[${i}]: 削除完了`)
+        if(USE_MOCK){
+            const ts:ReturnType<typeof setTimeout>[] = []
+            for(const {at, mock} of testSteps){
+                ts.push(setTimeout(() => setState(mock), at))
+            }
+            return () => {
+                console.log("in useEffect.return() 接続解除のため通信切断")
+                for(const [i,t] of ts.entries()){
+                    clearTimeout(t)
+                    console.log(`t[${i}]: 削除完了`)
+                }
             }
         }
     }, [])
