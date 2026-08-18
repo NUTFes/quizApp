@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react"
+
 import type { AdminState, MonitorState, ViewerState } from "../types"
+
 import { adminWaiting } from "./mock/admin/adminWaiting"
 import { adminQuestionFour, adminQuestionArunashi } from "./mock/admin/adminQuestion"
 import { adminAnswerAri, adminAnswerNashi } from "./mock/admin/adminAnswer"
@@ -13,7 +15,7 @@ import { phoneQuestionFour, phoneQuestionArunashi } from "./mock/phone/phoneQues
 import { phoneAnswerAri, phoneAnswerNashi } from "./mock/phone/phoneAnswer"
 import { phoneFinished } from "./mock/phone/phoneFinished"
 
-const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
+import { USE_MOCK } from "./config"
 
 function useEventState<Type>(testSteps: {at:number, mock:Type}[]) :Type | null{
     const [state, setState] = useState<Type | null>(null)

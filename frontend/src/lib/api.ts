@@ -7,8 +7,7 @@ import type {
   QuestionListItem,
   ViewerState,
 } from '../types'
-
-const BASE = import.meta.env.VITE_API_URL
+import { BASE } from './config'
 
 type Options = {
   method?: 'GET' | 'POST' | 'PUT'
