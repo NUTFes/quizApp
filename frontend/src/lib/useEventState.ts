@@ -2,18 +2,9 @@ import { useEffect, useState } from "react"
 
 import type { AdminState, MonitorState, ViewerState } from "../types"
 
-import { adminWaiting } from "./mock/admin/adminWaiting"
-import { adminQuestionFour, adminQuestionArunashi } from "./mock/admin/adminQuestion"
-import { adminAnswerAri, adminAnswerNashi } from "./mock/admin/adminAnswer"
-import { adminFinished } from "./mock/admin/adminFinished"
-import { monitorWaiting } from "./mock/monitor/monitorWaiting"
-import { monitorQuestionFour, monitorQuestionArunashi } from "./mock/monitor/monitorQuestion"
-import { monitorAnswerAri, monitorAnswerNashi } from "./mock/monitor/monitorAnswer"
-import { monitorFinished } from "./mock/monitor/monitorFinished"
-import { phoneWaiting } from "./mock/phone/phoneWaiting"
-import { phoneQuestionFour, phoneQuestionArunashi } from "./mock/phone/phoneQuestion"
-import { phoneAnswerAri, phoneAnswerNashi } from "./mock/phone/phoneAnswer"
-import { phoneFinished } from "./mock/phone/phoneFinished"
+import { adminWaiting, adminQuestionFour, adminQuestionArunashi, adminAnswerAri, adminAnswerNashi, adminFinished } from "./mock/admin/index"
+import { monitorWaiting, monitorQuestionFour, monitorQuestionArunashi, monitorAnswerAri, monitorAnswerNashi, monitorFinished, } from "./mock/monitor/index"
+import { phoneWaiting, phoneQuestionFour, phoneQuestionArunashi, phoneAnswerAri, phoneAnswerNashi, phoneFinished } from "./mock/phone/index"
 
 import { USE_MOCK } from "./config"
 
