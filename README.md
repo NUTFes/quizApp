@@ -84,6 +84,9 @@ quizApp/
 2. **API仕様を変えるときは `docs/実装要件/API仕様書.md` を先に直す**(実装とずれたら仕様書が正)
 3. `main` へは直接pushせず、ブランチ→PR→レビュー1件→squash merge
 4. コミット/PRは「何をしたか分かる日本語1行」でよい
+5. `mise run lint`、`mise run fix`は`mise run up`でコンテナが起動している状態で実行すること
+6. ホスト側の`pnpm install`は エディタ(VSCode)の補完・ESLint表示のために任意で実行するもの
+
 
 詳しい手順 → [`docs/ガイドライン/開発フローガイド.md`](docs/ガイドライン/開発フローガイド.md)
 
