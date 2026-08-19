@@ -27,14 +27,6 @@ export function useRemainingTime({
       const remaining =
         timeLimitSec * 1000 - (Date.now() - clockOffset - new Date(questionStartedAt).getTime())
 
-      console.log({
-        serverTime,
-        clockOffset,
-        questionStartedAt,
-        timeLimitSec,
-        remainingSec: Math.max(0, Math.ceil(remaining / 1000)),
-      })
-
       // 0のままにする
       setRemainingTime(Math.max(0, Math.ceil(remaining / 1000)))
     }
