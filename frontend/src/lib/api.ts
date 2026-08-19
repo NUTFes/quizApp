@@ -21,6 +21,10 @@ export class ApiError extends Error {
     readonly code: string,
     readonly status: number,
     message: string,
+    readonly details: {
+      sourceRow: number
+      reason: string
+    }[] = [],
   ) {
     super(message)
   }
@@ -46,6 +50,7 @@ async function request<Type>(path: string, opts: Options = {}) {
       data?.error?.code ?? 'UNKNOWN',
       res.status,
       data?.error?.message ?? res.statusText,
+      data?.error?.details  ?? [],
     )
   }
   return res.json() as Promise<Type>
