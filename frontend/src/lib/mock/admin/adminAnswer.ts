@@ -5,7 +5,7 @@ export const adminAnswerAri: AdminState = {
   serverTime: '2026-09-13T13:05:40+09:00',
   timeLimitSec: 30,
   questionStartedAt: '2026-09-13T13:05:00+09:00',
-  revealedSegments: 2,
+  revealedSegments: 3,
   totalSegments: 3,
   askedCount: 3,
   question: {
