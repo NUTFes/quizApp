@@ -64,46 +64,54 @@ function useEventState<Type>({ path, getState, testSteps }: Opts<Type>): Type | 
     })
     // コンポーネントレンダー終了時に接続を解除
     return () => es.close()
-  }, [])
+  }, [path, getState, testSteps])
   return state
 }
+
+const ADMIN_STEPS = [
+  { at: 300, mock: adminWaiting },
+  { at: 2000, mock: adminQuestionFour },
+  { at: 5000, mock: adminAnswerAri },
+  { at: 8000, mock: adminQuestionArunashi },
+  { at: 11000, mock: adminAnswerNashi },
+  { at: 14000, mock: adminFinished },
+]
 
 export const useAdminState = () =>
   useEventState<AdminState>({
     path: `/api/admin/events?token=${encodeURIComponent(getAdminToken())}`,
     getState: getAdminState,
-    testSteps: [
-      { at: 300, mock: adminWaiting },
-      { at: 2000, mock: adminQuestionFour },
-      { at: 5000, mock: adminAnswerAri },
-      { at: 8000, mock: adminQuestionArunashi },
-      { at: 11000, mock: adminAnswerNashi },
-      { at: 14000, mock: adminFinished },
-    ],
+    testSteps: ADMIN_STEPS,
   })
+
+const MONITOR_STEPS = [
+  { at: 300, mock: monitorWaiting },
+  { at: 2000, mock: monitorQuestionFour },
+  { at: 5000, mock: monitorAnswerAri },
+  { at: 8000, mock: monitorQuestionArunashi },
+  { at: 11000, mock: monitorAnswerNashi },
+  { at: 14000, mock: monitorFinished },
+]
+
 export const useMonitorState = () =>
   useEventState<MonitorState>({
     path: '/api/events?view=monitor',
     getState: getMonitorState,
-    testSteps: [
-      { at: 300, mock: monitorWaiting },
-      { at: 2000, mock: monitorQuestionFour },
-      { at: 5000, mock: monitorAnswerAri },
-      { at: 8000, mock: monitorQuestionArunashi },
-      { at: 11000, mock: monitorAnswerNashi },
-      { at: 14000, mock: monitorFinished },
-    ],
+    testSteps: MONITOR_STEPS,
   })
+
+const VIEWER_STEP = [
+  { at: 300, mock: phoneWaiting },
+  { at: 2000, mock: phoneQuestionFour },
+  { at: 5000, mock: phoneAnswerAri },
+  { at: 8000, mock: phoneQuestionArunashi },
+  { at: 11000, mock: phoneAnswerNashi },
+  { at: 14000, mock: phoneFinished },
+]
+
 export const useViewerState = () =>
   useEventState<ViewerState>({
     path: '/api/events?view=phone',
     getState: getViewerState,
-    testSteps: [
-      { at: 300, mock: phoneWaiting },
-      { at: 2000, mock: phoneQuestionFour },
-      { at: 5000, mock: phoneAnswerAri },
-      { at: 8000, mock: phoneQuestionArunashi },
-      { at: 11000, mock: phoneAnswerNashi },
-      { at: 14000, mock: phoneFinished },
-    ],
+    testSteps: VIEWER_STEP,
   })
