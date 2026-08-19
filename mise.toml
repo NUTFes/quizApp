@@ -47,10 +47,7 @@ description = "コードチェック(CIと同じ内容。PRを出す前にこれ
 run = [
   "docker compose exec backend sh -c 'test -z \"$(gofmt -l .)\"'",
   "docker compose exec backend go vet ./...",
-  # CIは `go build ./...` だが、手元では -o /dev/null を付ける。
-  # main パッケージが1つだけだと go は backend/server という実行ファイルを書き出してしまい、
-  # うっかりコミットすると履歴に数MBのバイナリが残るため(.gitignore済みだが二重の保険)。
-  "docker compose exec backend go build -o /dev/null ./...",
+  "docker compose exec backend go build ./...",
   "docker compose exec frontend pnpm lint",
   "docker compose exec frontend pnpm format:check",
   "docker compose exec frontend pnpm typecheck",
