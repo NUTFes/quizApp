@@ -50,7 +50,7 @@ async function request<Type>(path: string, opts: Options = {}) {
       data?.error?.code ?? 'UNKNOWN',
       res.status,
       data?.error?.message ?? res.statusText,
-      data?.error?.details  ?? [],
+      data?.error?.details ?? [],
     )
   }
   return res.json() as Promise<Type>

@@ -1,4 +1,4 @@
-export type RowIssue={
-    sourceRow: number
-    reason: string
-  }
+export type RowIssue = {
+  sourceRow: number
+  reason: string
+}

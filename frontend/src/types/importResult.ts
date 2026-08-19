@@ -1,4 +1,4 @@
-import type { RowIssue } from "./rowIssue"
+import type { RowIssue } from './rowIssue'
 
 export type ImportResult = {
   imported: number
