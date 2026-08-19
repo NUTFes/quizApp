@@ -52,14 +52,22 @@ function useEventState<Type>({ path, getState, testSteps }: Opts<Type>): Type | 
       }
     }
     const es = new EventSource(`${BASE}${path}`)
+    let recieved = 0
     // 初回接続時、再接続時に State を能動的にとってくる
     es.onopen = () => {
+      const runnningAt = recieved
       getState()
-        .then(setState)
+        .then((state) => {
+          // getState を呼んだときと、返ってきたときで recieved が変わっていたら返ってきた state を捨てる
+          if(runnningAt !== recieved) return
+          setState(state)
+        })
         .catch((e) => console.error('SSE 接続時に State が取得できませんでした', e))
     }
     // サーバーから送られたときに State を更新する
     es.addEventListener('state', (event: MessageEvent) => {
+      // SSE でのサーバーからのState送信があったらrecieved を増やす
+      recieved++
       setState(JSON.parse(event.data) as Type)
     })
     // コンポーネントレンダー終了時に接続を解除
