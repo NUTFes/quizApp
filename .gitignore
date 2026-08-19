@@ -4,7 +4,7 @@ node_modules/
 # ビルド成果物・一時ファイル
 dist/
 backend/tmp/
-/backend/server
+backend/server        
 
 # 環境変数(秘密を含むのでコミットしない。.env.example だけ共有する)
 .env
