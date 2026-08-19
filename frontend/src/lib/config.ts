@@ -1,7 +1,7 @@
 export const BASE: string = import.meta.env.VITE_API_URL
 if (!BASE) {
   throw new Error(
-    'VITE_API_URL が設定されていません。.env.example をコピーして .env を作り、mise run down && mise run up で開発サーバーを再起動してください。'
+    'VITE_API_URL が設定されていません。.env.example をコピーして .env を作り、mise run down && mise run up で開発サーバーを再起動してください。',
   )
 }
 export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
