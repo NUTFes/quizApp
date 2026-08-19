@@ -52,15 +52,15 @@ function useEventState<Type>({ path, getState, testSteps }: Opts<Type>): Type | 
       }
     }
     const es = new EventSource(`${BASE}${path}`)
-    let recieved = 0
+    let revision = 0
     let closed = false
     // 初回接続時、再接続時に State を能動的にとってくる
     es.onopen = () => {
-      const runnningAt = recieved
+      const runnningAt = ++revision
       getState()
         .then((state) => {
-          // getState を呼んだときと、返ってきたときで recieved が変わっていたら、または、すでに接続を切っていたら、返ってきた state を捨てる
-          if (closed || runnningAt !== recieved) return
+          // getState を呼んだときと、返ってきたときで revision が変わっていたら、または、すでに接続を切っていたら、返ってきた state を捨てる
+          if (closed || runnningAt !== revision) return
           setState(state)
         })
         .catch((e) => {
@@ -72,8 +72,8 @@ function useEventState<Type>({ path, getState, testSteps }: Opts<Type>): Type | 
     }
     // サーバーから送られたときに State を更新する
     es.addEventListener('state', (event: MessageEvent) => {
-      // SSE でのサーバーからのState送信があったらrecieved を増やす
-      recieved++
+      // SSE でのサーバーからのState送信があったらrevision を増やす
+      revision++
       setState(JSON.parse(event.data) as Type)
     })
     // コンポーネントレンダー終了時に接続を解除
