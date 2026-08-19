@@ -60,13 +60,13 @@ function useEventState<Type>({ path, getState, testSteps }: Opts<Type>): Type | 
       getState()
         .then((state) => {
           // getState を呼んだときと、返ってきたときで recieved が変わっていたら、または、すでに接続を切っていたら、返ってきた state を捨てる
-          if(closed || runnningAt !== recieved) return
+          if (closed || runnningAt !== recieved) return
           setState(state)
         })
         .catch((e) => {
           // 既に接続を切っていたら エラーが出ないようにする
           // これをしないと、ページ切り替えの度、アンマウントされる仕様により、エラー表示となり、デバッグがしずらくなる
-          if(closed)return
+          if (closed) return
           console.error('SSE 接続時に State が取得できませんでした', e)
         })
     }
@@ -78,7 +78,7 @@ function useEventState<Type>({ path, getState, testSteps }: Opts<Type>): Type | 
     })
     // コンポーネントレンダー終了時に接続を解除
     return () => {
-      closed=true
+      closed = true
       es.close()
     }
   }, [path, getState, testSteps])
