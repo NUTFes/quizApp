@@ -58,8 +58,8 @@ pnpm -v       # 10.x
 
 | URL | 何が見えるか |
 |---|---|
-| http://localhost:5173 | フロント(「技大祭クイズ 🎉」が出れば成功) |
-| http://localhost:3000/api/health | バックエンド(`{"status":"ok"}` が返れば成功) |
+| <http://localhost:5173> | フロント(「技大祭クイズ 🎉」が出れば成功) |
+| <http://localhost:3000/api/health> | バックエンド(`{"status":"ok"}` が返れば成功) |
 
 止めるときは `mise run down`。困ったら `mise run logs` でログを見る。
 使えるコマンド一覧は `mise tasks`。
@@ -84,6 +84,9 @@ quizApp/
 2. **API仕様を変えるときは `docs/実装要件/API仕様書.md` を先に直す**(実装とずれたら仕様書が正)
 3. `main` へは直接pushせず、ブランチ→PR→レビュー1件→squash merge
 4. コミット/PRは「何をしたか分かる日本語1行」でよい
+5. `mise run lint`、`mise run fix`は`mise run up`でコンテナが起動している状態で実行すること
+6. ホスト側の`pnpm install`は エディタ(VSCode)の補完・ESLint表示のために任意で実行するもの
+
 
 詳しい手順 → [`docs/ガイドライン/開発フローガイド.md`](docs/ガイドライン/開発フローガイド.md)
 
@@ -94,7 +97,10 @@ quizApp/
 | 名前 | 担当 | ひとこと |
 |---|---|---|
 | naoto-anzai | PM・インフラ・フロント・バック | みんなタスク割遅くなってごめん！ |
-
+| hengin-eer | レビュー・フロント・バック | レビューをスパスパ捌くので皆はじゃんじゃんPR投げてきてね！ |
+| sanpayy | フロント | 怖がらずにガンガンやって早めに慣れていきましょう！ | 
+| keigo-take | バック | タスク頑張ります！|
+| gold-fish | バック | これからタスクガンバル |
 ## まだ準備中のもの
 
 - Tailwind CSS・React Router(最小構成が動いてから追加)

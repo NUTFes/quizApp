@@ -5,6 +5,7 @@
 - 何を作るか → [`../実装要件/画面・要件.md`](../実装要件/画面・要件.md)
 - 実装で守ること → [`../実装要件/フロントエンド実装要件.md`](../実装要件/フロントエンド実装要件.md)
 - 作る順番 → `dev_policy/フロントエンド基盤の進め方.md`
+- **サーバーと話す(fetch・APIクライアント)** → [`API・fetch入門.md`](./API・fetch入門.md)
 
 > **読み方**: 上から順に読む必要はない。**STEPで詰まったら、対応する節に戻ってくる**使い方を想定している。
 > 各節の最後に「**このアプリのどこで使うか**」を書いてあるので、そこだけ先に眺めてもよい。
@@ -53,7 +54,7 @@ type Question = {
   id: number
   type: 'four_choice' | 'two_choice' | 'arunashi'  // ← ③ ユニオン型(このどれか、という意味)
   textSegments: string[]                            // ← 文字列の配列
-  correctChoiceId: number | null                    // ← ④ null が入りうる
+  correctChoiceId: string | null                    // ← ④ null が入りうる(idは "A"〜"D" の文字列)
 }
 
 // ⑤ 関数の型

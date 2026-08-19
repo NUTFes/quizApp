@@ -1,0 +1,1 @@
+export type Phase = 'waiting' | 'question' | 'answer' | 'finished'
