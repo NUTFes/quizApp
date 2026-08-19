@@ -43,5 +43,8 @@ export function useRemainingTime({
   }, [serverTime, timeLimitSec, questionStartedAt])
 
   // 残り時間を返す
+  if (timeLimitSec === null || questionStartedAt === null) {
+    return 0
+  }
   return remainingTime
 }
