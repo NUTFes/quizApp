@@ -47,17 +47,19 @@ description = "コードチェック(CIと同じ内容。PRを出す前にこれ
 run = [
   "docker compose exec backend sh -c 'test -z \"$(gofmt -l .)\"'",
   "docker compose exec backend go vet ./...",
-  "pnpm --dir frontend lint",
-  "pnpm --dir frontend format:check",
-  "pnpm --dir frontend typecheck",
+  "docker compose exec backend go build ./...",
+  "docker compose exec frontend pnpm lint",
+  "docker compose exec frontend pnpm format:check",
+  "docker compose exec frontend pnpm typecheck",
+  "docker compose exec frontend pnpm build",
 ]
 
 [tasks.fix]
 description = "自動で直せる書式・コードの問題を直す(gofmt / Prettier / ESLint)"
 run = [
   "docker compose exec backend gofmt -w .",
-  "pnpm --dir frontend format",
-  "pnpm --dir frontend lint:fix",
+  "docker compose exec frontend pnpm format",
+  "docker compose exec frontend pnpm lint:fix",
 ]
 
 # テスト(vitest / go test)は未導入。導入時にここへ [tasks.test] を追加する。
