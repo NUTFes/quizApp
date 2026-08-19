@@ -6,7 +6,7 @@ import { adminWaiting, adminQuestionFour, adminQuestionArunashi, adminAnswerAri,
 import { monitorWaiting, monitorQuestionFour, monitorQuestionArunashi, monitorAnswerAri, monitorAnswerNashi, monitorFinished, } from "./mock/monitor/index"
 import { phoneWaiting, phoneQuestionFour, phoneQuestionArunashi, phoneAnswerAri, phoneAnswerNashi, phoneFinished } from "./mock/phone/index"
 
-import { BASE, USE_MOCK } from "./config"
+import { BASE, getAdminToken, USE_MOCK } from "./config"
 import { getAdminState, getMonitorState, getViewerState } from "./api"
 
 type Opts<Type> = {
@@ -36,7 +36,7 @@ function useEventState<Type>({path,getState,testSteps}:Opts<Type>) :Type | null{
         es.onopen = () =>{
             getState()
                 .then(setState)
-                .catch((e) => console.error('SSE qq接続時に State が取得できませんでした', e))
+                .catch((e) => console.error('SSE 接続時に State が取得できませんでした', e))
         }
         // サーバーから送られたときに State を更新する
         es.addEventListener('state', (event:MessageEvent) => {
@@ -49,7 +49,7 @@ function useEventState<Type>({path,getState,testSteps}:Opts<Type>) :Type | null{
 }
 
 export const useAdminState = () => useEventState<AdminState>({
-    path:`/api/admin/events?token=<ADMIN_TOKEN>`,
+    path:`/api/admin/events?token=${encodeURIComponent(getAdminToken())}`,
     getState:getAdminState,
     testSteps:[
         { at:   300, mock: adminWaiting          },
