@@ -53,16 +53,22 @@ function useEventState<Type>({ path, getState, testSteps }: Opts<Type>): Type | 
     }
     const es = new EventSource(`${BASE}${path}`)
     let recieved = 0
+    let closed = false
     // 初回接続時、再接続時に State を能動的にとってくる
     es.onopen = () => {
       const runnningAt = recieved
       getState()
         .then((state) => {
-          // getState を呼んだときと、返ってきたときで recieved が変わっていたら返ってきた state を捨てる
-          if(runnningAt !== recieved) return
+          // getState を呼んだときと、返ってきたときで recieved が変わっていたら、または、すでに接続を切っていたら、返ってきた state を捨てる
+          if(closed || runnningAt !== recieved) return
           setState(state)
         })
-        .catch((e) => console.error('SSE 接続時に State が取得できませんでした', e))
+        .catch((e) => {
+          // 既に接続を切っていたら エラーが出ないようにする
+          // これをしないと、ページ切り替えの度、アンマウントされる仕様により、エラー表示となり、デバッグがしずらくなる
+          if(closed)return
+          console.error('SSE 接続時に State が取得できませんでした', e)
+        })
     }
     // サーバーから送られたときに State を更新する
     es.addEventListener('state', (event: MessageEvent) => {
@@ -71,7 +77,10 @@ function useEventState<Type>({ path, getState, testSteps }: Opts<Type>): Type | 
       setState(JSON.parse(event.data) as Type)
     })
     // コンポーネントレンダー終了時に接続を解除
-    return () => es.close()
+    return () => {
+      closed=true
+      es.close()
+    }
   }, [path, getState, testSteps])
   return state
 }
