@@ -9,13 +9,13 @@ import { phoneWaiting, phoneQuestionFour, phoneQuestionArunashi, phoneAnswerAri,
 import { BASE, USE_MOCK } from "./config"
 import { getAdminState, getMonitorState, getViewerState } from "./api"
 
-type opts<Type> = {
+type Opts<Type> = {
     path:string
     getState:() => Promise<Type>
     testSteps:{at:number, mock:Type}[]
 }
 
-function useEventState<Type>({path,getState,testSteps}:opts<Type>) :Type | null{
+function useEventState<Type>({path,getState,testSteps}:Opts<Type>) :Type | null{
     const [state, setState] = useState<Type | null>(null)
     useEffect(() =>{
         if(USE_MOCK){
