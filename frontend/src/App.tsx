@@ -11,7 +11,7 @@ function App() {
       <Routes>
         <Route path="/" element={<PhonePage />} />
         <Route path="/monitor" element={<MonitorPage />} />
-        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/backstage-0248" element={<AdminPage />} />
       </Routes>
     </BrowserRouter>
   )
