@@ -7,8 +7,7 @@ import type {
   QuestionListItem,
   ViewerState,
 } from '../types'
-
-const BASE = import.meta.env.VITE_API_URL
+import { BASE, getAdminToken } from './config'
 
 type Options = {
   method?: 'GET' | 'POST' | 'PUT'
@@ -34,7 +33,7 @@ async function request<Type>(path: string, opts: Options = {}) {
     headers['Content-Type'] = 'application/json'
   }
   if (auth) {
-    headers['Authorization'] = `Bearer ${localStorage.getItem('adminToken') ?? ''}`
+    headers['Authorization'] = `Bearer ${getAdminToken()}`
   }
   const res = await fetch(`${BASE}${path}`, {
     method,
