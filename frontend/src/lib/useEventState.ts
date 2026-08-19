@@ -27,7 +27,6 @@ function useEventState<Type>({path,getState,testSteps}:Opts<Type>) :Type | null{
                 console.log("in useEffect.return() 接続解除のため通信切断")
                 for(const [i,t] of ts.entries()){
                     clearTimeout(t)
-                    console.log(`t[${i}]: 削除完了`)
                 }
             }
         }
