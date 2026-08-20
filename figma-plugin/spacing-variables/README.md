@@ -42,6 +42,8 @@ JavaScriptを直接使用するため、ビルドや`npm install`は不要です
 4. `Plugins → Development → Import plugin from manifest…`を開く
 5. このフォルダの`manifest.json`を選ぶ
 
+`manifest.json`の`id`は、Figmaが開発用プラグインへ割り当てる値なので、架空の値を入れていません。Import時に`id`不足のエラーが出る環境では、Figmaの`Plugins → Development → New plugin…`から`Figma design`・`Custom UI`の空プラグインを一度作り、Figmaが生成した`manifest.json`の`id`だけを、このプラグインの`manifest.json`へコピーしてから再度Importしてください。
+
 対象ファイル:
 
 [クイズデザインカンプ](https://www.figma.com/design/5H6rnQnOXO2Xk3xhKGVTOV/%E3%82%AF%E3%82%A4%E3%82%BA%E3%83%87%E3%82%B6%E3%82%A4%E3%83%B3%E3%82%AB%E3%83%B3%E3%83%97?node-id=161-1211&m=dev)
@@ -153,7 +155,7 @@ dry-runの「対象件数」は、実際に`setBoundVariable()`を呼ぶFigmaプ
 ## 実装上の安全装置
 
 - dry-runが既定で、選択が変わると書き込み承認を破棄する
-- 書き込み直前に対象を再走査する
+- 書き込み直前に対象とVariablesを再走査し、dry-run後に状態が変わっていれば停止する
 - padding・gapの現在値とVariable値が完全一致するときだけバインドする
 - 別Variableへバインド済みの指定は上書きしない
 - 既存Variableは全モードで値が一致するときだけ再利用する

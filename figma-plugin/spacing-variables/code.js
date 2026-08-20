@@ -101,6 +101,42 @@ function selectionSignature(roots) {
     .join("|");
 }
 
+function bindingScanFingerprint(scan) {
+  return JSON.stringify({
+    targets: scan.targets
+      .map(
+        (item) =>
+          `${item.nodeId}|${item.field}|${item.value}|${item.boundVariableId || ""}`,
+      )
+      .sort(),
+    skippedValues: scan.skippedValues
+      .map(
+        (item) => `${item.nodeId}|${item.field}|${item.value}|${item.reason}`,
+      )
+      .sort(),
+    excluded: scan.excluded
+      .map((item) => `${item.nodeId}|${item.reason}`)
+      .sort(),
+    traversalErrors: scan.traversalErrors
+      .map((item) => `${item.nodeId}|${item.reason}`)
+      .sort(),
+  });
+}
+
+function variableStateFingerprint(variableState) {
+  return JSON.stringify({
+    collectionId: variableState.collection ? variableState.collection.id : null,
+    createCollection: variableState.createCollection,
+    reusable: variableState.reusable
+      .map((item) => `${item.px}|${item.name}|${item.variable.id}`)
+      .sort(),
+    toCreate: variableState.toCreate
+      .map((item) => `${item.px}|${item.name}`)
+      .sort(),
+    conflicts: variableState.conflicts.map((item) => item.message).sort(),
+  });
+}
+
 function isExcludedBoundary(node) {
   if (EXCLUDED_FRAME_IDS.has(node.id)) {
     return true;
@@ -709,8 +745,16 @@ async function runDryRun() {
       ? ["別のVariableへバインド済みの対象があります。内容を確認してください。"]
       : []),
   ];
-  const canApply = blockers.length === 0 && analysis.planned.length > 0;
-  approvedDryRunSignature = canApply ? signature : null;
+  const hasPendingWork =
+    analysis.planned.length > 0 || variableState.toCreate.length > 0;
+  const canApply = blockers.length === 0 && hasPendingWork;
+  approvedDryRunSignature = canApply
+    ? {
+        selection: signature,
+        scan: bindingScanFingerprint(scan),
+        variables: variableStateFingerprint(variableState),
+      }
+    : null;
 
   post("dry-run-report", {
     report: {
@@ -802,15 +846,34 @@ async function createVariables(variableState) {
 async function applyBindings() {
   const roots = getSelectedTargetRoots();
   const signature = selectionSignature(roots);
-  if (!approvedDryRunSignature || approvedDryRunSignature !== signature) {
+  const approval = approvedDryRunSignature;
+  if (!approval || approval.selection !== signature) {
     throw new Error("同じ選択範囲で、先にdry-runを成功させてください。");
   }
+  approvedDryRunSignature = null;
 
   const scan = await collectBindingScan(roots);
   const beforeState = await inspectVariables();
-  if (beforeState.conflicts.length > 0 || scan.traversalErrors.length > 0) {
+  const beforeAnalysis = await analyzeBindings(scan, beforeState);
+  const nonOddSkipped = scan.skippedValues.filter(
+    (item) => item.reason !== "奇数px（据え置き）",
+  );
+  if (
+    beforeState.conflicts.length > 0 ||
+    scan.traversalErrors.length > 0 ||
+    nonOddSkipped.length > 0 ||
+    beforeAnalysis.boundToOther.length > 0
+  ) {
     throw new Error(
       "dry-run後に競合が見つかりました。dry-runをやり直してください。",
+    );
+  }
+  if (
+    approval.scan !== bindingScanFingerprint(scan) ||
+    approval.variables !== variableStateFingerprint(beforeState)
+  ) {
+    throw new Error(
+      "dry-run後にFigmaの状態が変わりました。dry-runをやり直してください。",
     );
   }
 
@@ -994,6 +1057,17 @@ function publicStep1Target(target) {
   };
 }
 
+function step1Fingerprint(result) {
+  return JSON.stringify(
+    result.targets
+      .map(
+        (item) =>
+          `${item.nodeId}|${item.property}|${item.before}|${item.after}|${item.boundVariableId || ""}`,
+      )
+      .sort(),
+  );
+}
+
 async function previewStep1() {
   const roots = getSelectedTargetRoots();
   const signature = selectionSignature(roots);
@@ -1003,7 +1077,9 @@ async function previewStep1() {
   );
   const countMatches = result.targets.length === EXPECTED_STEP1_COUNT;
   const canApply = countMatches && boundTargets.length === 0;
-  approvedStep1Signature = canApply ? signature : null;
+  approvedStep1Signature = canApply
+    ? { selection: signature, targets: step1Fingerprint(result) }
+    : null;
 
   post("step1-preview-report", {
     report: {
@@ -1032,16 +1108,23 @@ async function previewStep1() {
 async function applyStep1() {
   const roots = getSelectedTargetRoots();
   const signature = selectionSignature(roots);
-  if (!approvedStep1Signature || approvedStep1Signature !== signature) {
+  const approval = approvedStep1Signature;
+  if (!approval || approval.selection !== signature) {
     throw new Error(
       "同じ選択範囲で、先に19px→20pxの対象確認を成功させてください。",
     );
   }
+  approvedStep1Signature = null;
 
   const result = await collectStep1Targets(roots);
   if (result.targets.length !== EXPECTED_STEP1_COUNT) {
     throw new Error(
       `実行直前の対象が${result.targets.length}件です。期待する${EXPECTED_STEP1_COUNT}件と一致しません。`,
+    );
+  }
+  if (approval.targets !== step1Fingerprint(result)) {
+    throw new Error(
+      "対象確認後に19px→20pxの対象が変わりました。対象確認をやり直してください。",
     );
   }
 
@@ -1093,7 +1176,8 @@ async function applyStep1() {
 
 async function runAction(action) {
   if (running) {
-    throw new Error("別の処理を実行中です。");
+    post("action-error", { action, message: "別の処理を実行中です。" });
+    return;
   }
   running = true;
   post("busy", { action });
