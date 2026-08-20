@@ -24,11 +24,11 @@ QuizAppのFigmaで、具体的なpx値になっているAuto Layoutの余白を`
 
 ## ファイル
 
-| ファイル | 役割 |
-| --- | --- |
-| `manifest.json` | Figmaがプラグインを読み込むための設定 |
-| `code.js` | 対象検出、Variables作成、バインド、19px→20px変更 |
-| `ui.html` | dry-run結果と確認UI |
+| ファイル        | 役割                                             |
+| --------------- | ------------------------------------------------ |
+| `manifest.json` | Figmaがプラグインを読み込むための設定            |
+| `code.js`       | 対象検出、Variables作成、バインド、19px→20px変更 |
+| `ui.html`       | dry-run結果と確認UI                              |
 
 JavaScriptを直接使用するため、ビルドや`npm install`は不要です。
 

@@ -42,7 +42,9 @@ const SPACING_VARIABLES = [
   { px: 180, name: "space/45" },
 ];
 
-const VARIABLE_BY_PX = new Map(SPACING_VARIABLES.map((item) => [item.px, item]));
+const VARIABLE_BY_PX = new Map(
+  SPACING_VARIABLES.map((item) => [item.px, item]),
+);
 const VARIABLE_NAMES = new Set(SPACING_VARIABLES.map((item) => item.name));
 const ANCHOR_VARIABLE_NAMES = ["space/2-5", "space/6"];
 const ODD_VALUES_TO_KEEP = new Set([13, 23, 29]);
@@ -160,7 +162,9 @@ function currentSelectionInfo() {
   const selected = figma.currentPage.selection.map((node) => ({
     id: node.id,
     name: node.name,
-    valid: Boolean(TARGET_ROOTS[node.id] && TARGET_ROOTS[node.id].name === node.name),
+    valid: Boolean(
+      TARGET_ROOTS[node.id] && TARGET_ROOTS[node.id].name === node.name,
+    ),
   }));
   return { selected };
 }
@@ -284,7 +288,8 @@ async function collectBindingScan(roots) {
           dedupePush(traversalErrors, `${mainComponent.id}|remote-component`, {
             nodeId: mainComponent.id,
             nodeName: mainComponent.name,
-            reason: "リモートライブラリのコンポーネントは編集できないためスキップ",
+            reason:
+              "リモートライブラリのコンポーネントは編集できないためスキップ",
             screen,
           });
           return;
@@ -368,7 +373,12 @@ async function collectBindingScan(roots) {
 
     if (hasChildren(node)) {
       for (const child of node.children) {
-        await visit(child, screen, `${path} → ${child.name}`, activeComponentIds);
+        await visit(
+          child,
+          screen,
+          `${path} → ${child.name}`,
+          activeComponentIds,
+        );
       }
     }
   }
@@ -393,7 +403,9 @@ async function inspectVariables() {
     findStatusBarAnchorVariables(),
   ]);
 
-  const collectionsById = new Map(collections.map((collection) => [collection.id, collection]));
+  const collectionsById = new Map(
+    collections.map((collection) => [collection.id, collection]),
+  );
   const variablesByName = new Map();
   for (const variable of variables) {
     if (!VARIABLE_NAMES.has(variable.name)) {
@@ -414,7 +426,11 @@ async function inspectVariables() {
         message: `${anchor.name}はステータスバーで使われていますが、リモートVariableのため新しいVariableを同じコレクションへ追加できません。`,
         variableId: anchor.id,
       });
-    } else if (!(variablesByName.get(anchor.name) || []).some((item) => item.id === anchor.id)) {
+    } else if (
+      !(variablesByName.get(anchor.name) || []).some(
+        (item) => item.id === anchor.id,
+      )
+    ) {
       conflicts.push({
         type: "anchor-not-in-local-list",
         name: anchor.name,
@@ -452,23 +468,29 @@ async function inspectVariables() {
 
   let collection = null;
   let createCollection = false;
-  const anchorCollectionIds = new Set(anchorVariables.map((variable) => variable.variableCollectionId));
+  const anchorCollectionIds = new Set(
+    anchorVariables.map((variable) => variable.variableCollectionId),
+  );
 
   if (anchorCollectionIds.size > 1) {
     conflicts.push({
       type: "anchor-collection-mismatch",
-      message: "space/2-5とspace/6が別々のコレクションにあります。自動選択できません。",
+      message:
+        "space/2-5とspace/6が別々のコレクションにあります。自動選択できません。",
     });
   } else if (anchorCollectionIds.size === 1) {
     collection = collectionsById.get([...anchorCollectionIds][0]) || null;
   } else {
-    const spacingCollections = collections.filter((item) => item.name === "Spacing");
+    const spacingCollections = collections.filter(
+      (item) => item.name === "Spacing",
+    );
     if (spacingCollections.length === 1) {
       collection = spacingCollections[0];
     } else if (spacingCollections.length > 1) {
       conflicts.push({
         type: "duplicate-collection",
-        message: "Spacingという名前のコレクションが複数あります。自動選択できません。",
+        message:
+          "Spacingという名前のコレクションが複数あります。自動選択できません。",
         collectionIds: spacingCollections.map((item) => item.id),
       });
     } else {
@@ -503,7 +525,9 @@ async function inspectVariables() {
     if (variable.resolvedType !== "FLOAT") {
       continue;
     }
-    const variableCollection = collectionsById.get(variable.variableCollectionId);
+    const variableCollection = collectionsById.get(
+      variable.variableCollectionId,
+    );
     if (collection && variable.variableCollectionId !== collection.id) {
       conflicts.push({
         type: "wrong-collection",
@@ -654,7 +678,10 @@ function publicVariablePlan(variableState) {
   return {
     collectionName: variableState.collectionName,
     createCollection: variableState.createCollection,
-    reuse: variableState.reusable.map((item) => ({ px: item.px, name: item.name })),
+    reuse: variableState.reusable.map((item) => ({
+      px: item.px,
+      name: item.name,
+    })),
     create: variableState.toCreate,
     conflicts: variableState.conflicts,
   };
@@ -705,10 +732,14 @@ async function runDryRun() {
         excludedSubtrees: scan.excluded.length,
       },
       oddValues: summarizeSkippedByValue(
-        scan.skippedValues.filter((item) => item.reason === "奇数px（据え置き）"),
+        scan.skippedValues.filter(
+          (item) => item.reason === "奇数px（据え置き）",
+        ),
       ),
       unexpectedValues: summarizeSkippedByValue(
-        scan.skippedValues.filter((item) => item.reason !== "奇数px（据え置き）"),
+        scan.skippedValues.filter(
+          (item) => item.reason !== "奇数px（据え置き）",
+        ),
       ),
       excluded: scan.excluded.map((item) => ({
         ...item,
@@ -740,8 +771,16 @@ async function createVariables(variableState) {
   for (const expected of variableState.toCreate) {
     let variable = null;
     try {
-      variable = figma.variables.createVariable(expected.name, collection, "FLOAT");
-      created.push({ px: expected.px, name: expected.name, variableId: variable.id });
+      variable = figma.variables.createVariable(
+        expected.name,
+        collection,
+        "FLOAT",
+      );
+      created.push({
+        px: expected.px,
+        name: expected.name,
+        variableId: variable.id,
+      });
       for (const mode of collection.modes) {
         variable.setValueForMode(mode.modeId, expected.px);
       }
@@ -770,7 +809,9 @@ async function applyBindings() {
   const scan = await collectBindingScan(roots);
   const beforeState = await inspectVariables();
   if (beforeState.conflicts.length > 0 || scan.traversalErrors.length > 0) {
-    throw new Error("dry-run後に競合が見つかりました。dry-runをやり直してください。");
+    throw new Error(
+      "dry-run後に競合が見つかりました。dry-runをやり直してください。",
+    );
   }
 
   const createdState = await createVariables(beforeState);
@@ -810,7 +851,10 @@ async function applyBindings() {
     const expected = VARIABLE_BY_PX.get(target.value);
     const variable = createdState.variableByPx.get(target.value);
     if (!variable) {
-      skipped.push({ ...publicTarget(target), reason: `${expected.name}を取得できない` });
+      skipped.push({
+        ...publicTarget(target),
+        reason: `${expected.name}を取得できない`,
+      });
       continue;
     }
 
@@ -826,7 +870,10 @@ async function applyBindings() {
 
       const currentBoundId = getBoundVariableId(target.node, target.field);
       if (currentBoundId === variable.id) {
-        skipped.push({ ...publicTarget(target), reason: "すでに同じVariableへバインド済み" });
+        skipped.push({
+          ...publicTarget(target),
+          reason: "すでに同じVariableへバインド済み",
+        });
         continue;
       }
       if (currentBoundId) {
@@ -862,7 +909,10 @@ async function applyBindings() {
       errorCount: errors.length,
       bindingTable: summarizeBindingTable(
         scan.targets.filter((target) =>
-          bound.some((item) => item.nodeId === target.nodeId && item.field === target.field),
+          bound.some(
+            (item) =>
+              item.nodeId === target.nodeId && item.field === target.field,
+          ),
         ),
       ),
       bound,
@@ -894,7 +944,11 @@ async function collectStep1Targets(roots) {
       return;
     }
     if (isExcludedBoundary(node)) {
-      excluded.push({ nodeId: node.id, nodeName: node.name, reason: excludedReason(node) });
+      excluded.push({
+        nodeId: node.id,
+        nodeName: node.name,
+        reason: excludedReason(node),
+      });
       return;
     }
 
@@ -944,7 +998,9 @@ async function previewStep1() {
   const roots = getSelectedTargetRoots();
   const signature = selectionSignature(roots);
   const result = await collectStep1Targets(roots);
-  const boundTargets = result.targets.filter((target) => target.boundVariableId);
+  const boundTargets = result.targets.filter(
+    (target) => target.boundVariableId,
+  );
   const countMatches = result.targets.length === EXPECTED_STEP1_COUNT;
   const canApply = countMatches && boundTargets.length === 0;
   approvedStep1Signature = canApply ? signature : null;
@@ -960,10 +1016,14 @@ async function previewStep1() {
       blockers: [
         ...(countMatches
           ? []
-          : [`対象が${result.targets.length}件です。期待する${EXPECTED_STEP1_COUNT}件と一致しません。`]),
+          : [
+              `対象が${result.targets.length}件です。期待する${EXPECTED_STEP1_COUNT}件と一致しません。`,
+            ]),
         ...(boundTargets.length === 0
           ? []
-          : ["counterAxisSpacingがすでにVariableへバインドされた対象があります。"]),
+          : [
+              "counterAxisSpacingがすでにVariableへバインドされた対象があります。",
+            ]),
       ],
     },
   });
@@ -973,7 +1033,9 @@ async function applyStep1() {
   const roots = getSelectedTargetRoots();
   const signature = selectionSignature(roots);
   if (!approvedStep1Signature || approvedStep1Signature !== signature) {
-    throw new Error("同じ選択範囲で、先に19px→20pxの対象確認を成功させてください。");
+    throw new Error(
+      "同じ選択範囲で、先に19px→20pxの対象確認を成功させてください。",
+    );
   }
 
   const result = await collectStep1Targets(roots);
@@ -989,17 +1051,26 @@ async function applyStep1() {
   for (const target of result.targets) {
     try {
       if (step1BoundVariableId(target.node)) {
-        skipped.push({ ...publicStep1Target(target), reason: "Variableへバインド済み" });
+        skipped.push({
+          ...publicStep1Target(target),
+          reason: "Variableへバインド済み",
+        });
         continue;
       }
       if (propertyValue(target.node, "counterAxisSpacing") !== 19) {
-        skipped.push({ ...publicStep1Target(target), reason: "実行直前の値が19pxではない" });
+        skipped.push({
+          ...publicStep1Target(target),
+          reason: "実行直前の値が19pxではない",
+        });
         continue;
       }
       target.node.counterAxisSpacing = 20;
       changed.push(publicStep1Target(target));
     } catch (error) {
-      errors.push({ ...publicStep1Target(target), reason: serializeError(error) });
+      errors.push({
+        ...publicStep1Target(target),
+        reason: serializeError(error),
+      });
     }
   }
 

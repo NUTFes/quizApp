@@ -248,14 +248,17 @@
     <main>
       <header>
         <h1>QuizApp Spacing Variables</h1>
-        <p class="muted">既定動作はdry-runです。書き込みボタンは確認完了後だけ有効になります。</p>
+        <p class="muted">
+          既定動作はdry-runです。書き込みボタンは確認完了後だけ有効になります。
+        </p>
       </header>
 
       <section class="card">
         <h2>対象フレーム</h2>
         <div id="selection">選択状態を確認中…</div>
         <p class="muted">
-          <code>Screens/Mobile</code>、<code>Screens/Display</code>、<code>admin</code>の最上位フレームだけを選択してください。
+          <code>Screens/Mobile</code
+          >、<code>Screens/Display</code>、<code>admin</code>の最上位フレームだけを選択してください。
         </p>
       </section>
 
@@ -266,7 +269,10 @@
           <li>Step 1の対象確認後、before画像を保存して19px→20pxを実行する</li>
           <li>after画像を保存し、もう一度dry-runを実行する</li>
           <li>競合がないことを確認してVariables作成・バインドを実行する</li>
-          <li>Dev Modeで数箇所の表示がpx値から<code>space/*</code>になったことを確認する</li>
+          <li>
+            Dev
+            Modeで数箇所の表示がpx値から<code>space/*</code>になったことを確認する
+          </li>
         </ol>
       </section>
 
@@ -274,26 +280,36 @@
         <h2>Variables作成・バインド</h2>
         <div class="actions">
           <button id="dry-run" class="primary">1. dry-run（変更なし）</button>
-          <button id="apply-bindings" class="danger" disabled>2. Variables作成・バインド</button>
+          <button id="apply-bindings" class="danger" disabled>
+            2. Variables作成・バインド
+          </button>
         </div>
         <label class="confirm">
           <input id="confirm-bindings" type="checkbox" disabled />
-          <span>dry-runの対象・除外・競合・Variable作成予定を確認しました。</span>
+          <span
+            >dry-runの対象・除外・競合・Variable作成予定を確認しました。</span
+          >
         </label>
       </section>
 
       <section class="card">
         <h2>Step 1：Displayの19px→20px</h2>
         <p class="muted">
-          <code>counterAxisSpacing</code>だけを対象にする、Variablesバインドとは別の処理です。
+          <code>counterAxisSpacing</code
+          >だけを対象にする、Variablesバインドとは別の処理です。
         </p>
         <div class="actions">
           <button id="preview-step1">1. 変更対象を確認（変更なし）</button>
-          <button id="apply-step1" class="danger" disabled>2. 9件を20pxへ変更</button>
+          <button id="apply-step1" class="danger" disabled>
+            2. 9件を20pxへ変更
+          </button>
         </div>
         <label class="confirm">
           <input id="confirm-step1" type="checkbox" disabled />
-          <span>9件のnode IDを確認し、変更前のスクリーンショットを保存しました。</span>
+          <span
+            >9件のnode
+            IDを確認し、変更前のスクリーンショットを保存しました。</span
+          >
         </label>
       </section>
 
@@ -396,7 +412,8 @@
       function updateWriteButtons() {
         applyBindingsButton.disabled =
           busy || !dryRunReady || !confirmBindings.checked;
-        applyStep1Button.disabled = busy || !step1Ready || !confirmStep1.checked;
+        applyStep1Button.disabled =
+          busy || !step1Ready || !confirmStep1.checked;
       }
 
       function postAction(action) {
@@ -404,16 +421,24 @@
       }
 
       dryRunButton.addEventListener("click", () => postAction("dry-run"));
-      applyBindingsButton.addEventListener("click", () => postAction("apply-bindings"));
-      previewStep1Button.addEventListener("click", () => postAction("preview-step1"));
-      applyStep1Button.addEventListener("click", () => postAction("apply-step1"));
+      applyBindingsButton.addEventListener("click", () =>
+        postAction("apply-bindings"),
+      );
+      previewStep1Button.addEventListener("click", () =>
+        postAction("preview-step1"),
+      );
+      applyStep1Button.addEventListener("click", () =>
+        postAction("apply-step1"),
+      );
       confirmBindings.addEventListener("change", updateWriteButtons);
       confirmStep1.addEventListener("change", updateWriteButtons);
 
       copyResultButton.addEventListener("click", async () => {
         if (!lastReport) return;
         try {
-          await navigator.clipboard.writeText(JSON.stringify(lastReport, null, 2));
+          await navigator.clipboard.writeText(
+            JSON.stringify(lastReport, null, 2),
+          );
           copyResultButton.textContent = "コピーしました";
           window.setTimeout(() => {
             copyResultButton.textContent = "JSONをコピー";
@@ -427,7 +452,8 @@
         resetApprovals();
         const selected = message.selected || [];
         if (selected.length === 0) {
-          selectionElement.innerHTML = '<p class="warn">何も選択されていません。</p>';
+          selectionElement.innerHTML =
+            '<p class="warn">何も選択されていません。</p>';
           return;
         }
         selectionElement.innerHTML = `<ul class="selection-list">${selected
@@ -509,7 +535,9 @@
           <section class="result-section">
             <h3>Variable作成計画</h3>
             <p>Collection: ${code(report.variablePlan.collectionName)} — ${
-              report.variablePlan.createCollection ? "新規作成予定" : "既存を使用"
+              report.variablePlan.createCollection
+                ? "新規作成予定"
+                : "既存を使用"
             }</p>
             ${table(["px", "Variable", "扱い"], variableRows)}
           </section>
@@ -603,10 +631,17 @@
           return;
         }
         if (message.type === "action-error") {
-          if (message.action === "apply-bindings" || message.action === "apply-step1") {
+          if (
+            message.action === "apply-bindings" ||
+            message.action === "apply-step1"
+          ) {
             resetApprovals();
           }
-          lastReport = { type: message.type, action: message.action, message: message.message };
+          lastReport = {
+            type: message.type,
+            action: message.action,
+            message: message.message,
+          };
           copyResultButton.disabled = false;
           renderError(message.message);
           return;
