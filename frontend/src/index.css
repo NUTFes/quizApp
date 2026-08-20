@@ -1,6 +1,1 @@
 @import 'tailwindcss';
-
-@theme {
-  /* 既定は 0.25rem。px 基準に切り替えて Figma の値と1対1で対応させる */
-  --spacing: 4px;
-}
