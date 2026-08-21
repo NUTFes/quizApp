@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QuizApp Spacing Variables</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: Inter, "Noto Sans JP", sans-serif;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--figma-color-text, #1f2937);
+        background: var(--figma-color-bg, #ffffff);
+      }
+
+      main {
+        display: grid;
+        gap: 16px;
+        padding: 16px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 18px;
+      }
+
+      h2 {
+        font-size: 14px;
+      }
+
+      h3 {
+        font-size: 12px;
+      }
+
+      .muted {
+        color: var(--figma-color-text-secondary, #6b7280);
+      }
+
+      .card {
+        display: grid;
+        gap: 12px;
+        padding: 14px;
+        border: 1px solid var(--figma-color-border, #d1d5db);
+        border-radius: 8px;
+        background: var(--figma-color-bg-secondary, #f9fafb);
+      }
+
+      .workflow {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      button {
+        min-height: 32px;
+        padding: 6px 12px;
+        border: 1px solid var(--figma-color-border, #d1d5db);
+        border-radius: 6px;
+        color: var(--figma-color-text, #111827);
+        background: var(--figma-color-bg, #ffffff);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      button.primary {
+        color: #ffffff;
+        border-color: #1d4ed8;
+        background: #2563eb;
+      }
+
+      button.danger {
+        color: #ffffff;
+        border-color: #b91c1c;
+        background: #dc2626;
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.4;
+      }
+
+      label.confirm {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        padding: 8px;
+        border-radius: 6px;
+        background: var(--figma-color-bg-warning-tertiary, #fff7ed);
+      }
+
+      input[type="checkbox"] {
+        margin-top: 2px;
+      }
+
+      .selection-list,
+      .message-list {
+        display: grid;
+        gap: 4px;
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      .ok {
+        color: var(--figma-color-text-success, #047857);
+      }
+
+      .warn {
+        color: var(--figma-color-text-warning, #b45309);
+      }
+
+      .error {
+        color: var(--figma-color-text-danger, #b91c1c);
+      }
+
+      .status {
+        padding: 10px;
+        border-radius: 6px;
+        font-weight: 600;
+      }
+
+      .status.ok {
+        background: var(--figma-color-bg-success-tertiary, #ecfdf5);
+      }
+
+      .status.warn {
+        background: var(--figma-color-bg-warning-tertiary, #fff7ed);
+      }
+
+      .status.error {
+        background: var(--figma-color-bg-danger-tertiary, #fef2f2);
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--figma-color-border, #d1d5db);
+        border-radius: 6px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--figma-color-bg, #ffffff);
+      }
+
+      th,
+      td {
+        padding: 7px 8px;
+        border-bottom: 1px solid var(--figma-color-border, #e5e7eb);
+        text-align: left;
+        vertical-align: top;
+        white-space: nowrap;
+      }
+
+      th {
+        background: var(--figma-color-bg-secondary, #f3f4f6);
+        font-weight: 600;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      code,
+      pre {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      code {
+        padding: 1px 4px;
+        border-radius: 4px;
+        background: var(--figma-color-bg-tertiary, #e5e7eb);
+      }
+
+      details {
+        border-top: 1px solid var(--figma-color-border, #d1d5db);
+        padding-top: 8px;
+      }
+
+      summary {
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      pre {
+        max-height: 320px;
+        margin: 8px 0 0;
+        padding: 10px;
+        overflow: auto;
+        border-radius: 6px;
+        color: var(--figma-color-text, #111827);
+        background: var(--figma-color-bg, #ffffff);
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+
+      .result-section {
+        display: grid;
+        gap: 8px;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .metric {
+        padding: 8px;
+        border: 1px solid var(--figma-color-border, #d1d5db);
+        border-radius: 6px;
+        background: var(--figma-color-bg, #ffffff);
+      }
+
+      .metric strong {
+        display: block;
+        font-size: 18px;
+      }
+
+      @media (max-width: 560px) {
+        .summary-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>QuizApp Spacing Variables</h1>
+        <p class="muted">
+          既定動作はdry-runです。書き込みボタンは確認完了後だけ有効になります。
+        </p>
+      </header>
+
+      <section class="card">
+        <h2>対象フレーム</h2>
+        <div id="selection">選択状態を確認中…</div>
+        <p class="muted">
+          <code>Screens/Mobile</code
+          >、<code>Screens/Display</code>、<code>admin</code>の最上位フレームだけを選択してください。
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>推奨する実行順</h2>
+        <ol class="workflow">
+          <li>最初のdry-runで、対象・除外・奇数px・19pxの状態を確認する</li>
+          <li>Step 1の対象確認後、before画像を保存して19px→20pxを実行する</li>
+          <li>after画像を保存し、もう一度dry-runを実行する</li>
+          <li>競合がないことを確認してVariables作成・バインドを実行する</li>
+          <li>
+            Dev
+            Modeで数箇所の表示がpx値から<code>space/*</code>になったことを確認する
+          </li>
+        </ol>
+      </section>
+
+      <section class="card">
+        <h2>Variables作成・バインド</h2>
+        <div class="actions">
+          <button id="dry-run" class="primary">1. dry-run（変更なし）</button>
+          <button id="apply-bindings" class="danger" disabled>
+            2. Variables作成・バインド
+          </button>
+        </div>
+        <label class="confirm">
+          <input id="confirm-bindings" type="checkbox" disabled />
+          <span
+            >dry-runの対象・除外・競合・Variable作成予定を確認しました。</span
+          >
+        </label>
+      </section>
+
+      <section class="card">
+        <h2>Step 1：Displayの19px→20px</h2>
+        <p class="muted">
+          <code>counterAxisSpacing</code
+          >だけを対象にする、Variablesバインドとは別の処理です。
+        </p>
+        <div class="actions">
+          <button id="preview-step1">1. 変更対象を確認（変更なし）</button>
+          <button id="apply-step1" class="danger" disabled>
+            2. 9件を20pxへ変更
+          </button>
+        </div>
+        <label class="confirm">
+          <input id="confirm-step1" type="checkbox" disabled />
+          <span
+            >9件のnode
+            IDを確認し、変更前のスクリーンショットを保存しました。</span
+          >
+        </label>
+      </section>
+
+      <section class="card" aria-live="polite">
+        <div class="actions" style="justify-content: space-between">
+          <h2>実行結果</h2>
+          <button id="copy-result" disabled>JSONをコピー</button>
+        </div>
+        <div id="result" class="muted">まだ実行していません。</div>
+      </section>
+    </main>
+
+    <script>
+      const selectionElement = document.getElementById("selection");
+      const resultElement = document.getElementById("result");
+      const dryRunButton = document.getElementById("dry-run");
+      const applyBindingsButton = document.getElementById("apply-bindings");
+      const previewStep1Button = document.getElementById("preview-step1");
+      const applyStep1Button = document.getElementById("apply-step1");
+      const confirmBindings = document.getElementById("confirm-bindings");
+      const confirmStep1 = document.getElementById("confirm-step1");
+      const copyResultButton = document.getElementById("copy-result");
+
+      let busy = false;
+      let dryRunReady = false;
+      let step1Ready = false;
+      let lastReport = null;
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function code(value) {
+        return `<code>${escapeHtml(value)}</code>`;
+      }
+
+      function table(headers, rows) {
+        if (rows.length === 0) {
+          return '<p class="muted">該当なし</p>';
+        }
+        return `
+          <div class="table-wrap">
+            <table>
+              <thead><tr>${headers.map((item) => `<th>${escapeHtml(item)}</th>`).join("")}</tr></thead>
+              <tbody>
+                ${rows
+                  .map(
+                    (row) =>
+                      `<tr>${row.map((item) => `<td>${item}</td>`).join("")}</tr>`,
+                  )
+                  .join("")}
+              </tbody>
+            </table>
+          </div>`;
+      }
+
+      function list(items, className = "") {
+        if (items.length === 0) {
+          return '<p class="muted">該当なし</p>';
+        }
+        return `<ul class="message-list ${className}">${items
+          .map((item) => `<li>${escapeHtml(item)}</li>`)
+          .join("")}</ul>`;
+      }
+
+      function rawDetails(report) {
+        return `
+          <details>
+            <summary>監査用の全データ（node IDを含む）</summary>
+            <pre>${escapeHtml(JSON.stringify(report, null, 2))}</pre>
+          </details>`;
+      }
+
+      function metric(label, value) {
+        return `<div class="metric"><strong>${escapeHtml(value)}</strong>${escapeHtml(label)}</div>`;
+      }
+
+      function setBusy(nextBusy) {
+        busy = nextBusy;
+        dryRunButton.disabled = busy;
+        previewStep1Button.disabled = busy;
+        updateWriteButtons();
+      }
+
+      function resetApprovals() {
+        dryRunReady = false;
+        step1Ready = false;
+        confirmBindings.checked = false;
+        confirmStep1.checked = false;
+        confirmBindings.disabled = true;
+        confirmStep1.disabled = true;
+        updateWriteButtons();
+      }
+
+      function updateWriteButtons() {
+        applyBindingsButton.disabled =
+          busy || !dryRunReady || !confirmBindings.checked;
+        applyStep1Button.disabled =
+          busy || !step1Ready || !confirmStep1.checked;
+      }
+
+      function postAction(action) {
+        parent.postMessage({ pluginMessage: { action } }, "*");
+      }
+
+      dryRunButton.addEventListener("click", () => postAction("dry-run"));
+      applyBindingsButton.addEventListener("click", () =>
+        postAction("apply-bindings"),
+      );
+      previewStep1Button.addEventListener("click", () =>
+        postAction("preview-step1"),
+      );
+      applyStep1Button.addEventListener("click", () =>
+        postAction("apply-step1"),
+      );
+      confirmBindings.addEventListener("change", updateWriteButtons);
+      confirmStep1.addEventListener("change", updateWriteButtons);
+
+      copyResultButton.addEventListener("click", async () => {
+        if (!lastReport) return;
+        try {
+          await navigator.clipboard.writeText(
+            JSON.stringify(lastReport, null, 2),
+          );
+          copyResultButton.textContent = "コピーしました";
+          window.setTimeout(() => {
+            copyResultButton.textContent = "JSONをコピー";
+          }, 1200);
+        } catch (_error) {
+          copyResultButton.textContent = "コピー失敗";
+        }
+      });
+
+      function renderSelection(message) {
+        resetApprovals();
+        const selected = message.selected || [];
+        if (selected.length === 0) {
+          selectionElement.innerHTML =
+            '<p class="warn">何も選択されていません。</p>';
+          return;
+        }
+        selectionElement.innerHTML = `<ul class="selection-list">${selected
+          .map(
+            (item) =>
+              `<li class="${item.valid ? "ok" : "error"}">${code(item.name)} ${code(
+                item.id,
+              )} — ${item.valid ? "対象" : "対象外"}</li>`,
+          )
+          .join("")}</ul>`;
+      }
+
+      function renderDryRun(report) {
+        dryRunReady = Boolean(report.canApply);
+        confirmBindings.disabled = !dryRunReady;
+        confirmBindings.checked = false;
+        updateWriteButtons();
+
+        const status = report.canApply
+          ? '<div class="status ok">書き込み可能です。内容を確認してチェックを入れてください。</div>'
+          : '<div class="status warn">書き込みは停止されています。blockersを解決してdry-runをやり直してください。</div>';
+
+        const variableRows = [
+          ...report.variablePlan.reuse.map((item) => [
+            `${item.px}px`,
+            code(item.name),
+            "既存を再利用",
+          ]),
+          ...report.variablePlan.create.map((item) => [
+            `${item.px}px`,
+            code(item.name),
+            "新規作成予定",
+          ]),
+        ];
+
+        const oddRows = report.oddValues.map((item) => [
+          `${item.px}px`,
+          String(item.count),
+          String(item.nodeCount),
+          item.nodeIds.map(code).join(", "),
+          escapeHtml(item.reason),
+        ]);
+        const unexpectedRows = report.unexpectedValues.map((item) => [
+          `${item.px}px`,
+          String(item.count),
+          String(item.nodeCount),
+          item.nodeIds.map(code).join(", "),
+          escapeHtml(item.reason),
+        ]);
+        const excludedRows = report.excluded.map((item) => [
+          item.screens.map(code).join(" / "),
+          code(item.nodeId),
+          code(item.nodeName),
+          escapeHtml(item.reason),
+        ]);
+
+        resultElement.innerHTML = `
+          ${status}
+          <section class="result-section">
+            <h3>件数</h3>
+            <div class="summary-grid">
+              ${metric("バインド予定", report.totals.planned)}
+              ${metric("バインド済み", report.totals.alreadyBound)}
+              ${metric("除外したサブツリー", report.totals.excludedSubtrees)}
+            </div>
+          </section>
+          <section class="result-section">
+            <h3>バインド予定</h3>
+            ${table(
+              ["画面", "px", "Variable", "対象件数"],
+              report.bindingTable.map((item) => [
+                escapeHtml(item.screen),
+                `${item.px}px`,
+                code(item.variable),
+                String(item.count),
+              ]),
+            )}
+          </section>
+          <section class="result-section">
+            <h3>Variable作成計画</h3>
+            <p>Collection: ${code(report.variablePlan.collectionName)} — ${
+              report.variablePlan.createCollection
+                ? "新規作成予定"
+                : "既存を使用"
+            }</p>
+            ${table(["px", "Variable", "扱い"], variableRows)}
+          </section>
+          <section class="result-section">
+            <h3>奇数px（意図的に据え置き）</h3>
+            ${table(["px", "プロパティ数", "ノード数", "node ID", "理由"], oddRows)}
+          </section>
+          <section class="result-section">
+            <h3>表にない値・Step 1待ち</h3>
+            ${table(
+              ["px", "プロパティ数", "ノード数", "node ID", "理由"],
+              unexpectedRows,
+            )}
+          </section>
+          <section class="result-section">
+            <h3>除外フレーム</h3>
+            ${table(["画面", "node ID", "フレーム", "理由"], excludedRows)}
+          </section>
+          <section class="result-section">
+            <h3>書き込みを止めている理由</h3>
+            ${list(report.blockers, report.blockers.length ? "error" : "")}
+          </section>
+          ${rawDetails(report)}`;
+      }
+
+      function renderStep1Preview(report) {
+        step1Ready = Boolean(report.canApply);
+        confirmStep1.disabled = !step1Ready;
+        confirmStep1.checked = false;
+        updateWriteButtons();
+
+        const rows = report.targets.map((item) => [
+          code(item.nodeId),
+          escapeHtml(item.path),
+          code(item.property),
+          `${item.before}px → ${item.after}px`,
+        ]);
+        resultElement.innerHTML = `
+          <div class="status ${report.canApply ? "ok" : "warn"}">
+            ${
+              report.canApply
+                ? `対象は期待どおり${report.actualCount}件です。before画像を保存してから実行してください。`
+                : `対象は${report.actualCount}件です。期待する${report.expectedCount}件と一致するまで実行できません。`
+            }
+          </div>
+          ${table(["node ID", "階層", "プロパティ", "変更"], rows)}
+          <section class="result-section"><h3>停止理由</h3>${list(
+            report.blockers,
+            report.blockers.length ? "error" : "",
+          )}</section>
+          ${rawDetails(report)}`;
+      }
+
+      function renderApplyReport(report, kind) {
+        resetApprovals();
+        const isStep1 = kind === "step1";
+        const mainCount = isStep1 ? report.changedCount : report.boundCount;
+        const label = isStep1 ? "変更した指定" : "バインドした指定";
+        const createdCount = isStep1 ? 0 : report.createdVariables.length;
+        resultElement.innerHTML = `
+          <div class="status ${report.errorCount === 0 ? "ok" : "error"}">
+            ${escapeHtml(report.warning || "処理が完了しました。")}
+          </div>
+          <div class="summary-grid">
+            ${metric(label, mainCount)}
+            ${metric("新規Variable", createdCount)}
+            ${metric("エラー", report.errorCount)}
+          </div>
+          ${rawDetails(report)}`;
+      }
+
+      function renderError(message) {
+        resultElement.innerHTML = `<div class="status error">${escapeHtml(message)}</div>`;
+      }
+
+      window.onmessage = (event) => {
+        const message = event.data.pluginMessage;
+        if (!message) return;
+
+        if (message.type === "selection-info") {
+          renderSelection(message);
+          return;
+        }
+        if (message.type === "busy") {
+          setBusy(true);
+          resultElement.innerHTML = '<p class="muted">処理中…</p>';
+          return;
+        }
+        if (message.type === "idle") {
+          setBusy(false);
+          return;
+        }
+        if (message.type === "action-error") {
+          if (
+            message.action === "apply-bindings" ||
+            message.action === "apply-step1"
+          ) {
+            resetApprovals();
+          }
+          lastReport = {
+            type: message.type,
+            action: message.action,
+            message: message.message,
+          };
+          copyResultButton.disabled = false;
+          renderError(message.message);
+          return;
+        }
+
+        lastReport = message.report;
+        copyResultButton.disabled = false;
+        if (message.type === "dry-run-report") {
+          renderDryRun(message.report);
+        } else if (message.type === "step1-preview-report") {
+          renderStep1Preview(message.report);
+        } else if (message.type === "binding-apply-report") {
+          renderApplyReport(message.report, "bindings");
+        } else if (message.type === "step1-apply-report") {
+          renderApplyReport(message.report, "step1");
+        }
+      };
+    </script>
+  </body>
+</html>
