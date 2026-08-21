@@ -1,5 +1,5 @@
-import { useRemainingTime } from "../../../lib/useRemainingTime"
-import { ViewerState } from "../../../types"
+import { useRemainingTime } from '../../../lib/useRemainingTime'
+import { ViewerState } from '../../../types'
 
 type Props = { state: ViewerState }
 
