@@ -46,8 +46,6 @@ const VARIABLE_BY_PX = new Map(
   SPACING_VARIABLES.map((item) => [item.px, item]),
 );
 const VARIABLE_NAMES = new Set(SPACING_VARIABLES.map((item) => item.name));
-const ANCHOR_VARIABLE_NAMES = ["space/2-5", "space/6"];
-const ODD_VALUES_TO_KEEP = new Set([13, 23, 29]);
 const BINDABLE_FIELDS = [
   "paddingTop",
   "paddingBottom",
@@ -72,9 +70,7 @@ const EXCLUDED_FRAME_IDS = new Set([
   "475:8171",
 ]);
 
-const EXPECTED_STEP1_COUNT = 9;
 let approvedDryRunSignature = null;
-let approvedStep1Signature = null;
 let running = false;
 
 figma.showUI(__html__, {
@@ -207,7 +203,6 @@ function currentSelectionInfo() {
 
 function invalidateApprovals() {
   approvedDryRunSignature = null;
-  approvedStep1Signature = null;
 }
 
 function sendSelectionInfo() {
@@ -247,41 +242,6 @@ function dedupePush(map, key, value) {
     map.set(key, value);
   }
   return map.get(key);
-}
-
-async function findStatusBarAnchorVariables() {
-  const root = await figma.getNodeByIdAsync("475:8171");
-  if (!root) {
-    return [];
-  }
-
-  const variableIds = new Set();
-  function collect(node) {
-    if (node.boundVariables) {
-      for (const binding of Object.values(node.boundVariables)) {
-        if (Array.isArray(binding)) {
-          for (const alias of binding) {
-            if (alias && alias.id) variableIds.add(alias.id);
-          }
-        } else if (binding && binding.id) {
-          variableIds.add(binding.id);
-        }
-      }
-    }
-    if (hasChildren(node)) {
-      for (const child of node.children) {
-        collect(child);
-      }
-    }
-  }
-  collect(root);
-
-  const variables = await Promise.all(
-    [...variableIds].map((id) => figma.variables.getVariableByIdAsync(id)),
-  );
-  return variables.filter(
-    (variable) => variable && ANCHOR_VARIABLE_NAMES.includes(variable.name),
-  );
 }
 
 async function collectBindingScan(roots) {
@@ -394,12 +354,7 @@ async function collectBindingScan(roots) {
           continue;
         }
 
-        let reason = "表にないpx値";
-        if (ODD_VALUES_TO_KEEP.has(value)) {
-          reason = "奇数px（据え置き）";
-        } else if (value === 19 && field === "counterAxisSpacing") {
-          reason = "Step 1（19px→20px）実行待ち";
-        }
+        const reason = "表にないpx値（据え置き）";
 
         const key = `${node.id}|${field}|${value}`;
         const existing = dedupePush(skippedValues, key, { ...record, reason });
@@ -433,10 +388,9 @@ async function collectBindingScan(roots) {
 }
 
 async function inspectVariables() {
-  const [collections, variables, statusBarAnchors] = await Promise.all([
+  const [collections, variables] = await Promise.all([
     figma.variables.getLocalVariableCollectionsAsync(),
     figma.variables.getLocalVariablesAsync(),
-    findStatusBarAnchorVariables(),
   ]);
 
   const collectionsById = new Map(
@@ -454,27 +408,6 @@ async function inspectVariables() {
   }
 
   const conflicts = [];
-  for (const anchor of statusBarAnchors) {
-    if (anchor.remote) {
-      conflicts.push({
-        type: "remote-anchor-variable",
-        name: anchor.name,
-        message: `${anchor.name}はステータスバーで使われていますが、リモートVariableのため新しいVariableを同じコレクションへ追加できません。`,
-        variableId: anchor.id,
-      });
-    } else if (
-      !(variablesByName.get(anchor.name) || []).some(
-        (item) => item.id === anchor.id,
-      )
-    ) {
-      conflicts.push({
-        type: "anchor-not-in-local-list",
-        name: anchor.name,
-        message: `${anchor.name}はステータスバーで見つかりましたが、ローカルVariable一覧と一致しません。`,
-        variableId: anchor.id,
-      });
-    }
-  }
   for (const [name, matches] of variablesByName) {
     if (matches.length > 1) {
       conflicts.push({
@@ -494,52 +427,33 @@ async function inspectVariables() {
     }
   }
 
-  const anchorVariables = [];
-  for (const name of ANCHOR_VARIABLE_NAMES) {
-    const matches = variablesByName.get(name) || [];
-    if (matches.length === 1 && matches[0].resolvedType === "FLOAT") {
-      anchorVariables.push(matches[0]);
-    }
-  }
-
+  // space/* は、このファイルのローカルVariableだけを見る。
+  // 外部ライブラリの同名Variableは、このプロジェクトの基準ではないので参照しない。
   let collection = null;
   let createCollection = false;
-  const anchorCollectionIds = new Set(
-    anchorVariables.map((variable) => variable.variableCollectionId),
+  const spacingCollections = collections.filter(
+    (item) => item.name === "Spacing",
   );
 
-  if (anchorCollectionIds.size > 1) {
+  if (spacingCollections.length === 1) {
+    collection = spacingCollections[0];
+  } else if (spacingCollections.length > 1) {
     conflicts.push({
-      type: "anchor-collection-mismatch",
+      type: "duplicate-collection",
       message:
-        "space/2-5とspace/6が別々のコレクションにあります。自動選択できません。",
+        "Spacingという名前のコレクションが複数あります。自動選択できません。",
+      collectionIds: spacingCollections.map((item) => item.id),
     });
-  } else if (anchorCollectionIds.size === 1) {
-    collection = collectionsById.get([...anchorCollectionIds][0]) || null;
   } else {
-    const spacingCollections = collections.filter(
-      (item) => item.name === "Spacing",
-    );
-    if (spacingCollections.length === 1) {
-      collection = spacingCollections[0];
-    } else if (spacingCollections.length > 1) {
+    const existingTargetVariables = [...variablesByName.values()].flat();
+    if (existingTargetVariables.length > 0) {
       conflicts.push({
-        type: "duplicate-collection",
+        type: "spacing-collection-not-found",
         message:
-          "Spacingという名前のコレクションが複数あります。自動選択できません。",
-        collectionIds: spacingCollections.map((item) => item.id),
+          "Spacingコレクションが無い一方、space/* Variableが別のコレクションに存在します。手動で確認してください。",
       });
     } else {
-      const existingTargetVariables = [...variablesByName.values()].flat();
-      if (existingTargetVariables.length > 0) {
-        conflicts.push({
-          type: "anchor-missing-with-existing-variables",
-          message:
-            "space/2-5・space/6が見つからない一方、他のspace/* Variableが存在します。既存コレクションを手動確認してください。",
-        });
-      } else {
-        createCollection = true;
-      }
+      createCollection = true;
     }
   }
 
@@ -735,12 +649,6 @@ async function runDryRun() {
   const blockers = [
     ...variableState.conflicts.map((item) => item.message),
     ...scan.traversalErrors.map((item) => item.reason),
-    ...scan.skippedValues
-      .filter((item) => item.reason !== "奇数px（据え置き）")
-      .map(
-        (item) =>
-          `${item.value}px (${item.field}, ${item.nodeId}) は${item.reason}のため、書き込み前に解決が必要です。`,
-      ),
     ...(analysis.boundToOther.length > 0
       ? ["別のVariableへバインド済みの対象があります。内容を確認してください。"]
       : []),
@@ -772,19 +680,10 @@ async function runDryRun() {
         alreadyBound: analysis.alreadyBound.length,
         boundToOther: analysis.boundToOther.length,
         unavailableVariable: analysis.unavailableVariable.length,
-        oddOrUnexpected: scan.skippedValues.length,
+        keptAsIs: scan.skippedValues.length,
         excludedSubtrees: scan.excluded.length,
       },
-      oddValues: summarizeSkippedByValue(
-        scan.skippedValues.filter(
-          (item) => item.reason === "奇数px（据え置き）",
-        ),
-      ),
-      unexpectedValues: summarizeSkippedByValue(
-        scan.skippedValues.filter(
-          (item) => item.reason !== "奇数px（据え置き）",
-        ),
-      ),
+      keptValues: summarizeSkippedByValue(scan.skippedValues),
       excluded: scan.excluded.map((item) => ({
         ...item,
         screens: [...item.screens].sort(),
@@ -855,13 +754,9 @@ async function applyBindings() {
   const scan = await collectBindingScan(roots);
   const beforeState = await inspectVariables();
   const beforeAnalysis = await analyzeBindings(scan, beforeState);
-  const nonOddSkipped = scan.skippedValues.filter(
-    (item) => item.reason !== "奇数px（据え置き）",
-  );
   if (
     beforeState.conflicts.length > 0 ||
     scan.traversalErrors.length > 0 ||
-    nonOddSkipped.length > 0 ||
     beforeAnalysis.boundToOther.length > 0
   ) {
     throw new Error(
@@ -989,191 +884,6 @@ async function applyBindings() {
   });
 }
 
-function step1BoundVariableId(node) {
-  return getBoundVariableId(node, "counterAxisSpacing");
-}
-
-async function collectStep1Targets(roots) {
-  const displayRoots = roots.filter((root) => root.id === "525:3394");
-  if (displayRoots.length !== 1) {
-    throw new Error("Step 1にはScreens/Displayを選択範囲へ含めてください。");
-  }
-
-  const targets = [];
-  const excluded = [];
-
-  async function visit(node, path) {
-    if (!node || node.removed) {
-      return;
-    }
-    if (isExcludedBoundary(node)) {
-      excluded.push({
-        nodeId: node.id,
-        nodeName: node.name,
-        reason: excludedReason(node),
-      });
-      return;
-    }
-
-    if (
-      node.type !== "INSTANCE" &&
-      isAutoLayoutNode(node) &&
-      node.layoutWrap === "WRAP" &&
-      node.name === "Answer Options" &&
-      propertyValue(node, "counterAxisSpacing") === 19
-    ) {
-      targets.push({
-        node,
-        nodeId: node.id,
-        nodeName: node.name,
-        path,
-        property: "counterAxisSpacing",
-        before: 19,
-        after: 20,
-        boundVariableId: step1BoundVariableId(node),
-      });
-    }
-
-    if (node.type !== "INSTANCE" && hasChildren(node)) {
-      for (const child of node.children) {
-        await visit(child, `${path} → ${child.name}`);
-      }
-    }
-  }
-
-  await visit(displayRoots[0], displayRoots[0].name);
-  return { targets, excluded };
-}
-
-function publicStep1Target(target) {
-  return {
-    nodeId: target.nodeId,
-    nodeName: target.nodeName,
-    path: target.path,
-    property: target.property,
-    before: target.before,
-    after: target.after,
-    boundVariableId: target.boundVariableId,
-  };
-}
-
-function step1Fingerprint(result) {
-  return JSON.stringify(
-    result.targets
-      .map(
-        (item) =>
-          `${item.nodeId}|${item.property}|${item.before}|${item.after}|${item.boundVariableId || ""}`,
-      )
-      .sort(),
-  );
-}
-
-async function previewStep1() {
-  const roots = getSelectedTargetRoots();
-  const signature = selectionSignature(roots);
-  const result = await collectStep1Targets(roots);
-  const boundTargets = result.targets.filter(
-    (target) => target.boundVariableId,
-  );
-  const countMatches = result.targets.length === EXPECTED_STEP1_COUNT;
-  const canApply = countMatches && boundTargets.length === 0;
-  approvedStep1Signature = canApply
-    ? { selection: signature, targets: step1Fingerprint(result) }
-    : null;
-
-  post("step1-preview-report", {
-    report: {
-      canApply,
-      expectedCount: EXPECTED_STEP1_COUNT,
-      actualCount: result.targets.length,
-      targets: result.targets.map(publicStep1Target),
-      alreadyBoundTargets: boundTargets.map(publicStep1Target),
-      excluded: result.excluded,
-      blockers: [
-        ...(countMatches
-          ? []
-          : [
-              `対象が${result.targets.length}件です。期待する${EXPECTED_STEP1_COUNT}件と一致しません。`,
-            ]),
-        ...(boundTargets.length === 0
-          ? []
-          : [
-              "counterAxisSpacingがすでにVariableへバインドされた対象があります。",
-            ]),
-      ],
-    },
-  });
-}
-
-async function applyStep1() {
-  const roots = getSelectedTargetRoots();
-  const signature = selectionSignature(roots);
-  const approval = approvedStep1Signature;
-  if (!approval || approval.selection !== signature) {
-    throw new Error(
-      "同じ選択範囲で、先に19px→20pxの対象確認を成功させてください。",
-    );
-  }
-  approvedStep1Signature = null;
-
-  const result = await collectStep1Targets(roots);
-  if (result.targets.length !== EXPECTED_STEP1_COUNT) {
-    throw new Error(
-      `実行直前の対象が${result.targets.length}件です。期待する${EXPECTED_STEP1_COUNT}件と一致しません。`,
-    );
-  }
-  if (approval.targets !== step1Fingerprint(result)) {
-    throw new Error(
-      "対象確認後に19px→20pxの対象が変わりました。対象確認をやり直してください。",
-    );
-  }
-
-  const changed = [];
-  const skipped = [];
-  const errors = [];
-  for (const target of result.targets) {
-    try {
-      if (step1BoundVariableId(target.node)) {
-        skipped.push({
-          ...publicStep1Target(target),
-          reason: "Variableへバインド済み",
-        });
-        continue;
-      }
-      if (propertyValue(target.node, "counterAxisSpacing") !== 19) {
-        skipped.push({
-          ...publicStep1Target(target),
-          reason: "実行直前の値が19pxではない",
-        });
-        continue;
-      }
-      target.node.counterAxisSpacing = 20;
-      changed.push(publicStep1Target(target));
-    } catch (error) {
-      errors.push({
-        ...publicStep1Target(target),
-        reason: serializeError(error),
-      });
-    }
-  }
-
-  invalidateApprovals();
-  post("step1-apply-report", {
-    report: {
-      changedCount: changed.length,
-      skippedCount: skipped.length,
-      errorCount: errors.length,
-      changed,
-      skipped,
-      errors,
-      warning:
-        errors.length > 0 || skipped.length > 0
-          ? "途中まで変更された可能性があります。changed・skipped・errorsを確認してください。"
-          : "before / afterのスクリーンショットを保存し、もう一度dry-runを実行してください。",
-    },
-  });
-}
-
 async function runAction(action) {
   if (running) {
     post("action-error", { action, message: "別の処理を実行中です。" });
@@ -1186,10 +896,6 @@ async function runAction(action) {
       await runDryRun();
     } else if (action === "apply-bindings") {
       await applyBindings();
-    } else if (action === "preview-step1") {
-      await previewStep1();
-    } else if (action === "apply-step1") {
-      await applyStep1();
     } else {
       throw new Error(`不明な操作です: ${action}`);
     }
