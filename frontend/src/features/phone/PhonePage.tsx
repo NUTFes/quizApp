@@ -1,4 +1,3 @@
-// PhonePage.tsx
 import { useViewerState } from '../../lib/useEventState'
 import { WaitingView } from './WaitingView'
 import { QuestionView } from './QuestionView'
