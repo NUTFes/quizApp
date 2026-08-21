@@ -14,7 +14,7 @@ export function QuestionView({ state }: props) {
   return (
     <div>
       <h1>問題</h1>
-      <QuestionNumber count={state.askedCount}/>
+      <QuestionNumber count={state.askedCount} />
       <QuestionText segments={state.question?.textSegments ?? []} />
       <RemainingTime state={state} />
       <ChoiceList
