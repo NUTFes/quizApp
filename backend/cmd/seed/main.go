@@ -61,18 +61,25 @@ func reset(tx *gorm.DB) error {
 	if err := tx.Exec(`DELETE FROM questions`).Error; err != nil {
 		return fmt.Errorf("delete questions: %w", err)
 	}
-	// id を 1 から振り直す(seed の結果を毎回同じにするため)
-	if err := tx.Exec(`ALTER SEQUENCE questions_id_seq RESTART WITH 1`).Error; err != nil {
+	// id を 1 から振り直す(seed の結果を毎回同じにするため)。
+	// シーケンス名を直書きすると、将来 GENERATED ... AS IDENTITY に変えたときに実体と食い違う。pg_get_serial_sequence でカラムから引けば、どちらでも動く。
+	// 第3引数 false は「次に払い出す値がこの値になる」という意味(is_called=false)。
+	if err := tx.Exec(
+		`SELECT setval(pg_get_serial_sequence('questions', 'id'), 1, false)`,
+	).Error; err != nil {
 		return fmt.Errorf("restart sequence: %w", err)
 	}
 	// 出題中の問題を消したので、進行状態も待機に戻す。
 	// これを忘れると phase=question のまま current_question_id だけ NULL になる。
+	// time_limit_sec も migration の既定値(30)に戻す。
+	// 前の問題で管理者が制限時間を変更していると、seed 後もその値が残ってしまうため。
 	if err := tx.Exec(`
 		UPDATE event_states
 		   SET phase = 'waiting',
 		       current_question_id = NULL,
 		       question_started_at = NULL,
-		       revealed_segments = 0
+		       revealed_segments = 0,
+		       time_limit_sec = 30
 		 WHERE id = 1`).Error; err != nil {
 		return fmt.Errorf("reset event_states: %w", err)
 	}
