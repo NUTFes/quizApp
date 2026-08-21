@@ -17,7 +17,10 @@ export function AnswerView({ state }: props) {
       {answer && <p>{answer}</p>}
       <QuestionNumber count={state.askedCount} />
       <QuestionText segments={state.question?.textSegments ?? []} />
-      <ChoiceList question={state.question} correctChoiceId={state.answer?.correctChoiceId ?? null} />
+      <ChoiceList
+        question={state.question}
+        correctChoiceId={state.answer?.correctChoiceId ?? null}
+      />
       {explanation && <p>{explanation}</p>}
     </div>
   )
