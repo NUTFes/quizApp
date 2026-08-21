@@ -1,18 +1,18 @@
-import { ViewerQuestion } from "../../../types"
-import { ChoiceCard } from "./ChoiceCard"
+import { ViewerQuestion } from '../../../types'
+import { ChoiceCard } from './ChoiceCard'
 
 type Props = {
-    question: ViewerQuestion | null
-    correctChoiceId: string | null
+  question: ViewerQuestion | null
+  correctChoiceId: string | null
 }
 
 export function ChoiceList({ question, correctChoiceId }: Props) {
-   if (question === null) return null
+  if (question === null) return null
 
   const layout =
     question.type === 'four_choice'
-      ? 'grid grid-cols-2'   // 2×2
-      : 'grid grid-cols-2'   // 左右（2つしか無いので同じ書き方で並ぶ）
+      ? 'grid grid-cols-2' // 2×2
+      : 'grid grid-cols-2' // 左右（2つしか無いので同じ書き方で並ぶ）
 
   return (
     <div className={layout}>
