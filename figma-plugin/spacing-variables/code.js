@@ -331,6 +331,22 @@ async function collectBindingScan(roots) {
           continue;
         }
 
+        // gapが「Auto」の指定は対象にしない。
+        // counterAxisSpacingはこのときAPIがnullを返すが、itemSpacingは
+        // 数値を返し続けるため、整列モードを見て明示的に除外する必要がある。
+        if (
+          field === "itemSpacing" &&
+          node.primaryAxisAlignItems === "SPACE_BETWEEN"
+        ) {
+          continue;
+        }
+        if (
+          field === "counterAxisSpacing" &&
+          node.counterAxisAlignContent === "SPACE_BETWEEN"
+        ) {
+          continue;
+        }
+
         const value = propertyValue(node, field);
         if (value === null || value <= 0) {
           continue;

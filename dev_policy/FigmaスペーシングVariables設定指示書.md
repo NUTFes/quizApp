@@ -140,6 +140,10 @@ Auto Layout の以下のみ。
 
 **対象外**: width / height、font-size / line-height、border-radius、border-width、色、影、絶対配置の座標。
 
+**gap が「Auto」の指定も対象外。** 整列が `SPACE_BETWEEN` のとき、gap はレイアウトが決めるものであって、デザイナーが指定した余白ではない。ここに Variable を刺すと Auto が固定値に切り替わる可能性があるため、触らない。
+
+⚠️ 実装上の注意: `counterAxisSpacing` はこのとき API が `null` を返すので値チェックで弾けるが、**`itemSpacing` は数値を返し続ける**（UI 上は「Auto」でも、最後に設定されていた値が残っている）。値だけを見ると Auto を見分けられない。`primaryAxisAlignItems` / `counterAxisAlignContent` を見て明示的に除外すること。
+
 ---
 
 ## 3. 値の変更はしない（2026-08-22 方針変更）
