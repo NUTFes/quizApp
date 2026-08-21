@@ -1,10 +1,8 @@
-// スマホ用ページ
+import { useViewerState } from '../../lib/useEventState'
+
 function PhonePage() {
-  return (
-    <div>
-      <h1 className="text-4xl font-bold text-cyan-500">スマホ用画面</h1>
-    </div>
-  )
+  const state = useViewerState()
+  return <pre>{JSON.stringify(state, null, 2)}</pre>
 }
 
 export default PhonePage
