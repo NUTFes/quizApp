@@ -7,6 +7,7 @@ import type {
   QuestionListItem,
   ViewerState,
 } from '../types'
+import { RowIssue } from '../types/rowIssue'
 import { BASE, getAdminToken } from './config'
 
 type Options = {
@@ -21,10 +22,7 @@ export class ApiError extends Error {
     readonly code: string,
     readonly status: number,
     message: string,
-    readonly details: {
-      sourceRow: number
-      reason: string
-    }[] = [],
+    readonly details: RowIssue[] = [],
   ) {
     super(message)
   }
