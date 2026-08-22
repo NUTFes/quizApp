@@ -49,16 +49,26 @@ quiz-app/
         ├── question/         #   問題CRUD(モデル+ハンドラ+DB操作をパッケージ内に同居)
         ├── event/            #   進行状態管理(EventState)
         ├── answer/           #   回答受付・集計
-        ├── admin/            #   管理者操作・認証
+        ├── admin/            #   管理者操作(進行制御・verify)
         ├── sheetsync/        #   スプシ→DB同期(バリデーション含む)
         ├── sse/              #   SSEブロードキャスタ(接続管理・配信)
-        └── platform/         #   共通基盤: DB接続、ルータ登録、ミドルウェア
+        └── platform/         #   共通基盤: DB接続、ルータ登録、認証ミドルウェア、エラー応答
 ```
 
 ## ルール(README に転記する)
 
 1. **新しい機能は feature フォルダ(front: `features/`、back: `internal/`)に新フォルダを切る。** 既存featureのフォルダ内に別機能のコードを足さない。
 2. feature間の直接importは最小限にする。共有したくなったら front は `shared/`、back は `platform/` に昇格させる。
+
+   **どちらに置くか迷ったら、話題ではなく「誰が使うか」で決める。** 判断が割れた実例を残しておく(→ #10)。
+
+   | 問い | `platform` 行き | feature 行き |
+   | --- | --- | --- |
+   | URL を持つか | 持たない | 持つ |
+   | ドメイン知識を含むか | 含まない | 含む |
+   | その feature を消したら一緒に消えるか | 消えない | 消える |
+
+   例: 認証ミドルウェアは「管理者の話題」だが、`IMPORT_TOKEN` を使う `sheetsync` からも呼ぶので `platform/middleware.go`。一方 `GET /api/admin/verify` は URL を持ち admin 固有なので `admin/`。
 3. **API仕様の変更は `docs/api.md` を先に直す。** フロントの `types/` とGoの構造体は api.md に従う(実装とずれたら api.md が正)。
 4. 1ファイルが300行を超えたら分割を検討する(初心者向けの機械的な目安)。
 
