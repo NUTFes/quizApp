@@ -134,7 +134,7 @@
 
     cssArea.value = message.css;
     jsonArea.value = JSON.stringify(message.json, null, 2);
-    summary.textContent = `ローカルの Color Style ${message.json.count} 件`;
+    summary.textContent = `色 ${message.json.colorCount} 件 / 文字 ${message.json.textCount} 件`;
     warnings.innerHTML = message.json.warnings.length
       ? `<div class="warn"><strong>確認してください</strong><ul>${message.json.warnings
           .map((item) => `<li>${escapeHtml(item)}</li>`)
