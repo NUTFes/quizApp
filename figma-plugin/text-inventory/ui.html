@@ -1,0 +1,253 @@
+<style>
+  :root {
+    color-scheme: light dark;
+    font-family:
+      Inter,
+      -apple-system,
+      "Hiragino Kaku Gothic ProN",
+      "Noto Sans JP",
+      sans-serif;
+    font-size: 12px;
+  }
+  body {
+    margin: 0;
+    padding: 12px;
+    color: var(--figma-color-text);
+    background: var(--figma-color-bg);
+  }
+  h2 {
+    font-size: 12px;
+    margin: 18px 0 6px;
+  }
+  .row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  button {
+    font: inherit;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--figma-color-border);
+    background: var(--figma-color-bg-secondary);
+    color: inherit;
+    cursor: pointer;
+  }
+  button:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .muted {
+    color: var(--figma-color-text-secondary);
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 4px;
+  }
+  th,
+  td {
+    text-align: left;
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--figma-color-border);
+    vertical-align: top;
+  }
+  th {
+    color: var(--figma-color-text-secondary);
+    font-weight: 500;
+  }
+  td.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+  }
+  .note {
+    border-left: 3px solid var(--figma-color-border-brand-strong, #0d99ff);
+    padding: 6px 10px;
+    margin-bottom: 10px;
+    background: var(--figma-color-bg-secondary);
+    border-radius: 0 6px 6px 0;
+  }
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--figma-color-border);
+    background: var(--figma-color-bg-secondary);
+    color: inherit;
+  }
+</style>
+
+<div class="row">
+  <button id="scan" disabled>調べる（変更なし）</button>
+  <button id="copy" disabled>JSONをコピー</button>
+  <span id="selection" class="muted"></span>
+</div>
+
+<div id="result" class="muted">
+  対象フレームを選んで「調べる」を押してください。Figmaには一切書き込みません。
+</div>
+
+<script>
+  const scanButton = document.getElementById("scan");
+  const copyButton = document.getElementById("copy");
+  const selectionElement = document.getElementById("selection");
+  const resultElement = document.getElementById("result");
+  let lastReport = null;
+
+  function escapeHtml(value) {
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;");
+  }
+
+  const code = (value) => `<code>${escapeHtml(value)}</code>`;
+  const dash = (value) =>
+    value === null || value === undefined ? "—" : escapeHtml(value);
+
+  function table(headers, rows, numeric = []) {
+    if (rows.length === 0) {
+      return '<p class="muted">なし</p>';
+    }
+    const head = headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("");
+    const body = rows
+      .map(
+        (row) =>
+          `<tr>${row
+            .map(
+              (cell, i) =>
+                `<td${numeric.includes(i) ? ' class="num"' : ""}>${cell}</td>`,
+            )
+            .join("")}</tr>`,
+      )
+      .join("");
+    return `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+  }
+
+  function render(report) {
+    lastReport = report;
+    copyButton.disabled = false;
+
+    const unstyledTotal = report.unstyled.reduce((sum, i) => sum + i.count, 0);
+
+    resultElement.innerHTML = `
+      <div class="note">
+        テキスト ${report.textNodeCount} 件 /
+        使用中のスタイル ${report.styled.length} 種 /
+        <strong>スタイル未適用 ${unstyledTotal} 件</strong> /
+        ファイル内のTextStyle ${report.localStyleCount} 件
+      </div>
+
+      <h2>使われているスタイル</h2>
+      ${table(
+        ["スタイル名", "件数", "画面", "代表 node ID"],
+        report.styled.map((item) => [
+          code(item.name),
+          String(item.count),
+          escapeHtml(item.screens.join(" / ")),
+          item.nodeIds.map(code).join(" "),
+        ]),
+        [1],
+      )}
+
+      <h2>スタイルが当たっていないテキスト</h2>
+      <p class="muted">ここが整理の対象です。同じ組み合わせはまとめてあります。</p>
+      ${table(
+        ["種別", "フォント", "px", "行間", "字間", "件数", "代表 node ID"],
+        report.unstyled.map((item) => [
+          escapeHtml(item.kind),
+          dash(item.family ? `${item.family} ${item.style || ""}`.trim() : null),
+          dash(item.px),
+          dash(item.lineHeight),
+          dash(item.letterSpacing),
+          String(item.count),
+          item.nodeIds.map(code).join(" "),
+        ]),
+        [5],
+      )}
+
+      <h2>fontSize の分布</h2>
+      <p class="muted">スケールを何段にするかの material です。</p>
+      ${table(
+        ["px", "件数", "画面"],
+        report.fontSizes.map((item) => [
+          `${item.px}px`,
+          String(item.count),
+          escapeHtml(item.screens.join(" / ")),
+        ]),
+        [0, 1],
+      )}
+
+      <h2>存在するのに使われていないスタイル</h2>
+      ${
+        report.unusedStyles.length
+          ? `<p>${report.unusedStyles.map(code).join(", ")}</p>`
+          : '<p class="muted">なし</p>'
+      }
+
+      <h2>除外したフレーム</h2>
+      ${table(
+        ["node ID", "フレーム", "理由"],
+        report.excluded.map((item) => [
+          code(item.nodeId),
+          code(item.nodeName),
+          escapeHtml(item.reason),
+        ]),
+      )}
+
+      <h2>JSON</h2>
+      <textarea id="json" rows="8" readonly>${escapeHtml(
+        JSON.stringify(report, null, 2),
+      )}</textarea>`;
+  }
+
+  copyButton.addEventListener("click", () => {
+    const area = document.getElementById("json");
+    if (!area) return;
+    area.removeAttribute("readonly");
+    area.select();
+    const ok = document.execCommand("copy");
+    area.setAttribute("readonly", "readonly");
+    window.getSelection().removeAllRanges();
+    copyButton.textContent = ok ? "コピーしました" : "Cmd/Ctrl+C でコピー";
+    setTimeout(() => {
+      copyButton.textContent = "JSONをコピー";
+    }, 1500);
+  });
+
+  scanButton.addEventListener("click", () => {
+    resultElement.innerHTML = '<p class="muted">読み込み中…</p>';
+    parent.postMessage({ pluginMessage: { action: "scan" } }, "*");
+  });
+
+  window.onmessage = (event) => {
+    const message = event.data.pluginMessage;
+    if (!message) return;
+
+    if (message.type === "selection-info") {
+      const selected = message.selected;
+      const valid = selected.filter((item) => item.valid);
+      scanButton.disabled = selected.length === 0 || valid.length !== selected.length;
+      selectionElement.textContent = selected.length
+        ? selected.map((item) => `${item.name}${item.valid ? "" : "（対象外）"}`).join(" / ")
+        : "未選択";
+      return;
+    }
+    if (message.type === "error") {
+      resultElement.innerHTML = `<div class="note">${escapeHtml(message.message)}</div>`;
+      return;
+    }
+    if (message.type === "report") {
+      render(message.report);
+    }
+  };
+</script>
