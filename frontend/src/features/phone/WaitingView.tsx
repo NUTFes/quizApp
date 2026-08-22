@@ -1,6 +1,4 @@
 // 待機画面
-const fontFamily = "Zen Kaku Gothic New"
-
 export function WaitingView() {
   return (
     <main className="min-h-dvh pt-[env(safe-area-inset-top)]">
