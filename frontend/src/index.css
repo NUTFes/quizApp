@@ -22,8 +22,6 @@
   --font-zen-kaku-gothic-new: 'Zen Kaku Gothic New', sans-serif;
 
   /* 文字 — 同上。--text-* の4行で1つのユーティリティになる */
-  --font-zen-kaku-gothic-new: 'Zen Kaku Gothic New', sans-serif;
-
   --text-header: 17px;
   --text-header--font-weight: 700;
   --text-p-header: 48px;
