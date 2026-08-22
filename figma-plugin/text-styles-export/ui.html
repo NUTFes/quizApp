@@ -1,0 +1,144 @@
+<style>
+  :root {
+    color-scheme: light dark;
+    font-family:
+      Inter,
+      -apple-system,
+      "Hiragino Kaku Gothic ProN",
+      "Noto Sans JP",
+      sans-serif;
+    font-size: 12px;
+  }
+  body {
+    margin: 0;
+    padding: 12px;
+    color: var(--figma-color-text);
+    background: var(--figma-color-bg);
+  }
+  h2 {
+    font-size: 12px;
+    margin: 16px 0 6px;
+  }
+  h2:first-child {
+    margin-top: 0;
+  }
+  .row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  button {
+    font: inherit;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--figma-color-border);
+    background: var(--figma-color-bg-secondary);
+    color: inherit;
+    cursor: pointer;
+  }
+  button:hover {
+    background: var(--figma-color-bg-hover);
+  }
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    line-height: 1.5;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--figma-color-border);
+    background: var(--figma-color-bg-secondary);
+    color: inherit;
+    resize: vertical;
+  }
+  .muted {
+    color: var(--figma-color-text-secondary);
+  }
+  .warn {
+    border-left: 3px solid var(--figma-color-bg-warning, #d9a300);
+    padding: 6px 10px;
+    margin-bottom: 8px;
+    background: var(--figma-color-bg-secondary);
+    border-radius: 0 6px 6px 0;
+  }
+  .warn ul {
+    margin: 4px 0 0;
+    padding-left: 18px;
+  }
+</style>
+
+<div class="row">
+  <button id="reload">再読み込み</button>
+  <span id="summary" class="muted">読み込み中…</span>
+</div>
+
+<div id="warnings"></div>
+
+<h2>
+  Tailwind（<code>frontend/src/index.css</code> の <code>@theme</code> に貼る）
+  <button id="copy-css">コピー</button>
+</h2>
+<textarea id="css" rows="12" readonly></textarea>
+
+<h2>JSON（記録用）<button id="copy-json">コピー</button></h2>
+<textarea id="json" rows="14" readonly></textarea>
+
+<script>
+  const cssArea = document.getElementById("css");
+  const jsonArea = document.getElementById("json");
+  const summary = document.getElementById("summary");
+  const warnings = document.getElementById("warnings");
+
+  function escapeHtml(value) {
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;");
+  }
+
+  function copyFrom(area, button) {
+    area.removeAttribute("readonly");
+    area.select();
+    const ok = document.execCommand("copy");
+    area.setAttribute("readonly", "readonly");
+    window.getSelection().removeAllRanges();
+    const label = button.textContent;
+    button.textContent = ok ? "コピーしました" : "Cmd/Ctrl+C でコピー";
+    setTimeout(() => {
+      button.textContent = label;
+    }, 1500);
+  }
+
+  document
+    .getElementById("copy-css")
+    .addEventListener("click", (event) => copyFrom(cssArea, event.target));
+  document
+    .getElementById("copy-json")
+    .addEventListener("click", (event) => copyFrom(jsonArea, event.target));
+  document.getElementById("reload").addEventListener("click", () => {
+    summary.textContent = "読み込み中…";
+    parent.postMessage({ pluginMessage: { action: "reload" } }, "*");
+  });
+
+  window.onmessage = (event) => {
+    const message = event.data.pluginMessage;
+    if (!message) return;
+
+    if (message.type === "error") {
+      summary.textContent = "エラー";
+      warnings.innerHTML = `<div class="warn">${escapeHtml(message.message)}</div>`;
+      return;
+    }
+
+    cssArea.value = message.css;
+    jsonArea.value = JSON.stringify(message.json, null, 2);
+    summary.textContent = `ローカルの Text Style ${message.json.count} 件`;
+    warnings.innerHTML = message.json.warnings.length
+      ? `<div class="warn"><strong>確認してください</strong><ul>${message.json.warnings
+          .map((item) => `<li>${escapeHtml(item)}</li>`)
+          .join("")}</ul></div>`
+      : "";
+  };
+</script>
