@@ -31,11 +31,13 @@ export function WaitingView() {
           </p>
         </div>
       </div>
-      <div>
-        移動の際は走らないでください
+      <div className="px-4 pt-7 pb-2.5">
+        <div className="rounded-[20px] shadow-[0_6px_16px_0_rgba(25,32,133,0.08)] h-[153px] w-full flex items-center justift-start p-6 text-xl">
+          移動の際は走らないでください
+        </div>
       </div>
-      <footer>
-        <div>
+      <footer className="w-full h-full">
+        <div className="pt-8 px-2.5 text-center text-base">
           第45回 技大祭実行委員会
         </div>
       </footer>
