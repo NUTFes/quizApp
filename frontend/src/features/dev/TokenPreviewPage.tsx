@@ -8,8 +8,6 @@
 // Tailwind はソースを文字列として走査してクラスを生成するので、
 // `bg-${name}` のように組み立てた名前は生成されず、色が当たらない。
 // このファイルが縦に長いのはそのためで、短くしようとすると壊れる。
-import { useEffect, useState } from 'react'
-
 const COLOR_CLASSES = [
   'bg-accent',
   'bg-accepting-answer',
@@ -25,7 +23,7 @@ const COLOR_CLASSES = [
   'bg-info',
   'bg-live',
   'bg-maru',
-  'bg-surface'
+  'bg-surface',
 ] as const
 
 const PHONE_TEXT = [
@@ -63,7 +61,7 @@ const PHONE_TEXT = [
   'text-question-arunashi-example',
   'text-question-body',
   'text-status-answer',
-  'text-timelimit'
+  'text-timelimit',
 ] as const
 
 const MONITOR_TEXT = [
@@ -92,7 +90,7 @@ const MONITOR_TEXT = [
   'text-p-question-body-l',
   'text-p-question-body-m',
   'text-p-status-answer',
-  'text-p-timelimit'
+  'text-p-timelimit',
 ] as const
 
 const ADMIN_TEXT = [
@@ -102,53 +100,63 @@ const ADMIN_TEXT = [
   'text-admin-header-alt',
   'text-admin-list-label',
   'text-admin-pre-timelimit',
-  'text-admin-timelimit'
+  'text-admin-timelimit',
 ] as const
 
-// getComputedStyle で読む項目。useEffect の依存に入るので、
-// 呼び出しのたびに新しい配列ができないよう定数にしておく。
+// 「そのクラスが本当に効いているか」は React の状態ではなく、
+// ブラウザが計算したスタイル(CSSOM)の側にしかない。
+//
+// ここで useEffect + setState を使うと、測った値を state に入れるために
+// 再レンダリングが毎回1回余分に走る(react-hooks/set-state-in-effect)。
+// 測った値は「表示するだけ」で React 側の判断には使わないので、
+// ref コールバックで測って、その場で表示用の要素に書き込む。state を経由しない。
 const COLOR_PROPS = ['background-color']
+const COLOR_LABELS = ['']
 const TEXT_PROPS = ['font-size', 'line-height', 'font-weight', 'letter-spacing']
+const TEXT_LABELS = ['', '行間 ', 'weight ', '字間 ']
 
-// 実際に描画された要素から計算後の値を読む。
-// index.css を目で読むのではなく、ブラウザが解決した結果を出すことに意味がある。
-function useComputed(selector: string, props: readonly string[]) {
-  const [rows, setRows] = useState<Record<string, Record<string, string>>>({})
+// root の中の [data-sample] を測り、結果を [data-label] に書き込む ref コールバックを作る。
+// モジュールの最上位で1度だけ作ること。描画のたびに作り直すと、
+// React が ref を付け外しして毎回測り直しになる。
+function measureInto(props: readonly string[], labels: readonly string[]) {
+  return (root: HTMLElement | null) => {
+    if (!root) return
+    const sample = root.querySelector<HTMLElement>('[data-sample]')
+    const label = root.querySelector<HTMLElement>('[data-label]')
+    if (!sample || !label) return
 
-  useEffect(() => {
-    const next: Record<string, Record<string, string>> = {}
-    for (const el of document.querySelectorAll<HTMLElement>(selector)) {
-      const key = el.dataset.token
-      if (!key) continue
-      const style = getComputedStyle(el)
-      next[key] = Object.fromEntries(props.map((p) => [p, style.getPropertyValue(p)]))
-    }
-    setRows(next)
-  }, [selector, props])
-
-  return rows
+    const style = getComputedStyle(sample)
+    label.textContent = props
+      .map((prop, i) => `${labels[i] ?? ''}${style.getPropertyValue(prop)}`)
+      .join(' / ')
+  }
 }
 
-function ColorSection() {
-  const computed = useComputed('[data-kind="color"]', COLOR_PROPS)
+const measureColor = measureInto(COLOR_PROPS, COLOR_LABELS)
+const measureText = measureInto(TEXT_PROPS, TEXT_LABELS)
 
+function ColorSection() {
   return (
     <section className="mb-16">
       <h2 className="text-instruction mb-1">色（{COLOR_CLASSES.length}）</h2>
       <p className="text-message-s mb-4">
-        四角に色が付いていれば、そのクラスは生成されている。
-        白いままなら index.css に変数が無いか、名前を間違えている。
+        四角に色が付いていれば、そのクラスは生成されている。 白いままなら index.css
+        に変数が無いか、名前を間違えている。
       </p>
 
       <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3">
         {COLOR_CLASSES.map((cls) => (
-          <div key={cls} className="border border-border-soft rounded overflow-hidden">
-            <div data-kind="color" data-token={cls} className={`${cls} h-16 w-full`} />
+          <div
+            key={cls}
+            ref={measureColor}
+            className="border-border-soft overflow-hidden rounded border"
+          >
+            <div data-sample className={`${cls} h-16 w-full`} />
             <div className="p-2">
               <code className="text-message-s block">{cls}</code>
-              <code className="text-message-s block opacity-60">
-                {computed[cls]?.['background-color'] ?? '—'}
-              </code>
+              {/* 中身は measureColor が書き込む。React 側の子は持たせない
+                  （持たせると再描画で書き戻されることがある） */}
+              <code data-label className="text-message-s block opacity-60" />
             </div>
           </div>
         ))}
@@ -166,8 +174,6 @@ function TextSection({
   note: string
   classes: readonly string[]
 }) {
-  const computed = useComputed(`[data-kind="${title}"]`, TEXT_PROPS)
-
   return (
     <section className="mb-16">
       <h2 className="text-instruction mb-1">
@@ -176,26 +182,18 @@ function TextSection({
       <p className="text-message-s mb-4">{note}</p>
 
       <div className="flex flex-col gap-4">
-        {classes.map((cls) => {
-          const c = computed[cls]
-          return (
-            <div key={cls} className="border-b border-border-soft pb-3">
-              <div className="text-message-s opacity-60 mb-1">
-                <code>{cls}</code>
-                {c && (
-                  <span className="ml-3">
-                    {c['font-size']} / 行間 {c['line-height']} / weight {c['font-weight']} / 字間{' '}
-                    {c['letter-spacing']}
-                  </span>
-                )}
-              </div>
-              {/* トークンだけを当てる。font-bold などを足さないこと（太さが上書きされる） */}
-              <p data-kind={title} data-token={cls} className={`${cls} text-brand`}>
-                技大祭クイズ AaBbCc 0123
-              </p>
+        {classes.map((cls) => (
+          <div key={cls} ref={measureText} className="border-border-soft border-b pb-3">
+            <div className="text-message-s mb-1 opacity-60">
+              <code>{cls}</code>
+              <span data-label className="ml-3" />
             </div>
-          )
-        })}
+            {/* トークンだけを当てる。font-bold などを足さないこと（太さが上書きされる） */}
+            <p data-sample className={`${cls} text-brand`}>
+              技大祭クイズ AaBbCc 0123
+            </p>
+          </div>
+        ))}
       </div>
     </section>
   )
