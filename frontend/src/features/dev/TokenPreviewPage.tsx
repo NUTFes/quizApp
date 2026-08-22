@@ -58,7 +58,7 @@ const PHONE_TEXT = [
   'text-notes',
   'text-pre-answer',
   'text-pre-answer-exp',
-  'text-pre-show-quesiton',
+  'text-pre-show-question',
   'text-pw-offset',
   'text-question-arunashi-example',
   'text-question-body',
