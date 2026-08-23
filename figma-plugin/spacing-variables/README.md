@@ -7,10 +7,13 @@ QuizAppのFigmaで、具体的なpx値になっているAuto Layoutの余白を`
 - 既定の`dry-run`では、Figmaを変更せず対象・除外・競合を一覧表示する
 - 決定済みの30個の`space/*` FLOAT Variablesをfind-or-createする
 - Variableの値と現在のpadding・gapが完全に一致する場合だけバインドする
+- Displayの選択肢グリッド9件に限り、`counterAxisSpacing`を`19px`から`20px`へ変更する別モードを提供する
 - 実行結果を画面とJSONで報告する
 
 ## このプラグインが行わないこと
 
+- `13px`、`23px`、`29px`の丸め・バインド
+- 救済問題、iOSステータスバー、Displayの早押し画面を起点とする探索
 - **既存の余白の数値変更**（`13px`、`19px`、`23px`、`29px`、`17px`、`33px`などは、そのまま残します）
 - 30個の表に無いpx値のバインド
 - 救済問題、iOSステータスバー、Displayの早押し画面を起点とする探索
