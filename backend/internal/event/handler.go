@@ -65,11 +65,11 @@ func getState(c *gin.Context, db *gorm.DB) {
 // phase が waiting または finished のときは出題関係は全部 0/null にする
 // 絶対にキーは消さないように、 omitempty は使わない
 // 値を代入しないで、null にする
-func buildState(es EventState, q *question.Question, ac int) State {
+func buildState(es EventState, q *question.Question, askedCount int) State {
 	s := State{
 		Phase:      es.Phase,
 		ServerTime: time.Now(),
-		AskedCount: ac,
+		AskedCount: askedCount,
 	}
 
 	// waiting か finished の時はここで返す
