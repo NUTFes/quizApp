@@ -1,17 +1,26 @@
 package platform
 
 import (
-	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
-// ここでトークンの照合をする（現状はトークン直書きでヘッダ丸ごと検証）
+// ここでトークンの照合をする（現状はトークン直書きで検証）
+const bearerPrefix = "Bearer "
+
 func RequireToken() gin.HandlerFunc {
 	return func(c *gin.Context){
-		log.Println("called RequireToken()")
-		if c.GetHeader("Authorization") != "koreha-tesuto-youno-tookunn-desu" {
+		// prefix とトークンを切り分ける
+		token, isCut := strings.CutPrefix(c.GetHeader("Authorization"), bearerPrefix)
+
+		// トークンが空文字列の時は問答無用ではじく
+		if !isCut || token==""{// http だけならtoken==""は本来いらないが、前提が変わった時のため、認証は複数段階で行う
+			RespondError(c, http.StatusUnauthorized, "UNAUTHORIZED", "Authorization ヘッダがありません")
+			return
+		}
+		if token != "dev-admin-token" {
 			RespondError(c, http.StatusUnauthorized, "UNAUTHORIZED", "トークンが違います")
 			return
 		}
