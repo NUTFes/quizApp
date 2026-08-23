@@ -6,6 +6,13 @@ type Props = Pick<
   'serverTime' | 'timeLimitSec' | 'questionStartedAt'
 >
 
+function formatTime(seconds: number): string {
+  const minutes = Math.floor(seconds / 60)
+  const secs = seconds % 60
+
+  return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+}
+
 export function RemainingTime({ serverTime, timeLimitSec, questionStartedAt }: Props) {
   const remaining = useRemainingTime({
     serverTime: serverTime,
@@ -15,7 +22,7 @@ export function RemainingTime({ serverTime, timeLimitSec, questionStartedAt }: P
 
   const isClosed = remaining <= 0
 
-  if (isClosed) return <p>締切!</p>
+  if (isClosed) return <p>{formatTime(0)}</p>
 
-  return <p>{remaining}</p>
+  return <p>{formatTime(remaining)}</p>
 }
