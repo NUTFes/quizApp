@@ -40,6 +40,14 @@ func getState(c *gin.Context, db *gorm.DB){
 		q = &found
 	}
 
+	// 今何問目かを数える
+	var askedCount int64
+	var result = db.Model(&question.Question{}).Where("asked = ?", true).Count(&askedCount)// askedCount にカウント結果を入れる
+	if result.Error != nil{
+		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "出題数を数えられませんでした")
+		return
+	}	
+
 	c.JSON(http.StatusOK, buildState(es, q))
 }
 
