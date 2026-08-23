@@ -1,5 +1,5 @@
 type Props = { segments: string[] }
 
 export function QuestionText({ segments }: Props) {
-  return <p>{segments.join('')}</p>
+  return <p className="px-6 pb-3 items-center text-xl">{segments.join('')}</p>
 }
