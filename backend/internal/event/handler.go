@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/naoto-anzai/quizApp/backend/internal/platform"
+	"github.com/naoto-anzai/quizApp/backend/internal/question"
 	"gorm.io/gorm"
 )
 
@@ -26,7 +27,20 @@ func getState(c *gin.Context, db *gorm.DB){
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_statesを読み込めませんでした")
 		return
 	}
-	c.JSON(http.StatusOK, buildState(es))
+	
+	// 今表示する問題を取得する
+	var q *question.Question
+	if(es.CurrentQuestionID != nil){
+		var found question.Question
+		var result = db.First(&found, *es.CurrentQuestionID)
+		if(result.Error != nil){
+			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "指定された問題が読み込めませでした")
+			return
+		}
+		q = &found
+	}
+
+	c.JSON(http.StatusOK, buildState(es, q))
 }
 
 // DBにある、EventState の形のものをAPIで返すState型に直す
@@ -34,7 +48,7 @@ func getState(c *gin.Context, db *gorm.DB){
 // phase が waiting または finished のときは出題関係は全部 0/null にする
 // 絶対にキーは消さないように、 omitempty は使わない
 // 値を代入しないで、null にする
-func buildState(es EventState) State {
+func buildState(es EventState, q *question.Question) State {
 	s := State{
 		Phase: es.Phase,
 		ServerTime: time.Now(),
@@ -51,6 +65,7 @@ func buildState(es EventState) State {
 	s.TimeLimitSec = &tls
 	s.QuestionStartedAt = es.QuestionStartedAt
 	s.RevealedSegments = es.RevealedSegments
+	s.Question = q
 
 	return s
 } 
