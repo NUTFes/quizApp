@@ -9,7 +9,7 @@ RUN go install github.com/air-verse/air@v1.67.1
 RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1
 
 # 依存の一覧をコピー(今は標準ライブラリだけなので中身は最小)
-COPY go.mod ./
+COPY go.mod go.sum ./
 RUN go mod download
 
 # 残りのソースをコピー
