@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/naoto-anzai/quizApp/backend/internal/platform"
 )
@@ -13,4 +15,7 @@ func RegisterRoutes(r *gin.Engine){
 	g.GET("/verify", verify)
 }
 
-func verify(c *gin.Context){}
+// 何もしない関数。トークンが切れてないかの確認用
+func verify(c *gin.Context){
+	c.JSON(http.StatusOK, gin.H{"ok":true})
+}
