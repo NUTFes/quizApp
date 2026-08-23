@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -21,11 +22,13 @@ import (
 )
 
 func main() {
+	adminToken := os.Getenv("ADMIN_TOKEN")
+
 	r := platform.NewRouter(
 		// 各機能の RegisterRoutes をここに1行ずつ足していく。
 		// 例(STEP 6 以降): admin.RegisterRoutes,
 		registerEvents,
-		admin.RegisterRoutes,
+		admin.RegisterRoutes(adminToken),
 	)
 
 	addr := ":3000"

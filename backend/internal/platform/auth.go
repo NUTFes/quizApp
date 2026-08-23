@@ -10,7 +10,7 @@ import (
 // ここでトークンの照合をする（現状はトークン直書きで検証）
 const bearerPrefix = "Bearer "
 
-func RequireToken() gin.HandlerFunc {
+func RequireToken(allowedToken string) gin.HandlerFunc {
 	return func(c *gin.Context){
 		// prefix とトークンを切り分ける
 		token, isCut := strings.CutPrefix(c.GetHeader("Authorization"), bearerPrefix)
@@ -20,7 +20,7 @@ func RequireToken() gin.HandlerFunc {
 			RespondError(c, http.StatusUnauthorized, "UNAUTHORIZED", "Authorization ヘッダがありません")
 			return
 		}
-		if token != "dev-admin-token" {
+		if token != allowedToken {
 			RespondError(c, http.StatusUnauthorized, "UNAUTHORIZED", "トークンが違います")
 			return
 		}

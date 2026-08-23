@@ -7,12 +7,15 @@ import (
 	"github.com/naoto-anzai/quizApp/backend/internal/platform"
 )
 
-func RegisterRoutes(r *gin.Engine){
-	// api/admin/~~のAPIにアクセスると、RequireToken で記述した関数が実行され、トークン照合される
-	g := r.Group("api/admin", platform.RequireToken())
+// NewRouterに渡す形を合わせるために関数を返す関数にする
+func RegisterRoutes(adminToken string) platform.RegisterFunc{
+	return func(r *gin.Engine){ 
+		// api/admin/~~のAPIにアクセスると、RequireToken で記述した関数が実行され、トークン照合される
+		g := r.Group("api/admin", platform.RequireToken(adminToken))
 
-	// トークン認証だけしたいなら、機能が何もない関数を呼ぶ
-	g.GET("/verify", verify)
+		// トークン認証だけしたいなら、機能が何もない関数を呼ぶ
+		g.GET("/verify", verify)
+	}
 }
 
 // 何もしない関数。トークンが切れてないかの確認用
