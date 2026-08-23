@@ -23,6 +23,9 @@ import (
 
 func main() {
 	adminToken := os.Getenv("ADMIN_TOKEN")
+	if(adminToken == ""){
+		log.Fatal("ADMIN_TOKEN が設定されていません")
+	}
 
 	r := platform.NewRouter(
 		// 各機能の RegisterRoutes をここに1行ずつ足していく。
