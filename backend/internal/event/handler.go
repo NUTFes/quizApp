@@ -1,6 +1,8 @@
 package event
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/naoto-anzai/quizApp/backend/internal/platform"
 )
@@ -13,4 +15,7 @@ func RegisterRoutes(adminToken string) platform.RegisterFunc{
 	}
 }
 
-func getState(c *gin.Context){}
+// State を返す関数
+func getState(c *gin.Context){
+	c.JSON(http.StatusOK, gin.H{"phase": "waiting"})
+}
