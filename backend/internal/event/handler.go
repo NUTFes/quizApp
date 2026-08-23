@@ -1,6 +1,7 @@
 package event
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -22,7 +23,12 @@ func RegisterRoutes(db *gorm.DB, adminToken string) platform.RegisterFunc{
 func getState(c *gin.Context, db *gorm.DB){
 	var es EventState
 	// es に event_states テーブルから１行目を指定して書き込む
-	if db.First(&es, 1).Error != nil{
+	if err := db.First(&es, 1).Error; err != nil{
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", 
+				"event_states(id=1)がありません。mise run db:migrate を実行して下さい")	
+			return
+		}
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_statesを読み込めませんでした")
 		return
 	}
