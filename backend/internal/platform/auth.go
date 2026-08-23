@@ -17,15 +17,14 @@ import (
 const bearerPrefix = "Bearer "
 
 func RequireToken(_allowedTokens ...string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// 検証トークンは一度だけフィルタリング（空文字列トークンの排除）
-		allowedTokens := make([]string, 0, len(_allowedTokens))
-		for _, token := range _allowedTokens {
-			if token != "" {
-				allowedTokens = append(allowedTokens, token)
-			}
+	// 検証トークンは一度だけフィルタリング（空文字列トークンの排除）
+	allowedTokens := make([]string, 0, len(_allowedTokens))
+	for _, token := range _allowedTokens {
+		if token != "" {
+			allowedTokens = append(allowedTokens, token)
 		}
-
+	}
+	return func(c *gin.Context) {
 		// prefix とトークンを切り分ける
 		token, isCut := strings.CutPrefix(c.GetHeader("Authorization"), bearerPrefix)
 
