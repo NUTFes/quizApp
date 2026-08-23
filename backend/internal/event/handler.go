@@ -22,8 +22,7 @@ func RegisterRoutes(db *gorm.DB, adminToken string) platform.RegisterFunc{
 func getState(c *gin.Context, db *gorm.DB){
 	var es EventState
 	// es に event_states テーブルから１行目を指定して書き込む
-	var result = db.First(&es, 1)
-	if result.Error != nil{
+	if db.First(&es, 1).Error != nil{
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_statesを読み込めませんでした")
 		return
 	}
@@ -32,8 +31,7 @@ func getState(c *gin.Context, db *gorm.DB){
 	var q *question.Question
 	if(es.CurrentQuestionID != nil){
 		var found question.Question
-		var result = db.First(&found, *es.CurrentQuestionID)
-		if(result.Error != nil){
+		if(db.First(&found, *es.CurrentQuestionID).Error != nil){
 			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "指定された問題が読み込めませでした")
 			return
 		}
@@ -42,8 +40,7 @@ func getState(c *gin.Context, db *gorm.DB){
 
 	// 今何問目かを数える
 	var askedCount int64
-	var result = db.Model(&question.Question{}).Where("asked = ?", true).Count(&askedCount)// askedCount にカウント結果を入れる
-	if result.Error != nil{
+	if db.Model(&question.Question{}).Where("asked = ?", true).Count(&askedCount).Error != nil{
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "出題数を数えられませんでした")
 		return
 	}	
