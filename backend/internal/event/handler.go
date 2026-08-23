@@ -29,7 +29,7 @@ func RegisterRoutes(db *gorm.DB, adminToken string) platform.RegisterFunc {
 func getState(c *gin.Context, db *gorm.DB) {
 	var es EventState
 	// es に event_states テーブルから１行目を指定して書き込む
-	if err := db.First(&es, 1).Error; err != nil {// if 分の中でerr による分岐が入るため、一度err に入れる
+	if err := db.First(&es, 1).Error; err != nil { // if 分の中でerr による分岐が入るため、一度err に入れる
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL",
 				"event_states(id=1)がありません。mise run db:reset を実行して下さい")
