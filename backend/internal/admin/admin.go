@@ -8,8 +8,8 @@ import (
 )
 
 // NewRouterに渡す形を合わせるために関数を返す関数にする
-func RegisterRoutes(adminToken string) platform.RegisterFunc{
-	return func(r *gin.Engine){ 
+func RegisterRoutes(adminToken string) platform.RegisterFunc {
+	return func(r *gin.Engine) {
 		// api/admin/~~のAPIにアクセスると、RequireToken で記述した関数が実行され、トークン照合される
 		g := r.Group("api/admin", platform.RequireToken(adminToken))
 
@@ -19,6 +19,6 @@ func RegisterRoutes(adminToken string) platform.RegisterFunc{
 }
 
 // 何もしない関数。トークンが切れてないかの確認用
-func verify(c *gin.Context){
-	c.JSON(http.StatusOK, gin.H{"ok":true})
+func verify(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"ok": true})
 }

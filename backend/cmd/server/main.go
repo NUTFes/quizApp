@@ -23,7 +23,7 @@ import (
 
 func main() {
 	adminToken := os.Getenv("ADMIN_TOKEN")
-	if(adminToken == ""){
+	if adminToken == "" {
 		log.Fatal("ADMIN_TOKEN が設定されていません")
 	}
 

@@ -17,11 +17,11 @@ import (
 const bearerPrefix = "Bearer "
 
 func RequireToken(_allowedTokens ...string) gin.HandlerFunc {
-	return func(c *gin.Context){
+	return func(c *gin.Context) {
 		// 検証トークンは一度だけフィルタリング（空文字列トークンの排除）
 		allowedTokens := make([]string, 0, len(_allowedTokens))
 		for _, token := range _allowedTokens {
-			if(token!=""){
+			if token != "" {
 				allowedTokens = append(allowedTokens, token)
 			}
 		}
@@ -30,13 +30,13 @@ func RequireToken(_allowedTokens ...string) gin.HandlerFunc {
 		token, isCut := strings.CutPrefix(c.GetHeader("Authorization"), bearerPrefix)
 
 		// トークンが空文字列の時は問答無用ではじく
-		if !isCut || token==""{// http だけならtoken==""は本来いらないが、前提が変わった時のため、認証は複数段階で行う
+		if !isCut || token == "" { // http だけならtoken==""は本来いらないが、前提が変わった時のため、認証は複数段階で行う
 			RespondError(c, http.StatusUnauthorized, "UNAUTHORIZED", "Authorization ヘッダがありません")
 			return
 		}
 		// 許可されているトークンのどれかが来たら通す
-		for _, allowedToken := range allowedTokens{
-			if subtle.ConstantTimeCompare([]byte(token),[]byte(allowedToken)) == 1 {
+		for _, allowedToken := range allowedTokens {
+			if subtle.ConstantTimeCompare([]byte(token), []byte(allowedToken)) == 1 {
 				c.Next()
 				return
 			}
