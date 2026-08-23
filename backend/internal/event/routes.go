@@ -17,7 +17,7 @@ func RegisterRoutes(db *gorm.DB, adminToken string) platform.RegisterFunc {
 	return func(r *gin.Engine) {
 		g := r.Group("/api/admin", platform.RequireToken(adminToken))
 		g.GET("/state", func(c *gin.Context) { getState(c, db) })
-		g.POST("/show-question", showQuestion)
+		g.POST("/show-question", func(c *gin.Context) {showQuestion(c, db)})
 		g.POST("/advance-text", advanceText)
 		g.POST("/show-answer", showAnswer)
 		g.POST("/reset", reset)
