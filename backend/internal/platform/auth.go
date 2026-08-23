@@ -7,11 +7,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ここでトークンの照合をする（現状はトークン直書きで検証）
+// ここでトークンの照合をする
+
+// allowedTokens は可変長。次のパターンをとる
+// 管理者画面からの API アクセス: adminToken
+// 問題投入（スプシからGAS経由）: adminToken, importToken
+
 const bearerPrefix = "Bearer "
 
-func RequireToken(allowedToken string) gin.HandlerFunc {
+func RequireToken(_allowedTokens ...string) gin.HandlerFunc {
 	return func(c *gin.Context){
+		// 検証トークンは一度だけフィルタリング（空文字列トークンの排除）
+		allowedTokens := make([]string, 0, len(_allowedTokens))
+		for _, token := range _allowedTokens {
+			if(token!=""){
+				allowedTokens = append(allowedTokens, token)
+			}
+		}
+
 		// prefix とトークンを切り分ける
 		token, isCut := strings.CutPrefix(c.GetHeader("Authorization"), bearerPrefix)
 
@@ -20,10 +33,14 @@ func RequireToken(allowedToken string) gin.HandlerFunc {
 			RespondError(c, http.StatusUnauthorized, "UNAUTHORIZED", "Authorization ヘッダがありません")
 			return
 		}
-		if token != allowedToken {
-			RespondError(c, http.StatusUnauthorized, "UNAUTHORIZED", "トークンが違います")
-			return
+		// 許可されているトークンのどれかが来たら通す
+		for _, allowedToken := range allowedTokens{
+			if token == allowedToken {
+				c.Next()
+				return
+			}
 		}
-		c.Next()
+
+		RespondError(c, http.StatusUnauthorized, "UNAUTHORIZED", "トークンが違います")
 	}
 }
