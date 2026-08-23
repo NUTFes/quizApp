@@ -45,7 +45,7 @@ func getState(c *gin.Context, db *gorm.DB){
 		return
 	}	
 
-	c.JSON(http.StatusOK, buildState(es, q))
+	c.JSON(http.StatusOK, buildState(es, q, int(askedCount)))
 }
 
 // DBにある、EventState の形のものをAPIで返すState型に直す
@@ -53,10 +53,11 @@ func getState(c *gin.Context, db *gorm.DB){
 // phase が waiting または finished のときは出題関係は全部 0/null にする
 // 絶対にキーは消さないように、 omitempty は使わない
 // 値を代入しないで、null にする
-func buildState(es EventState, q *question.Question) State {
+func buildState(es EventState, q *question.Question, ac int) State {
 	s := State{
 		Phase: es.Phase,
 		ServerTime: time.Now(),
+		AskedCount: ac,
 	}
 
 	// waiting か finished の時はここで返す
