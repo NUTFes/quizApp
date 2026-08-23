@@ -26,7 +26,7 @@ func getState(c *gin.Context, db *gorm.DB){
 	if err := db.First(&es, 1).Error; err != nil{
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", 
-				"event_states(id=1)がありません。mise run db:migrate を実行して下さい")	
+				"event_states(id=1)がありません。mise run db:reset を実行して下さい")	
 			return
 		}
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_statesを読み込めませんでした")
@@ -38,7 +38,7 @@ func getState(c *gin.Context, db *gorm.DB){
 	if(es.CurrentQuestionID != nil){
 		var found question.Question
 		if(db.First(&found, *es.CurrentQuestionID).Error != nil){
-			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "指定された問題が読み込めませでした")
+			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "指定された問題が読み込めませんでした")
 			return
 		}
 		q = &found
