@@ -1,14 +1,14 @@
 package event
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // question フェーズへ移行する関数
-func showQuestion(c *gin.Context){
-	c.JSON(http.StatusOK, gin.H{"phase": "qestion"})
+func showQuestion(c *gin.Context, db *gorm.DB){
+	// 最後の処理として、getState で行うことをそのまま行うため、そのまま呼び出す
+	getState(c, db)
 }
 func advanceText(c *gin.Context){}
 func showAnswer(c *gin.Context){}
