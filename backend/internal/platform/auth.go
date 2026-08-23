@@ -8,8 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-
 const bearerPrefix = "Bearer "
+
 // RequireToken(allowedToken ...string) でトークンの照合をする
 //
 // allowedTokens は可変長。次のパターンをとる
