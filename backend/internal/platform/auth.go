@@ -1,6 +1,7 @@
 package platform
 
 import (
+	"crypto/subtle"
 	"net/http"
 	"strings"
 
@@ -35,7 +36,7 @@ func RequireToken(_allowedTokens ...string) gin.HandlerFunc {
 		}
 		// 許可されているトークンのどれかが来たら通す
 		for _, allowedToken := range allowedTokens{
-			if token == allowedToken {
+			if subtle.ConstantTimeCompare([]byte(token),[]byte(allowedToken)) == 1 {
 				c.Next()
 				return
 			}
