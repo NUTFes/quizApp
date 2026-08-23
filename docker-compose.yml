@@ -28,6 +28,7 @@ services:                            # ① 並べる箱の一覧。名前がそ�
     environment:                     # ⑤ 開発用の設定値。本番は別の値を注入する
       - DATABASE_URL=postgresql://quiz:quiz@db:5432/quiz?sslmode=disable
       - ADMIN_TOKEN=dev-admin-token
+      - IMPORT_TOKEN=dev-inport-token
       - GOOGLE_CREDENTIALS_JSON=     # スプシ同期用。開発では空でよい(同期機能だけ無効になる)
       - SPREADSHEET_ID=
     depends_on:
