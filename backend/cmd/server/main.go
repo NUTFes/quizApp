@@ -16,6 +16,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/naoto-anzai/quizApp/backend/internal/admin"
 	"github.com/naoto-anzai/quizApp/backend/internal/platform"
 )
 
@@ -24,6 +25,7 @@ func main() {
 		// 各機能の RegisterRoutes をここに1行ずつ足していく。
 		// 例(STEP 6 以降): admin.RegisterRoutes,
 		registerEvents,
+		admin.RegisterRoutes,
 	)
 
 	addr := ":3000"
