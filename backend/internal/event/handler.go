@@ -66,6 +66,10 @@ func buildState(es EventState, q *question.Question) State {
 	s.QuestionStartedAt = es.QuestionStartedAt
 	s.RevealedSegments = es.RevealedSegments
 	s.Question = q
+	if (q != nil) {
+		// これは毎回必ず数える
+		s.TotalSegments = len(q.TextSegments)
+	}
 
 	return s
 } 
