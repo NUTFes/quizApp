@@ -30,7 +30,7 @@ func main() {
 
 	// DB接続を一度だけ行う
 	db, err := platform.NewDB()
-	if(err != nil){
+	if err != nil {
 		log.Fatalf("DB接続が出来ませんでした: %v", err)
 	}
 
