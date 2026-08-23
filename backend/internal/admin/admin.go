@@ -11,7 +11,7 @@ import (
 func RegisterRoutes(adminToken string) platform.RegisterFunc {
 	return func(r *gin.Engine) {
 		// api/admin/~~のAPIにアクセスると、RequireToken で記述した関数が実行され、トークン照合される
-		g := r.Group("api/admin", platform.RequireToken(adminToken))
+		g := r.Group("/api/admin", platform.RequireToken(adminToken))
 
 		// トークン認証だけしたいなら、機能が何もない関数を呼ぶ
 		g.GET("/verify", verify)
