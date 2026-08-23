@@ -16,7 +16,11 @@ export function QuestionView({ state }: props) {
       <h1>問題</h1>
       <QuestionNumber count={state.askedCount} />
       <QuestionText segments={state.question?.textSegments ?? []} />
-      <RemainingTime state={state} />
+      <RemainingTime
+        serverTime={state.serverTime}
+        timeLimitSec={state.timeLimitSec}
+        questionStartedAt={state.questionStartedAt}
+      />
       <ChoiceList
         question={state.question}
         correctChoiceId={state.answer?.correctChoiceId ?? null}
