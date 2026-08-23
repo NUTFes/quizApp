@@ -8,20 +8,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ここでトークンの照合をする
 
+const bearerPrefix = "Bearer "
+// RequireToken(allowedToken ...string) でトークンの照合をする
+//
 // allowedTokens は可変長。次のパターンをとる
 // 管理者画面からの API アクセス: adminToken
 // 問題投入（スプシからGAS経由）: adminToken, importToken
-
-const bearerPrefix = "Bearer "
-
-func RequireToken(_allowedTokens ...string) gin.HandlerFunc {
+func RequireToken(allowedTokens ...string) gin.HandlerFunc {
 	// 検証トークンは一度だけフィルタリング（空文字列トークンの排除）
-	allowedTokens := make([]string, 0, len(_allowedTokens))
-	for _, token := range _allowedTokens {
+	validTokens := make([]string, 0, len(allowedTokens))
+	for _, token := range allowedTokens {
 		if token != "" {
-			allowedTokens = append(allowedTokens, token)
+			validTokens = append(validTokens, token)
 		}
 	}
 	return func(c *gin.Context) {
@@ -34,8 +33,8 @@ func RequireToken(_allowedTokens ...string) gin.HandlerFunc {
 			return
 		}
 		// 許可されているトークンのどれかが来たら通す
-		for _, allowedToken := range allowedTokens {
-			if subtle.ConstantTimeCompare([]byte(token), []byte(allowedToken)) == 1 {
+		for _, validToken := range validTokens {
+			if subtle.ConstantTimeCompare([]byte(token), []byte(validToken)) == 1 {
 				c.Next()
 				return
 			}
