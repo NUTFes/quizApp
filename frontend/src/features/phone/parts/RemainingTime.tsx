@@ -20,13 +20,10 @@ export function TimeView({ seconds, max }: TimeViewProps) {
   const progress = maxTime > 0 ? Math.max(0, Math.min(1, time / maxTime)) : 0
 
   return (
-  <div className="h-[9px] w-full ml-5 mr-6 rounded-sm bg-gray-200">
-    <div
-      className="h-full rounded-sm bg-amber-300"
-      style={{ width: `${progress * 100}%` }}
-    />
-  </div>
-)
+    <div className="mr-6 ml-5 h-[9px] w-full rounded-sm bg-gray-200">
+      <div className="h-full rounded-sm bg-amber-300" style={{ width: `${progress * 100}%` }} />
+    </div>
+  )
 }
 
 export function RemainingTime({ serverTime, timeLimitSec, questionStartedAt }: Props) {
