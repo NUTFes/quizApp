@@ -2,6 +2,7 @@ package event
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/naoto-anzai/quizApp/backend/internal/platform"
@@ -17,6 +18,16 @@ func RegisterRoutes(db *gorm.DB, adminToken string) platform.RegisterFunc{
 }
 
 // State を返す関数
-func getState(c *gin.Context, db gorm.DB){
-	c.JSON(http.StatusOK, gin.H{"phase": "waiting"})
+func getState(c *gin.Context, db *gorm.DB){
+	var es EventState
+	// es に event_states テーブルから１行目を指定して書き込む
+	var result = db.First(&es, 1)
+	if result.Error != nil{
+		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_statesを読み込めませんでした")
+		return
+	}
+	c.JSON(http.StatusOK, State{
+		Phase: es.Phase,
+		ServerTime: time.Now(),
+	})
 }
