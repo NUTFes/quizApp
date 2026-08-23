@@ -36,7 +36,6 @@ func main() {
 
 	r := platform.NewRouter(
 		// 各機能の RegisterRoutes をここに1行ずつ足していく。
-		// 例(STEP 6 以降): admin.RegisterRoutes,
 		registerEvents,
 		admin.RegisterRoutes(adminToken),
 		event.RegisterRoutes(db, adminToken),

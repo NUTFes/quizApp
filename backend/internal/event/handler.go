@@ -11,7 +11,13 @@ import (
 	"gorm.io/gorm"
 )
 
-// エンドポイントの登録
+// RegisterRoutes は、エンドポイントの登録を行う
+//
+// db を扱うため、dbを引数に取る
+// admin の State を扱うため、認証トークン adminToken を引数にとる
+//
+// 上記の変数を引数として扱い、グローバルにしないのは、
+// 各関数がどんな値を必要とするのか明示的にするため
 func RegisterRoutes(db *gorm.DB, adminToken string) platform.RegisterFunc {
 	return func(r *gin.Engine) {
 		g := r.Group("/api/admin", platform.RequireToken(adminToken))
@@ -23,7 +29,7 @@ func RegisterRoutes(db *gorm.DB, adminToken string) platform.RegisterFunc {
 func getState(c *gin.Context, db *gorm.DB) {
 	var es EventState
 	// es に event_states テーブルから１行目を指定して書き込む
-	if err := db.First(&es, 1).Error; err != nil {
+	if err := db.First(&es, 1).Error; err != nil {// if 分の中でerr による分岐が入るため、一度err に入れる
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL",
 				"event_states(id=1)がありません。mise run db:reset を実行して下さい")
@@ -67,7 +73,7 @@ func buildState(es EventState, q *question.Question, ac int) State {
 	}
 
 	// waiting か finished の時はここで返す
-	// TimelimitSec などはポインタであるから nil となるが、 JSON への変換で null になる
+	// TimeLimitSec などはポインタであるから nil となるが、 JSON への変換で null になる
 	if es.Phase == "waiting" || es.Phase == "finished" {
 		return s
 	}
@@ -80,6 +86,7 @@ func buildState(es EventState, q *question.Question, ac int) State {
 	s.Question = q
 	if q != nil {
 		// これは毎回必ず数える
+		// 実際の値と保存したある値がずれる余地をなくすため
 		s.TotalSegments = len(q.TextSegments)
 	}
 
