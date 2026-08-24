@@ -200,15 +200,22 @@ func reset(c *gin.Context, db *gorm.DB) {
 		// 指定している要素以外は、ゼロ値代入となる
 	}
 
-	// es を書込み
-	if db.Save(&es).Error != nil {
-		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
-		return
-	}
-
-	// questions テーブルの全ての asked を false にする
-	if db.Model(&question.Question{}).Where("asked = ?", true).Update("asked", false).Error != nil {
-		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "asked を変更できませんでした")
+	// トランザクションで実装
+	err := db.Transaction(func(tx *gorm.DB) error {
+		// es の書込み
+		if err := tx.Save(&es).Error; err != nil {
+			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
+			return err
+		}
+		// questions テーブルの全ての asked を false にする
+		if err := tx.Model(&question.Question{}).Where("asked = ?", true).Update("asked", false).Error; err != nil {
+			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "questions の asked を書き換えられません")
+			return err
+		}
+		return nil
+	})
+	// 上のどれかのエラーになったら return
+	if err != nil {
 		return
 	}
 
