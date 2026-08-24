@@ -185,7 +185,11 @@ func reset(c *gin.Context, db *gorm.DB) {
 
 	to := "waiting" // デフォルト値を代入
 
-	if req.To != nil { //もし指定があれば代入
+	if req.To != nil { //もし指定があれば検証し、代入
+		if *req.To != "waiting" && *req.To != "finished" {
+			platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "リセット先は waiting か finished にしてください")
+			return
+		}
 		to = *req.To
 	}
 
