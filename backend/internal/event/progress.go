@@ -178,7 +178,7 @@ func reset(c *gin.Context, db *gorm.DB) {
 	}
 
 	// 指定したリクエストの型でリクエストが来ているかのチェック
-	if c.ShouldBind(&req) != nil {
+	if c.ShouldBindJSON(&req) != nil {
 		platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "リクエストの形が不正です")
 		return
 	}
