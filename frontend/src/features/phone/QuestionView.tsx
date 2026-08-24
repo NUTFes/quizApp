@@ -23,6 +23,10 @@ export function QuestionView({ state }: props) {
       questionType = 'あるなし'
       break
   }
+  const announceTextTop = '選んだ選択肢のエリアに'
+  const announceTextBottom = '移動してください'
+  const attentionText = '歩きスマホや走っての移動はご遠慮ください'
+  
 
   return (
     <main className="min-h-dvh pt-[env(safe-area-inset-top)]">
@@ -55,6 +59,12 @@ export function QuestionView({ state }: props) {
           />
         </div>
       </div>
+      <div className='flex justify-center items-center text-center text-2xl h-[153px] p-6 mx-4 mt-7 mb-2.5 rounded-[20px] shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]'>
+        {announceTextTop}<br />{announceTextBottom}
+      </div>
+      <footer className="h-full w-full">
+        <div className="px-2.5 pt-8 text-center text-base">{attentionText}</div>
+      </footer>
     </main>
   )
 }
