@@ -104,6 +104,12 @@ func advanceText(c *gin.Context, db *gorm.DB) {
 		return
 	}
 
+	// phase が question かどうかのチェック
+	if es.Phase != "question" {
+		platform.RespondError(c, http.StatusConflict, "INVALID_PHASE", "フェーズが question ではありません")
+		return
+	}
+	
 	// RevealedSegments だけ指定して次の仕切りまで進める
 	if db.Model(&es).Update("revealed_segments", gorm.Expr("revealed_segments + 1")).Error != nil {
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
