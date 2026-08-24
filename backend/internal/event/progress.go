@@ -144,8 +144,6 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 		return
 	}
 	
-	es.Phase = "answer"// phase を answer に設定
-
 	// TotalSegments を計算
 	// // question 側の読み込み
 	var q *question.Question
@@ -161,10 +159,11 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 	// TotalSegments の計算
 	TotalSegments := len(q.TextSegments)
 	
-	es.RevealedSegments = TotalSegments// RevealedSegments を上限に設定
-
-	// event_states に書き込み
-	if db.Save(&es).Error != nil {
+	// event_states に書き込み 指定した要素のみ書き換え
+	if db.Model(&es).Updates(map[string]any{
+		"phase": "answer",
+		"revealedSegments": TotalSegments,
+	}).Error != nil {
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
 		return
 	}
