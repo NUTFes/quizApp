@@ -3,6 +3,7 @@ package event
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -114,9 +115,10 @@ func advanceText(c *gin.Context, db *gorm.DB) {
 	// TotalSegments を上限にするために、問題を見る
 	// question 側の読み込み
 	var q *question.Question
-	if err := db.First(&q, es.CurrentQuestionID).Error; err != nil { //err による分岐が必要
+	if err := db.First(&q, *es.CurrentQuestionID).Error; err != nil { //err による分岐が必要
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			platform.RespondError(c, http.StatusNotFound, "QUESTION_NOT_FOUND", "指定された問題が見つかりませんでした")
+			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL",
+				"出題された問題 (id="+strconv.Itoa(int(*es.CurrentQuestionID))+")が存在しません")
 			return
 		}
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "問題データを読み込めませんでした") // DB が落ちている
