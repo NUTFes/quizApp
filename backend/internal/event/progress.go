@@ -12,24 +12,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// event_states テーブルから読み込む
-//
-// es に状態を書き込む
-func readEventState(c *gin.Context, db *gorm.DB, es *EventState) bool{
-	// まず、event_states テーブル側に問題がないかをチェック
-	if err := db.First(es, 1).Error; err != nil { // if 分の中でerr による分岐が入るため、一度err に入れる
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL",
-				"event_states(id=1)がありません。mise run db:reset を実行して下さい")
-			return false
-		}
-		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_statesを読み込めませんでした")
-		return false
-	}
-	return true
-}
-
-
 // question フェーズへ移行する関数
 func showQuestion(c *gin.Context, db *gorm.DB) {
 	// リクエスト を取得するためのリクエストの型を定義
