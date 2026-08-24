@@ -43,9 +43,12 @@ func showQuestion(c *gin.Context, db *gorm.DB) {
 
 	// questionId の question が実際に存在するか
 	var q *question.Question
-	if db.First(&q, req.QuestionID).Error != nil {
-		platform.RespondError(c, http.StatusInternalServerError, "QUESTION_NOT_FOUND", "指定された問題が読み込めませんでした")
-		return
+	if err := db.First(&q, req.QuestionID).Error; err != nil { //err による分岐が必要
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			platform.RespondError(c, http.StatusInternalServerError, "QUESTION_NOT_FOUND", "指定された問題が見つかりませんでした")
+			return
+		}
+		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "問題データを読み込めませんでした")// DB が落ちている
 	}
 
 	// あったら、このquestionId をes に書き込む
