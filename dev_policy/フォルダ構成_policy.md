@@ -68,7 +68,9 @@ quiz-app/
    | ドメイン知識を含むか | 含まない | 含む |
    | その feature を消したら一緒に消えるか | 消えない | 消える |
 
-   例: 認証ミドルウェアは「管理者の話題」だが、`IMPORT_TOKEN` を使う `sheetsync` からも呼ぶので `platform/middleware.go`。一方 `GET /api/admin/verify` は URL を持ち admin 固有なので `admin/`。
+   例: 認証ミドルウェアは「管理者の話題」だが、`IMPORT_TOKEN` を使う `sheetsync` からも呼ぶので `platform/auth.go`。一方 `GET /api/admin/verify` は URL を持ち admin 固有なので `admin/`。
+
+   **ファイル名は「役割」で付ける。「仕組み」で付けない。** `middleware.go` `utils.go` `helpers.go` のような入れ物の名前は、無関係なコードを呼び寄せて、そのうち誰も開きたくないファイルになる。`platform/` の既存ファイル（`response.go` = エラー応答、`router.go` = ルータ組み立て）もこの規則で付いている。
 3. **API仕様の変更は `docs/api.md` を先に直す。** フロントの `types/` とGoの構造体は api.md に従う(実装とずれたら api.md が正)。
 4. 1ファイルが300行を超えたら分割を検討する(初心者向けの機械的な目安)。
 
