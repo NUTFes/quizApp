@@ -12,6 +12,24 @@ import (
 	"gorm.io/gorm"
 )
 
+// event_states テーブルから読み込む
+//
+// es に状態を書き込む
+func readEventState(c *gin.Context, db *gorm.DB, es *EventState) bool{
+	// まず、event_states テーブル側に問題がないかをチェック
+	if err := db.First(es, 1).Error; err != nil { // if 分の中でerr による分岐が入るため、一度err に入れる
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL",
+				"event_states(id=1)がありません。mise run db:reset を実行して下さい")
+			return false
+		}
+		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_statesを読み込めませんでした")
+		return false
+	}
+	return true
+}
+
+
 // question フェーズへ移行する関数
 func showQuestion(c *gin.Context, db *gorm.DB) {
 	// リクエスト を取得するためのリクエストの型を定義
@@ -55,16 +73,11 @@ func showQuestion(c *gin.Context, db *gorm.DB) {
 
 	// あったら、このquestionId をes に書き込む
 	var es EventState
-	// まず、event_states テーブル側に問題がないかをチェック
-	if err := db.First(&es, 1).Error; err != nil { // if 分の中でerr による分岐が入るため、一度err に入れる
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL",
-				"event_states(id=1)がありません。mise run db:reset を実行して下さい")
-			return
-		}
-		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_statesを読み込めませんでした")
+	// event_sates の読み込み
+	if ok := readEventState(c, db, &es); !ok {
 		return
 	}
+	
 	// テーブルへ書き込む値の整備
 	now := time.Now()
 	es.Phase = "question"
@@ -95,14 +108,8 @@ func showQuestion(c *gin.Context, db *gorm.DB) {
 }
 func advanceText(c *gin.Context, db *gorm.DB) {
 	var es EventState
-	// まず、event_states テーブル側に問題がないかをチェック
-	if err := db.First(&es, 1).Error; err != nil { // if 分の中でerr による分岐が入るため、一度err に入れる
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL",
-				"event_states(id=1)がありません。mise run db:reset を実行して下さい")
-			return
-		}
-		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_statesを読み込めませんでした")
+	// まず、event_states テーブルを読み込む
+	if ok := readEventState(c, db, &es); !ok {
 		return
 	}
 
@@ -140,14 +147,7 @@ func advanceText(c *gin.Context, db *gorm.DB) {
 func showAnswer(c *gin.Context, db *gorm.DB) {
 	// es を読み込む
 	var es EventState
-	// まず、event_states テーブル側に問題がないかをチェック
-	if err := db.First(&es, 1).Error; err != nil { // if 分の中でerr による分岐が入るため、一度err に入れる
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL",
-				"event_states(id=1)がありません。mise run db:reset を実行して下さい")
-			return
-		}
-		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_statesを読み込めませんでした")
+	if ok := readEventState(c, db, &es); !ok {
 		return
 	}
 
