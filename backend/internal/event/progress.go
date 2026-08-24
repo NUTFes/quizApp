@@ -73,7 +73,11 @@ func showQuestion(c *gin.Context, db *gorm.DB){
 		return
 	}
 
-	// state テーブルの asked を書き換える
+	// questions テーブルの asked を書き換える
+	if db.Model(&q).Update("asked", true).Error != nil {
+		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "questions の asked を書き換えられません")
+		return
+	}
 
 	// 最後の処理として、getState で行うことをそのまま行うため、そのまま呼び出す
 	getState(c, db)
