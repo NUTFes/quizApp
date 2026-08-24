@@ -45,7 +45,7 @@ func showQuestion(c *gin.Context, db *gorm.DB) {
 	var q *question.Question
 	if err := db.First(&q, req.QuestionID).Error; err != nil { //err による分岐が必要
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			platform.RespondError(c, http.StatusInternalServerError, "QUESTION_NOT_FOUND", "指定された問題が見つかりませんでした")
+			platform.RespondError(c, http.StatusNotFound, "QUESTION_NOT_FOUND", "指定された問題が見つかりませんでした")
 			return
 		}
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "問題データを読み込めませんでした") // DB が落ちている
