@@ -151,6 +151,17 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 		return
 	}
 
+	// フェーズチェック
+	if es.Phase == "answer" {// すでにanswer フェーズなら、何もせず 200 を返す
+		getState(c, db)
+		return
+	}
+
+	if es.Phase != "question" || es.CurrentQuestionID == nil {
+		platform.RespondError(c, http.StatusConflict, "INVALID_PHASE", "フェーズが question ではありません")
+		return
+	}
+	
 	es.Phase = "answer"// phase を answer に設定
 
 	// TotalSegments を計算
