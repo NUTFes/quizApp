@@ -92,6 +92,9 @@ func showQuestion(c *gin.Context, db *gorm.DB) {
 	getState(c, db)
 }
 func advanceText(c *gin.Context, db *gorm.DB) {
+	var es EventState
+	es.RevealedSegments += 1
+	db.Save(&es)
 	getState(c, db)
 }
 func showAnswer(c *gin.Context)  {}
