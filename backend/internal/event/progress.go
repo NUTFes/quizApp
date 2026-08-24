@@ -206,5 +206,11 @@ func reset(c *gin.Context, db *gorm.DB) {
 		return
 	}
 
+	// questions テーブルの全ての asked を false にする
+	if db.Model(&question.Question{}).Where("asked = ?", true).Update("asked", false).Error != nil {
+		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "asked を変更できませんでした")
+		return
+	}
+
 	getState(c, db)
 }
