@@ -151,7 +151,7 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 		return
 	}
 
-	// phase を answer にする
+	es.Phase = "answer"// phase を answer に設定
 
 	getState(c, db)
 }
