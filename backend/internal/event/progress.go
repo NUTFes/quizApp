@@ -70,11 +70,11 @@ func showQuestion(c *gin.Context, db *gorm.DB) {
 	// svevt_states への書き込みと questiona の asked の書き換えをトランザクションで行う
 	// 片方だけエラーで止まると、不正な状態でDBが保存される可能性がある
 	err := db.Transaction(func(tx *gorm.DB) error {
-		if err := db.Save(&es).Error; err != nil {
+		if err := tx.Save(&es).Error; err != nil {
 			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
 			return err
 		}
-		if err := db.Model(&q).Update("asked", true).Error; err != nil {
+		if err := tx.Model(&q).Update("asked", true).Error; err != nil {
 			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "questions の asked を書き換えられません")
 			return err
 		}
