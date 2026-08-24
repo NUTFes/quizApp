@@ -32,6 +32,21 @@ if [ ! -f .env.prod ]; then
   exit 1
 fi
 
+# ★ 空欄を早期に検出する。
+# backend は ADMIN_TOKEN が空だと起動時に log.Fatal で落ちる(cmd/server/main.go)。
+# restart: always と組み合わさるとクラッシュループになり、原因が分かりにくい。
+# ここで止めれば「どの値が空か」がその場で分かる。
+missing=""
+for key in POSTGRES_PASSWORD ADMIN_TOKEN IMPORT_TOKEN; do
+  value="$(grep -E "^${key}=" .env.prod | head -1 | cut -d= -f2-)"
+  [ -z "$value" ] && missing="${missing} ${key}"
+done
+if [ -n "$missing" ]; then
+  echo "!! .env.prod の次の値が空です:${missing}" >&2
+  echo "   生成例: openssl rand -base64 24  /  openssl rand -hex 32" >&2
+  exit 1
+fi
+
 echo "=== ① コードを取得(${REF}) ==============================="
 git fetch --prune --tags origin
 if git rev-parse -q --verify "refs/tags/${REF}" >/dev/null; then
