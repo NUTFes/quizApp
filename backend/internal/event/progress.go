@@ -49,6 +49,7 @@ func showQuestion(c *gin.Context, db *gorm.DB) {
 			return
 		}
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "問題データを読み込めませんでした") // DB が落ちている
+		return
 	}
 
 	// あったら、このquestionId をes に書き込む
@@ -119,6 +120,7 @@ func advanceText(c *gin.Context, db *gorm.DB) {
 			return
 		}
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "問題データを読み込めませんでした") // DB が落ちている
+		return
 	}
 	// 上限の取得
 	TotalSegments := len(q.TextSegments)
