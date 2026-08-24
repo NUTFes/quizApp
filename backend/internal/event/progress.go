@@ -103,8 +103,12 @@ func advanceText(c *gin.Context, db *gorm.DB) {
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_statesを読み込めませんでした")
 		return
 	}
-	es.RevealedSegments += 1
-	db.Save(&es)
+
+	// RevealedSegments だけ指定して次の仕切りまで進める
+	if db.Model(&es).Update("revealed_segments", gorm.Expr("revealed_segments + 1")).Error != nil {
+		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
+		return
+	}
 	getState(c, db)
 }
 func showAnswer(c *gin.Context)  {}
