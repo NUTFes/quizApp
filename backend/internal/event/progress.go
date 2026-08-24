@@ -107,7 +107,7 @@ func advanceText(c *gin.Context, db *gorm.DB) {
 	}
 
 	// phase が question かどうかのチェック
-	if es.Phase != "question" {
+	if es.Phase != "question" || es.CurrentQuestionID == nil {
 		platform.RespondError(c, http.StatusConflict, "INVALID_PHASE", "フェーズが question ではありません")
 		return
 	}
