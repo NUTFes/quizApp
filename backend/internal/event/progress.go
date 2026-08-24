@@ -127,7 +127,6 @@ func advanceText(c *gin.Context, db *gorm.DB) {
 	// 上限の取得
 	TotalSegments := len(q.TextSegments)
 
-
 	// RevealedSegments だけ指定して次の仕切りまで進める
 	if db.Model(&es).
 		Where("revealed_segments < ?", TotalSegments). // 上限に達していないときという条件
@@ -137,5 +136,5 @@ func advanceText(c *gin.Context, db *gorm.DB) {
 	}
 	getState(c, db)
 }
-func showAnswer(c *gin.Context)  {}
-func reset(c *gin.Context)       {}
+func showAnswer(c *gin.Context) {}
+func reset(c *gin.Context)      {}
