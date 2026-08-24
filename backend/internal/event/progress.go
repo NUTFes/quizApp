@@ -174,7 +174,7 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 func reset(c *gin.Context, db *gorm.DB) {
 	// リクエストを読み込む
 	var req struct {
-		To *string `json:"to"`// これは任意
+		To *string `json:"to"` // これは任意
 	}
 
 	// 指定したリクエストの型でリクエストが来ているかのチェック
@@ -194,8 +194,8 @@ func reset(c *gin.Context, db *gorm.DB) {
 	}
 
 	es := EventState{
-		ID: 1, // UPDATEにするために、id を指定
-		Phase: to,
+		ID:           1, // UPDATEにするために、id を指定
+		Phase:        to,
 		TimeLimitSec: 30, // これもデフォ値が 0 で設定されているため明示的に設定
 		// 指定している要素以外は、ゼロ値代入となる
 	}
