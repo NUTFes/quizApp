@@ -171,4 +171,6 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 
 	getState(c, db)
 }
-func reset(c *gin.Context) {}
+func reset(c *gin.Context, db *gorm.DB) {
+	getState(c, db)
+}

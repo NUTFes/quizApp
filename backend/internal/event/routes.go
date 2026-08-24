@@ -20,6 +20,6 @@ func RegisterRoutes(db *gorm.DB, adminToken string) platform.RegisterFunc {
 		g.POST("/show-question", func(c *gin.Context) { showQuestion(c, db) })
 		g.POST("/advance-text", func(c *gin.Context) { advanceText(c, db) })
 		g.POST("/show-answer", func(c *gin.Context) { showAnswer(c, db) })
-		g.POST("/reset", reset)
+		g.POST("/reset", func(c *gin.Context) { reset(c, db)})
 	}
 }
