@@ -8,6 +8,11 @@
 > 7-20時点で「〜らしい」と書いていた推測部分を確定として書き直し、確定したことで新しく発生した
 > 検討事項(Docker in LXC / Cloudflare の防御機能 / フロントのビルド時URL)を追記した。
 > あわせて `ADMIN_PASSWORD` という古い名前を `ADMIN_TOKEN`・`IMPORT_TOKEN` に修正。
+>
+> **2026-08-25 更新: 検証用CT(VMID 201 / quiz-stg)を実際に作り、CT側の項目を全て検証した。**
+> Q1(CTでDockerが動くか)は**解決**、I6(NTP)も**解決**、I5(fd上限)とI7(TZ)は実測値で決着。
+> 一方で **①thin poolの空き容量 ②ホストにSSHが到達しない** という2つの制約が新たに判明した。
+> 検証手順は `infra/create-ct.sh`、デプロイ手順は `docs/ガイドライン/デプロイ手順.md` に切り出した。
 
 ## 前提と方針
 
@@ -48,6 +53,52 @@
 
 **開発と本番で構成を揃えることを優先し、B を第一希望として交渉する。**
 
+### ✅ 検証結果(2026-08-25)
+
+**VMID 201 で実際に確認し、非特権CT + `nesting=1,keyctl=1` で Docker が問題なく動いた。**
+この節の懸念は解消し、**上の A/B/C の交渉は不要**になった。
+
+| 検証項目 | 結果 |
+|---|---|
+| Docker デーモン起動(非特権CT) | ✅ `hello-world` 完走 |
+| 永続ボリュームを持つコンテナ | ✅ PostgreSQL 16 が `ready to accept connections` |
+| Storage Driver | ✅ **`overlayfs`**(containerd snapshotter)。`vfs` フォールバックなし |
+| ホストのストレージ | ✅ **lvmthin。ZFSではない**ため `fuse-overlayfs` は不要 |
+
+> `docker info` の表示が `overlay2` ではなく **`overlayfs`** なのは、新しい Docker が
+> containerd のイメージストアを使っているため。名前が違うだけで中身は同じ OverlayFS。
+
+---
+
+## 🔴 もう1つの制約: thin pool の空き容量
+
+2026-08-25 に判明。**Docker が動くかより先に、置ける容量があるかで詰まる。**
+
+ホスト `pve03` のストレージは `pve/data`(lvmthin, 54.18GB)1本で、**全ゲストが共有している**。
+
+| | 値 |
+|---|---|
+| プール使用率 | **70.87%**(quiz-stg 作成後。作成前は 68.33%) |
+| プールの残り | 約 15.8GB |
+| VG の未割り当て | 14.75GB(プール拡張に使える) |
+| quiz-stg の実消費 | 12GB枠に対し **1.37GB** |
+
+**thin pool が 100% に達すると、そのプール上の全ゲストが同時に書き込み不能になる**(自分のCTだけでなく他の利用者のCTも巻き添え)。しかも autoextend の閾値が未設定で、その保険が無い。
+
+### 決定
+
+- **検証用CTと本番CTは並存させない。** 検証が済んだら quiz-stg を破棄し、`infra/create-ct.sh` から本番CTを作り直す(スクリプトが同一なら再現性は担保される)
+- rootfs は **12GB**。実消費 1.37GB に対して十分
+- **`docker system prune -af` の後、ホストで `pct fstrim <VMID>` を必ず実行する。**LXCでは中でファイルを消してもプールの消費は減らず、fstrim で初めて返る
+
+### 運用者への報告事項(依頼ではなく情報提供)
+
+- `pve/data` が 70.87%。VG に 14.75GB の未割り当てがあるので、プール拡張の余地がある
+- `thin_pool_autoextend_threshold` が未設定で、満杯時に全ゲストが巻き添えになる構成
+- **CT 101(mitomen-playground)が自ディスクの 98.10% を使用中**
+
+3つ目は自分たちの都合ではない。**相乗りする側がホスト全体の健康状態を報告する**形になるので、依頼全体の通りが良くなる。
+
 ---
 
 ## インフラ運用者への確認リスト
@@ -56,13 +107,45 @@
 
 | # | 確認事項 | 状態 / なぜ必要か |
 |---|---|---|
-| Q1 | **CT で Docker を動かせるか**(`nesting=1` の有無、ホストのストレージが ZFS か) | 🔴 **未確認・最優先**。上記の通り、駄目なら CT/VM の再交渉になる |
+| Q1 | **CT で Docker を動かせるか**(`nesting=1` の有無、ホストのストレージが ZFS か) | ✅ **解決(2026-08-25)**。VMID 201 で検証済み。非特権CT + nesting/keyctl で動作、ZFSでもない |
 | Q2 | Cloudflare の繋ぎ方: 中央の `cloudflared`(Tunnel)に転送先を登録する流儀か、各環境で `cloudflared` を動かす流儀か、Cloudflare がグローバルIPに proxy する流儀か | 🟡 未確認。**Tunnel ならポート開放も証明書も不要**になり、こちらの作業がむしろ減る。後者なら `docker-compose.prod.yml` に `cloudflared` コンテナを1つ足すだけ |
 | Q3 | **`quiz.` サブドメインで Bot Fight Mode / Rate Limiting を外せるか** | 🔴 未確認。**当日SSEが全滅する原因になりうる**(下記) |
 | Q4 | **`/api/*` をキャッシュしない設定になっているか**(Cache Rule) | 🔴 未確認。SSEやstateがキャッシュされると全端末が古い状態で固まる |
 | Q5 | サブドメイン名の希望を伝える(例: `quiz`) | 🟡 **QRコード・ポスターの印刷期限から逆算すること**。締切が一番早い |
-| Q6 | CT のスペック(メモリ・コア)、OS、SSHアクセス権を誰がもらえるか | 🟡 200接続を支える前提の確認 |
+| Q6 | **CTへの SSH 経路そのものが無い** | 🔴 **未解決・要依頼**。「誰が権限をもらうか」以前に経路が無かった。下記参照 |
 | Q7 | HTTPS証明書 | ✅ **Cloudflare が終端するので原則不要**。Tunnel なら完全に不要 |
+
+---
+
+## 🔴 Q6 の書き換え: SSH アクセス権ではなく「経路が無い」
+
+当初 Q6 は「SSHアクセス権を**誰が**もらえるか」という権限の話だと考えていたが、**前提が違った**。
+
+校内ネットワークの外から Proxmox ホストへ SSH が通らず、**現状の唯一の入口は Cloudflare Zero Trust 経由の PVE GUI**。CT は同じ内側にいるので、CT への SSH も同様に通らない。
+
+**これは policy に書いたデプロイ方式そのものが成り立たないことを意味する:**
+
+```
+CTにSSH → git pull → docker compose up -d --build   ← 「CTにSSH」ができない
+```
+
+### 当面の回避策(リハーサルまではこれで進められる)
+
+**受信(inbound SSH)が塞がれているだけで、送信(outbound)は生きている。**CT から GitHub も Docker Hub も見えることを確認済み。したがって:
+
+```
+PVEのGUI → ホストのShell → pct enter <VMID> → git pull → docker compose up
+```
+
+で全部完結する。`.env.prod` もヒアドキュメントの貼り付けで作れる。
+
+つらいのは、ログを追う・ファイルを取り出す・複数人で作業する、といった点。**当日の障害対応をブラウザのコンソールだけでやるのはかなり厳しい。**
+
+### 運用者への依頼(Q2 とセットで聞く)
+
+> Proxmox GUI と同じ Zero Trust 経由で、**CT への SSH アクセスも公開**していただけませんか。手元からは `cloudflared access ssh` で繋ぎます。
+
+**新しい穴を開ける依頼ではなく、既に導入済みの仕組みに1件足す依頼**なので通りやすい。運用者から見ると Q2(Cloudflareの繋ぎ方)と同じ作業なので、まとめて聞くのが効率的。
 
 ---
 
@@ -128,7 +211,10 @@ Proxmox の CT
 
 開発時の3コンテナ(frontend/backend/db)と違い、本番はフロントが「Viteでビルドした静的ファイル+nginx配信」になる(`docker-compose.prod.yml` で定義)。
 
-> ⚠️ **いまの `frontend/Dockerfile` は開発専用**(`CMD ["pnpm", "dev", "--host"]`)。本番用に「ビルドして nginx に載せる」multi-stage の Dockerfile が**別途必要**。
+> ✅ **2026-08-25 作成済み。** 開発用の `frontend/Dockerfile`(`CMD ["pnpm", "dev", "--host"]`)は
+> そのまま残し、本番用を **`frontend/Dockerfile.prod`**(multi-stage: Viteでビルド → nginx に載せる)
+> として別ファイルで用意した。backend も同様に **`backend/Dockerfile.prod`**(静的バイナリ + alpine)。
+> nginx の設定は `frontend/nginx.conf`(SSE向けに `proxy_buffering off` 等を設定済み)。
 
 ---
 
@@ -151,6 +237,11 @@ if (!BASE) { throw new Error('VITE_API_URL が設定されていません。...'
 | A-2 | ビルド時に `VITE_API_URL=https://quiz.○○○.jp` を必ず渡す | 手順を毎回守る必要があり、間違えても**ビルドは成功してしまう** |
 
 **A-1 を採る。**「手順を守る」ではなく「間違えられない形にする」ほうが当日の安全性が高い。
+
+> ✅ **2026-08-25 対応済み。**`frontend/src/lib/config.ts` を
+> `export const BASE: string = import.meta.env.VITE_API_URL ?? ''` に変更し、`throw` を削除した。
+> `api.ts` / `useEventState.ts` のパスは全て `/api/...` 始まりなので、相対パスでそのまま届く。
+> `frontend/Dockerfile.prod` は **意図的に `VITE_API_URL` を渡さない**。
 
 ---
 
@@ -179,15 +270,58 @@ if (!BASE) { throw new Error('VITE_API_URL が設定されていません。...'
 
 ## デプロイ方式
 
-v1は**手動デプロイで十分**(CDは作らない):
+v1は**手動デプロイで十分**(CDは作らない)。
+
+**2026-08-25 更新: SSH が通らないことが判明したため、入口を `pct enter` に変更した。**
+また CT に mise を入れる必要が無いよう、`mise run deploy` ではなく**シェルスクリプト**にした。
 
 ```
-CTにSSH → git pull → docker compose -f docker-compose.prod.yml up -d --build → migrate実行
+PVEのGUI → ホストのShell → pct enter <VMID> → bash /opt/quizApp/infra/deploy.sh
 ```
 
-これを `mise run deploy`(本番CT上で実行するタスク)にまとめる。自動化(GitHub Actionsからのデプロイ)は動いてから考えるv2。
+`infra/deploy.sh` の中身:
 
-**マイグレーションはアプリ起動前に流す**こと(順序を手順書に明記)。
+1. `git pull --ff-only`
+2. `docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build`
+3. **マイグレーション**
+4. 疎通確認(`/`、`/api/health`、SSE のハートビートまで)
+5. 不要イメージの削除(→ ホストで `pct fstrim`)
+
+自動化(GitHub Actionsからのデプロイ)は動いてから考えるv2。ただし**現状 SSH が通らないので、CD を作るにも先に Q6 の解決が要る**。
+
+### デプロイ専用ブランチは作らない(2026-08-25 決定)
+
+`production` のようなデプロイ用ブランチは**作らない**。`Git運用・CI_policy.md` で GitHub Flow
+(main + 作業ブランチのみ、中間ブランチなし)を採用しているため、それに従う。
+
+デプロイブランチの動機は普通2つあるが、どちらもこの構成では別の手段で満たせる:
+
+| 動機 | ブランチを作らずどう満たすか |
+|---|---|
+| main が不安定な時に本番を守りたい | **当日は `git pull` しない(凍結する)**。ブランチを分けても凍結の判断は結局必要 |
+| 何が動いているか特定したい | **タグを使う。**ブランチはポインタが動くので特定できない。タグは動かない |
+
+そして**コストが実在する**: 初心者チームだと `main` へのマージと `production` へのマージの
+二段階を必ず誰かが忘れ、症状が「**直したはずのバグが本番に残っている**」という
+原因にたどり着きにくい形で出る。
+
+**代わりに: 本番・リハーサルはタグを指定してデプロイする。**
+
+```bash
+git tag -a event-YYYY-MM-DD -m "本番"; git push origin event-YYYY-MM-DD
+REF=event-YYYY-MM-DD bash infra/deploy.sh
+```
+
+CTスナップショットが「設定ごと戻す」手段なのに対し、タグは「コードだけ戻す」手段として
+補完関係になる。デプロイ結果は CT の `/opt/DEPLOYED_REF` に記録される。
+
+**再検討するのは CD を入れる時**(「このブランチに push されたら本番へ」というトリガーが
+必要になるため)。ただしそれには先に Q6(SSH経路)の解決が要る。
+
+> ⚠️ **マイグレーションの順序について。** policy では当初「アプリ起動**前**に流す」としていたが、
+> compose で1つのCTに同居させる構成では、`migrate` コマンドが backend イメージの中にあるため
+> **コンテナ起動 → マイグレーション → 利用開始** の順になる。守るべきは
+> 「**利用者がアクセスする前にスキーマが揃っていること**」なので実質的な要件は満たしている。
 
 ---
 
@@ -206,13 +340,13 @@ CTにSSH → git pull → docker compose -f docker-compose.prod.yml up -d --buil
 
 | # | 項目 | 状態・推奨 |
 |---|---|---|
-| I1 | アクセス経路 | ✅ サブドメイン追加 + Cloudflare + Proxmox CT(2026-08-24確定)。残タスクは確認リスト Q1〜Q6 |
-| I2 | DBバックアップ | イベント前に `pg_dump` を1回 + **CTスナップショット**。クイズデータはスプシから再同期できるので喪失リスクは低い |
+| I1 | アクセス経路 | ✅ サブドメイン追加 + Cloudflare + Proxmox CT(2026-08-24確定)。**残タスクは Q2〜Q5(Cloudflare側)と Q6(SSH経路)**。Q1・Q7 は解決済み |
+| I2 | DBバックアップ | イベント前に `pg_dump` を1回 + **CTスナップショット**。クイズデータはスプシから再同期できるので喪失リスクは低い。<br>⚠️ thin のスナップショットは**取った直後はほぼ0で、元が書き換わるほど育つ**。長期保持したまま大量のビルドを回すとプールを食うので、`base-docker-ok` は本番CT作成後に削除してよい |
 | I3 | 当日の障害対応 | 「CT再起動手順」「進行をリセットして途中の問題から再開する手順」を手順書に書く。**紙に印刷して当日持つ**。`EventState` がDBにあるので再起動後も復帰できる設計 |
 | I4 | 管理者画面の保護 | トークン認証(#10で実装済み)+ 推測されにくいパス(`/backstage-0248`)。可能ならアクセス元制限 |
-| I5 | 負荷 | **SSE同時接続 = 参加人数分。想定 約200人**(R5確定)。**本番経路で**200接続テストを1回やる。Go側は余裕だが、詰まるとすれば Cloudflare(上記)と **CTのファイルディスクリプタ上限(`ulimit -n`)**。LXCはホストの制限を受ける |
-| I6 | **時刻同期(NTP)** | 🆕 `serverTime` を全端末のカウントダウンに使うため、CTの時計がずれると残り時間が全員ずれる。NTPが効いているか確認する |
-| I7 | **タイムゾーン** | 🆕 コンテナ既定は UTC。動作に影響はないが、**当日ログを読むとき JST でないと辛い**。`TZ=Asia/Tokyo` を入れるか判断する |
+| I5 | 負荷 | **SSE同時接続 = 参加人数分。想定 約200人**(R5確定)。**本番経路で**200接続テストを1回やる。詰まるとすれば Cloudflare(上記)と fd 上限。<br>🆕 **fd 上限は実測で対処済み**: CT既定 `ulimit -n` = **1024**(200接続では不足。SSE1接続あたりクライアント側+backend側で2本消費するため400本超が必要)。hard limit は 524288 あり、`docker run --ulimit nofile=65535:65535` で **65535 まで引き上げ可能なことを確認**。→ `docker-compose.prod.yml` の `ulimits.nofile` に明記済み。**LXC側の設定変更は不要**(＝運用者への依頼は増えない) |
+| I6 | **時刻同期(NTP)** | ✅ **解決(2026-08-25)**。ホスト `pve03` は `System clock synchronized: yes` / `NTP service: active` / TZ も JST。<br>⚠️ **確認すべきはホスト側**だった。LXC の CT は**ホストのカーネル＝ホストの時計をそのまま使い**、CT内では時刻を変更できない(`CAP_SYS_TIME` が無い)。**CT内に chrony を入れても無意味** |
+| I7 | **タイムゾーン** | ✅ **決定(2026-08-25): 入れる。** 検証で、CT に `--timezone Asia/Tokyo` を指定していても**Dockerコンテナの中は UTC のまま**であることを確認した(PostgreSQL のログが `2026-08-24 15:12 UTC` = JSTでは翌日 00:12 と表示され、**日付までずれて見えた**)。`docker-compose.prod.yml` の全サービスに `TZ=Asia/Tokyo` を設定済み。alpine ベースのイメージには `tzdata` の追加が必要(Dockerfile.prod に記載済み) |
 | I8 | ログ | 🆕 当日その場でログを見る手段を決めておく(`docker compose logs -f`)。**トークンを絶対にログに出さない**(必要なら長さだけ) |
 | I9 | **ネット断のフォールバック** | 🆕 会場回線か Cloudflare が落ちた時どうするか。**「紙で進行する」も立派な回答**。決めて周知しておくこと |
 
@@ -224,9 +358,9 @@ CTにSSH → git pull → docker compose -f docker-compose.prod.yml up -d --buil
 
 | 順 | やること | 待つ必要のあるもの |
 |---|---|---|
-| ① | **CT で Docker が動くことの確認** | なし → **今すぐ** |
+| ① | ~~**CT で Docker が動くことの確認**~~ | ✅ **完了(2026-08-25)**。`infra/create-ct.sh` に手順化 |
 | ② | **本番サブドメインに空のSSEを1本通す** | なし(中身は空でよい) → **早期に** |
-| ③ | `docker-compose.prod.yml` と本番用 `frontend/Dockerfile` を書く | ①の結果 |
+| ③ | ~~`docker-compose.prod.yml` と本番用 `frontend/Dockerfile` を書く~~ | ✅ **完了(2026-08-25)**。`docker-compose.prod.yml` / `*/Dockerfile.prod` / `frontend/nginx.conf` / `infra/deploy.sh` |
 | ④ | 200接続の負荷テスト(本番経路で) | ③ |
 | ⑤ | 通しリハーサル | Phase 2完了 |
 | ⑥ | 本番トークン発行・問題データ投入・スナップショット | 当日 |
@@ -237,11 +371,31 @@ CTにSSH → git pull → docker compose -f docker-compose.prod.yml up -d --buil
 
 ## TODO(開発と並行して進める)
 
-- [ ] 🔴 【最優先】インフラ運用者に **Q1(CTでDockerが動くか)** を確認する
-- [ ] 🔴 Q3・Q4(Bot Fight Mode / Rate Limiting / `/api/*` のキャッシュ)を確認する
-- [ ] 🟡 Q2(Cloudflareの繋ぎ方)、Q5(サブドメイン名)、Q6(スペック・SSH)を確認する
+### 完了(2026-08-25)
+
+- [x] ~~🔴【最優先】**Q1(CTでDockerが動くか)**~~ → **動く**。VMID 201 で検証、`infra/create-ct.sh` に手順化
+- [x] ~~`config.ts` を「未設定なら相対パス」に直す~~ → `?? ''` に変更、`throw` を削除
+- [x] ~~`docker-compose.prod.yml` / 本番用 Dockerfile / デプロイ手順書~~ → 作成済み
+      (`docker-compose.prod.yml` / `backend/Dockerfile.prod` / `frontend/Dockerfile.prod` /
+       `frontend/nginx.conf` / `.env.prod.example` / `infra/create-ct.sh` / `infra/deploy.sh` /
+       `docs/ガイドライン/デプロイ手順.md`)
+- [x] ~~I6(NTP)~~ → ホスト側で同期済みを確認。CT内での対応は不要
+- [x] ~~I5(fd上限)~~ → compose の `ulimits.nofile` で 65535 に。LXC側の変更は不要
+- [x] ~~I7(TZ)~~ → 入れる。全サービスに `TZ=Asia/Tokyo`
+
+### 運用者に確認・依頼する(こちらでは進められない)
+
+- [ ] 🔴 **Q3・Q4**(Bot Fight Mode / Rate Limiting / `/api/*` のキャッシュ)
+- [ ] 🔴 **Q6: Zero Trust 経由の SSH 公開**。Q2 とセットで依頼する
+- [ ] 🟡 **Q2**(Cloudflareの繋ぎ方)、**Q5**(サブドメイン名)
 - [ ] 🟡 **Q5 はポスター・QR印刷の締切から逆算**して、他より先に確定させる
-- [ ] `config.ts` を「未設定なら相対パス」に直す(§フロントに localhost が焼き込まれる事故)
-- [ ] 空のSSEを本番サブドメインに通し、**Cloudflare越しの疎通を確認**する(早期に)
-- [ ] `docker-compose.prod.yml` / 本番用 `frontend/Dockerfile` / `docs/ガイドライン/デプロイ手順.md` の雛形を作る
+- [ ] 🟡 thin pool の状況を報告する(70.87% / autoextend未設定 / CT101が98.1%)
+
+### 自分たちで進める
+
+- [ ] 🔴 **空のSSEを本番サブドメインに通し、Cloudflare越しの疎通を確認**する(Q2〜Q4 の解決待ち。段取り②)
+- [ ] 検証用CT(201)を破棄し、`infra/create-ct.sh` で本番CT(202)を作る ※並存はディスク的に不可
+- [ ] 本番経路での200接続テスト(段取り④)
 - [ ] 本番1ヶ月前リハーサル(Phase 2完了時)を予定に入れる
+- [ ] 当日オペ手順書(誰が管理者画面を操作するか)を決め、`docs/ガイドライン/デプロイ手順.md` §5 に追記
+- [ ] I9(ネット断のフォールバック)を決めて周知する
