@@ -170,6 +170,12 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 	
 	es.RevealedSegments = TotalSegments// RevealedSegments を上限に設定
 
+	// event_states に書き込み
+	if db.Save(&es).Error != nil {
+		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
+		return
+	}
+
 	getState(c, db)
 }
 func reset(c *gin.Context)      {}
