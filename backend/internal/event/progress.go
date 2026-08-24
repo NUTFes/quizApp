@@ -12,11 +12,11 @@ import (
 )
 
 // question フェーズへ移行する関数
-func showQuestion(c *gin.Context, db *gorm.DB){
+func showQuestion(c *gin.Context, db *gorm.DB) {
 	// リクエスト を取得するためのリクエストの型を定義
 	var req struct {
-		QuestionId uint `json: "quesitonId"`
-		TimeLimitSec *int `json: "timeLimitSec"` // これは任意
+		QuestionId   uint `json:"quesitonId"`
+		TimeLimitSec *int `json:"timeLimitSec"` // これは任意
 	}
 
 	// 指定したリクエストの型でリクエストが来ているかのチェック
@@ -69,7 +69,7 @@ func showQuestion(c *gin.Context, db *gorm.DB){
 	es.RevealedSegments = 1
 	// svevt_states への書き込みと questiona の asked の書き換えをトランザクションで行う
 	// 片方だけエラーで止まると、不正な状態でDBが保存される可能性がある
-	err := db.Transaction(func(tx *gorm.DB) error{
+	err := db.Transaction(func(tx *gorm.DB) error {
 		if err := db.Save(&es).Error; err != nil {
 			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
 			return err
@@ -78,16 +78,16 @@ func showQuestion(c *gin.Context, db *gorm.DB){
 			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "questions の asked を書き換えられません")
 			return err
 		}
-		return nil 
+		return nil
 	})
 	// 上のどれかのエラーになったら return
-	if err != nil{
+	if err != nil {
 		return
 	}
 
 	// 最後の処理として、getState で行うことをそのまま行うため、そのまま呼び出す
 	getState(c, db)
 }
-func advanceText(c *gin.Context){}
-func showAnswer(c *gin.Context){}
-func reset(c *gin.Context){}
+func advanceText(c *gin.Context) {}
+func showAnswer(c *gin.Context)  {}
+func reset(c *gin.Context)       {}
