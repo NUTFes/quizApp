@@ -48,7 +48,7 @@ func showQuestion(c *gin.Context, db *gorm.DB) {
 			platform.RespondError(c, http.StatusInternalServerError, "QUESTION_NOT_FOUND", "指定された問題が見つかりませんでした")
 			return
 		}
-		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "問題データを読み込めませんでした")// DB が落ちている
+		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "問題データを読み込めませんでした") // DB が落ちている
 	}
 
 	// あったら、このquestionId をes に書き込む
