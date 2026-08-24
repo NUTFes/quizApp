@@ -15,7 +15,7 @@ import (
 func showQuestion(c *gin.Context, db *gorm.DB) {
 	// リクエスト を取得するためのリクエストの型を定義
 	var req struct {
-		QuestionId   uint `json:"quesitonId"`
+		QuestionID   uint `json:"quesitonId"`
 		TimeLimitSec *int `json:"timeLimitSec"` // これは任意
 	}
 
@@ -26,7 +26,7 @@ func showQuestion(c *gin.Context, db *gorm.DB) {
 	}
 
 	// questionId がリクエストにふくまれるか？（questionIdが含まれない場合、Go によるゼロ値代入で、 0 が入る）　０じゃないか？
-	if req.QuestionId == 0 {
+	if req.QuestionID == 0 {
 		platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "questionId は必須です")
 		return
 	}
@@ -43,7 +43,7 @@ func showQuestion(c *gin.Context, db *gorm.DB) {
 
 	// questionId の question が実際に存在するか
 	var q *question.Question
-	if db.First(&q, req.QuestionId).Error != nil {
+	if db.First(&q, req.QuestionID).Error != nil {
 		platform.RespondError(c, http.StatusInternalServerError, "QUESTION_NOT_FOUND", "指定された問題が読み込めませんでした")
 		return
 	}
@@ -64,7 +64,7 @@ func showQuestion(c *gin.Context, db *gorm.DB) {
 	now := time.Now()
 	es.Phase = "question"
 	es.QuestionStartedAt = &now
-	es.CurrentQuestionID = &req.QuestionId
+	es.CurrentQuestionID = &req.QuestionID
 	es.TimeLimitSec = timeLimitSec
 	es.RevealedSegments = 1
 	// svevt_states への書き込みと questiona の asked の書き換えをトランザクションで行う
