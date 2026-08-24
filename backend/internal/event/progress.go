@@ -109,9 +109,25 @@ func advanceText(c *gin.Context, db *gorm.DB) {
 		platform.RespondError(c, http.StatusConflict, "INVALID_PHASE", "フェーズが question ではありません")
 		return
 	}
-	
+
+	// TotalSegments を上限にするために、問題を見る
+	// question 側の読み込み
+	var q *question.Question
+	if err := db.First(&q, es.CurrentQuestionID).Error; err != nil { //err による分岐が必要
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			platform.RespondError(c, http.StatusNotFound, "QUESTION_NOT_FOUND", "指定された問題が見つかりませんでした")
+			return
+		}
+		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "問題データを読み込めませんでした") // DB が落ちている
+	}
+	// 上限の取得
+	TotalSegments := len(q.TextSegments)
+
+
 	// RevealedSegments だけ指定して次の仕切りまで進める
-	if db.Model(&es).Update("revealed_segments", gorm.Expr("revealed_segments + 1")).Error != nil {
+	if db.Model(&es).
+		Where("revealed_segments < ?", TotalSegments). // 上限に達していないときという条件
+		Update("revealed_segments", gorm.Expr("revealed_segments + 1")).Error != nil {
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
 		return
 	}
