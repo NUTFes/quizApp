@@ -1,7 +1,9 @@
 package event
 
 import (
+	"errors"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/naoto-anzai/quizApp/backend/internal/platform"
@@ -43,6 +45,31 @@ func showQuestion(c *gin.Context, db *gorm.DB){
 	var q *question.Question
 	if db.First(&q, req.QuestionId).Error != nil {
 		platform.RespondError(c, http.StatusInternalServerError, "QUESTION_NOT_FOUND", "指定された問題が読み込めませんでした")
+		return
+	}
+
+	// あったら、このquestionId をes に書き込む
+	var es EventState
+	// まず、event_states テーブル側に問題がないかをチェック
+	if err := db.First(&es, 1).Error; err != nil { // if 分の中でerr による分岐が入るため、一度err に入れる
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL",
+				"event_states(id=1)がありません。mise run db:reset を実行して下さい")
+			return
+		}
+		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_statesを読み込めませんでした")
+		return
+	}
+	// テーブルへ書き込む値の整備
+	now := time.Now()
+	es.Phase = "question"
+	es.QuestionStartedAt = &now
+	es.CurrentQuestionID = &req.QuestionId
+	es.TimeLimitSec = timeLimitSec
+	es.RevealedSegments = 1
+	// svevt_states への書き込み
+	if db.Save(&es).Error != nil {
+		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
 		return
 	}
 
