@@ -183,5 +183,24 @@ func reset(c *gin.Context, db *gorm.DB) {
 		return
 	}
 
+	to := "waiting" // デフォルト値を代入
+
+	if req.To != nil { //もし指定があれば代入
+		to = *req.To
+	}
+
+	es := EventState{
+		ID: 1, // UPDATEにするために、id を指定
+		Phase: to,
+		TimeLimitSec: 30, // これもデフォ値が 0 で設定されているため明示的に設定
+		// 指定している要素以外は、ゼロ値代入となる
+	}
+
+	// es を書込み
+	if db.Save(&es).Error != nil {
+		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
+		return
+	}
+
 	getState(c, db)
 }
