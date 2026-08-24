@@ -59,7 +59,7 @@ func showQuestion(c *gin.Context, db *gorm.DB) {
 	if ok := readEventState(c, db, &es); !ok {
 		return
 	}
-	
+
 	// テーブルへ書き込む値の整備
 	now := time.Now()
 	es.Phase = "question"
@@ -125,6 +125,7 @@ func advanceText(c *gin.Context, db *gorm.DB) {
 	}
 	getState(c, db)
 }
+
 // 正解を公開する
 func showAnswer(c *gin.Context, db *gorm.DB) {
 	// es を読み込む
@@ -134,7 +135,7 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 	}
 
 	// フェーズチェック
-	if es.Phase == "answer" {// すでにanswer フェーズなら、何もせず 200 を返す
+	if es.Phase == "answer" { // すでにanswer フェーズなら、何もせず 200 を返す
 		getState(c, db)
 		return
 	}
@@ -143,7 +144,7 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 		platform.RespondError(c, http.StatusConflict, "INVALID_PHASE", "フェーズが question ではありません")
 		return
 	}
-	
+
 	// TotalSegments を計算
 	// // question 側の読み込み
 	var q *question.Question
@@ -158,10 +159,10 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 	}
 	// TotalSegments の計算
 	TotalSegments := len(q.TextSegments)
-	
+
 	// event_states に書き込み 指定した要素のみ書き換え
 	if db.Model(&es).Updates(map[string]any{
-		"phase": "answer",
+		"phase":            "answer",
 		"revealedSegments": TotalSegments,
 	}).Error != nil {
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
@@ -170,4 +171,4 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 
 	getState(c, db)
 }
-func reset(c *gin.Context)      {}
+func reset(c *gin.Context) {}
