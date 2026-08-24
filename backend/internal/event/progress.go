@@ -67,15 +67,21 @@ func showQuestion(c *gin.Context, db *gorm.DB){
 	es.CurrentQuestionID = &req.QuestionId
 	es.TimeLimitSec = timeLimitSec
 	es.RevealedSegments = 1
-	// svevt_states への書き込み
-	if db.Save(&es).Error != nil {
-		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
-		return
-	}
-
-	// questions テーブルの asked を書き換える
-	if db.Model(&q).Update("asked", true).Error != nil {
-		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "questions の asked を書き換えられません")
+	// svevt_states への書き込みと questiona の asked の書き換えをトランザクションで行う
+	// 片方だけエラーで止まると、不正な状態でDBが保存される可能性がある
+	err := db.Transaction(func(tx *gorm.DB) error{
+		if err := db.Save(&es).Error; err != nil {
+			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
+			return err
+		}
+		if err := db.Model(&q).Update("asked", true).Error; err != nil {
+			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "questions の asked を書き換えられません")
+			return err
+		}
+		return nil 
+	})
+	// 上のどれかのエラーになったら return
+	if err != nil{
 		return
 	}
 
