@@ -153,6 +153,23 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 
 	es.Phase = "answer"// phase を answer に設定
 
+	// TotalSegments を計算
+	// // question 側の読み込み
+	var q *question.Question
+	if err := db.First(&q, *es.CurrentQuestionID).Error; err != nil { //err による分岐が必要
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL",
+				"出題された問題 (id="+strconv.Itoa(int(*es.CurrentQuestionID))+")が存在しません")
+			return
+		}
+		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "問題データを読み込めませんでした") // DB が落ちている
+		return
+	}
+	// TotalSegments の計算
+	TotalSegments := len(q.TextSegments)
+	
+	es.RevealedSegments = TotalSegments// RevealedSegments を上限に設定
+
 	getState(c, db)
 }
 func reset(c *gin.Context)      {}
