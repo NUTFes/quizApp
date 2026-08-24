@@ -91,6 +91,8 @@ func showQuestion(c *gin.Context, db *gorm.DB) {
 	// 最後の処理として、getState で行うことをそのまま行うため、そのまま呼び出す
 	getState(c, db)
 }
-func advanceText(c *gin.Context) {}
+func advanceText(c *gin.Context, db *gorm.DB) {
+	getState(c, db)
+}
 func showAnswer(c *gin.Context)  {}
 func reset(c *gin.Context)       {}
