@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/naoto-anzai/quizApp/backend/internal/platform"
+	"github.com/naoto-anzai/quizApp/backend/internal/question"
 	"gorm.io/gorm"
 )
 
@@ -38,6 +39,12 @@ func showQuestion(c *gin.Context, db *gorm.DB){
 		timeLimitSec = *req.TimeLimitSec
 	}
 
+	// questionId の question が実際に存在するか
+	var q *question.Question
+	if db.First(&q, req.QuestionId).Error != nil {
+		platform.RespondError(c, http.StatusInternalServerError, "QUESTION_NOT_FOUND", "指定された問題が読み込めませんでした")
+		return
+	}
 
 	// state テーブルの asked を書き換える
 
