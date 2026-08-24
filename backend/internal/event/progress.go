@@ -15,7 +15,7 @@ import (
 func showQuestion(c *gin.Context, db *gorm.DB) {
 	// リクエスト を取得するためのリクエストの型を定義
 	var req struct {
-		QuestionID   uint `json:"quesitonId"`
+		QuestionID   uint `json:"questionId"`
 		TimeLimitSec *int `json:"timeLimitSec"` // これは任意
 	}
 
