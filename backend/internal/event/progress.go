@@ -136,5 +136,7 @@ func advanceText(c *gin.Context, db *gorm.DB) {
 	}
 	getState(c, db)
 }
-func showAnswer(c *gin.Context) {}
+func showAnswer(c *gin.Context, db *gorm.DB) {
+	getState(c, db)
+}
 func reset(c *gin.Context)      {}
