@@ -35,7 +35,7 @@ func showQuestion(c *gin.Context, db *gorm.DB) {
 	timeLimitSec := 30 // timeLimitSec を省略するときは規定値 30 に設定
 	if req.TimeLimitSec != nil {
 		if *req.TimeLimitSec < 5 || *req.TimeLimitSec > 120 {
-			platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "timiLimitSec は 5~120 で指定してください")
+			platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "timeLimitSec は 5~120 で指定してください")
 			return
 		}
 		timeLimitSec = *req.TimeLimitSec
