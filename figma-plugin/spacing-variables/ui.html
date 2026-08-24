@@ -265,9 +265,8 @@
       <section class="card">
         <h2>推奨する実行順</h2>
         <ol class="workflow">
-          <li>最初のdry-runで、対象・除外・奇数px・19pxの状態を確認する</li>
-          <li>Step 1の対象確認後、before画像を保存して19px→20pxを実行する</li>
-          <li>after画像を保存し、もう一度dry-runを実行する</li>
+          <li>dry-runで、対象・除外・据え置きになるpx値を確認する</li>
+          <li>Figmaのバージョン履歴に名前を付けて保存する（戻せるようにする）</li>
           <li>競合がないことを確認してVariables作成・バインドを実行する</li>
           <li>
             Dev
@@ -292,26 +291,6 @@
         </label>
       </section>
 
-      <section class="card">
-        <h2>Step 1：Displayの19px→20px</h2>
-        <p class="muted">
-          <code>counterAxisSpacing</code
-          >だけを対象にする、Variablesバインドとは別の処理です。
-        </p>
-        <div class="actions">
-          <button id="preview-step1">1. 変更対象を確認（変更なし）</button>
-          <button id="apply-step1" class="danger" disabled>
-            2. 9件を20pxへ変更
-          </button>
-        </div>
-        <label class="confirm">
-          <input id="confirm-step1" type="checkbox" disabled />
-          <span
-            >9件のnode
-            IDを確認し、変更前のスクリーンショットを保存しました。</span
-          >
-        </label>
-      </section>
 
       <section class="card" aria-live="polite">
         <div class="actions" style="justify-content: space-between">
@@ -327,15 +306,11 @@
       const resultElement = document.getElementById("result");
       const dryRunButton = document.getElementById("dry-run");
       const applyBindingsButton = document.getElementById("apply-bindings");
-      const previewStep1Button = document.getElementById("preview-step1");
-      const applyStep1Button = document.getElementById("apply-step1");
       const confirmBindings = document.getElementById("confirm-bindings");
-      const confirmStep1 = document.getElementById("confirm-step1");
       const copyResultButton = document.getElementById("copy-result");
 
       let busy = false;
       let dryRunReady = false;
-      let step1Ready = false;
       let lastReport = null;
 
       function escapeHtml(value) {
@@ -395,25 +370,19 @@
       function setBusy(nextBusy) {
         busy = nextBusy;
         dryRunButton.disabled = busy;
-        previewStep1Button.disabled = busy;
         updateWriteButtons();
       }
 
       function resetApprovals() {
         dryRunReady = false;
-        step1Ready = false;
         confirmBindings.checked = false;
-        confirmStep1.checked = false;
         confirmBindings.disabled = true;
-        confirmStep1.disabled = true;
         updateWriteButtons();
       }
 
       function updateWriteButtons() {
         applyBindingsButton.disabled =
           busy || !dryRunReady || !confirmBindings.checked;
-        applyStep1Button.disabled =
-          busy || !step1Ready || !confirmStep1.checked;
       }
 
       function postAction(action) {
@@ -424,14 +393,7 @@
       applyBindingsButton.addEventListener("click", () =>
         postAction("apply-bindings"),
       );
-      previewStep1Button.addEventListener("click", () =>
-        postAction("preview-step1"),
-      );
-      applyStep1Button.addEventListener("click", () =>
-        postAction("apply-step1"),
-      );
       confirmBindings.addEventListener("change", updateWriteButtons);
-      confirmStep1.addEventListener("change", updateWriteButtons);
 
       copyResultButton.addEventListener("click", async () => {
         if (!lastReport) return;
@@ -489,19 +451,11 @@
           ]),
         ];
 
-        const oddRows = report.oddValues.map((item) => [
+        const keptRows = report.keptValues.map((item) => [
           `${item.px}px`,
           String(item.count),
           String(item.nodeCount),
           item.nodeIds.map(code).join(", "),
-          escapeHtml(item.reason),
-        ]);
-        const unexpectedRows = report.unexpectedValues.map((item) => [
-          `${item.px}px`,
-          String(item.count),
-          String(item.nodeCount),
-          item.nodeIds.map(code).join(", "),
-          escapeHtml(item.reason),
         ]);
         const excludedRows = report.excluded.map((item) => [
           item.screens.map(code).join(" / "),
@@ -542,15 +496,8 @@
             ${table(["px", "Variable", "扱い"], variableRows)}
           </section>
           <section class="result-section">
-            <h3>奇数px（意図的に据え置き）</h3>
-            ${table(["px", "プロパティ数", "ノード数", "node ID", "理由"], oddRows)}
-          </section>
-          <section class="result-section">
-            <h3>表にない値・Step 1待ち</h3>
-            ${table(
-              ["px", "プロパティ数", "ノード数", "node ID", "理由"],
-              unexpectedRows,
-            )}
+            <h3>表にないpx値（据え置き・値は変更しません）</h3>
+            ${table(["px", "プロパティ数", "ノード数", "node ID"], keptRows)}
           </section>
           <section class="result-section">
             <h3>除外フレーム</h3>
@@ -563,47 +510,15 @@
           ${rawDetails(report)}`;
       }
 
-      function renderStep1Preview(report) {
-        step1Ready = Boolean(report.canApply);
-        confirmStep1.disabled = !step1Ready;
-        confirmStep1.checked = false;
-        updateWriteButtons();
-
-        const rows = report.targets.map((item) => [
-          code(item.nodeId),
-          escapeHtml(item.path),
-          code(item.property),
-          `${item.before}px → ${item.after}px`,
-        ]);
-        resultElement.innerHTML = `
-          <div class="status ${report.canApply ? "ok" : "warn"}">
-            ${
-              report.canApply
-                ? `対象は期待どおり${report.actualCount}件です。before画像を保存してから実行してください。`
-                : `対象は${report.actualCount}件です。期待する${report.expectedCount}件と一致するまで実行できません。`
-            }
-          </div>
-          ${table(["node ID", "階層", "プロパティ", "変更"], rows)}
-          <section class="result-section"><h3>停止理由</h3>${list(
-            report.blockers,
-            report.blockers.length ? "error" : "",
-          )}</section>
-          ${rawDetails(report)}`;
-      }
-
-      function renderApplyReport(report, kind) {
+      function renderApplyReport(report) {
         resetApprovals();
-        const isStep1 = kind === "step1";
-        const mainCount = isStep1 ? report.changedCount : report.boundCount;
-        const label = isStep1 ? "変更した指定" : "バインドした指定";
-        const createdCount = isStep1 ? 0 : report.createdVariables.length;
         resultElement.innerHTML = `
           <div class="status ${report.errorCount === 0 ? "ok" : "error"}">
             ${escapeHtml(report.warning || "処理が完了しました。")}
           </div>
           <div class="summary-grid">
-            ${metric(label, mainCount)}
-            ${metric("新規Variable", createdCount)}
+            ${metric("バインドした指定", report.boundCount)}
+            ${metric("新規Variable", report.createdVariables.length)}
             ${metric("エラー", report.errorCount)}
           </div>
           ${rawDetails(report)}`;
@@ -631,10 +546,7 @@
           return;
         }
         if (message.type === "action-error") {
-          if (
-            message.action === "apply-bindings" ||
-            message.action === "apply-step1"
-          ) {
+          if (message.action === "apply-bindings") {
             resetApprovals();
           }
           lastReport = {
@@ -651,12 +563,8 @@
         copyResultButton.disabled = false;
         if (message.type === "dry-run-report") {
           renderDryRun(message.report);
-        } else if (message.type === "step1-preview-report") {
-          renderStep1Preview(message.report);
         } else if (message.type === "binding-apply-report") {
-          renderApplyReport(message.report, "bindings");
-        } else if (message.type === "step1-apply-report") {
-          renderApplyReport(message.report, "step1");
+          renderApplyReport(message.report);
         }
       };
     </script>

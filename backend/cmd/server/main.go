@@ -12,18 +12,33 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/naoto-anzai/quizApp/backend/internal/admin"
+	"github.com/naoto-anzai/quizApp/backend/internal/event"
 	"github.com/naoto-anzai/quizApp/backend/internal/platform"
 )
 
 func main() {
+	adminToken := os.Getenv("ADMIN_TOKEN")
+	if adminToken == "" {
+		log.Fatal("ADMIN_TOKEN が設定されていません")
+	}
+
+	// DB接続を一度だけ行う
+	db, err := platform.NewDB()
+	if err != nil {
+		log.Fatalf("DB接続が出来ませんでした: %v", err)
+	}
+
 	r := platform.NewRouter(
 		// 各機能の RegisterRoutes をここに1行ずつ足していく。
-		// 例(STEP 6 以降): admin.RegisterRoutes,
 		registerEvents,
+		admin.RegisterRoutes(adminToken),
+		event.RegisterRoutes(db, adminToken),
 	)
 
 	addr := ":3000"
