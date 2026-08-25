@@ -13,9 +13,7 @@ export function AnswerView({ state }: props) {
   if (state.question === null) return null
   const explanation = state.answer?.explanation
   const answer = state.answer?.correctChoiceId
-  const correctChoice = state.question.choices.find(
-  (choice) => choice.id === answer
-  )
+  const correctChoice = state.question.choices.find((choice) => choice.id === answer)
 
   let questionType
   switch (state.question.type) {
@@ -66,7 +64,11 @@ export function AnswerView({ state }: props) {
         </div>
       </div>
       <div className="mx-4 mt-7 mb-2.5 flex h-[153px] items-center justify-center rounded-[20px] shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
-        <AnswerText correctText={correctChoice?.text ?? null} explanation={explanation ?? null} correctId={answer ?? null}/>
+        <AnswerText
+          correctText={correctChoice?.text ?? null}
+          explanation={explanation ?? null}
+          correctId={answer ?? null}
+        />
       </div>
       <footer className="h-full w-full">
         <div className="px-2.5 pt-8 text-center text-base">{attentionText}</div>

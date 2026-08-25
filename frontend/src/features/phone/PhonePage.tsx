@@ -3,11 +3,12 @@ import { WaitingView } from './WaitingView'
 import { QuestionView } from './QuestionView'
 import { FinishedView } from './FinishedView'
 import { AnswerView } from './AnswerView'
+import { LoadingView } from './LoadingView'
 
 function PhonePage() {
   const state = useViewerState()
 
-  if (state === null) return <p>読み込み中…</p>
+  if (state === null) return <LoadingView />
 
   switch (state.phase) {
     case 'waiting':
