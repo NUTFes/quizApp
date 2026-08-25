@@ -8,7 +8,7 @@ export function LoadingView() {
         </div>
         <p className="flex justify-center py-2.5 text-[17px] font-bold">45th Quiz</p>
       </header>
-      <div className="h-[643px] w-full">
+      <div className="h-[643px] w-full px-5 pt-7">
         <div className="flex h-full justify-center space-y-7 rounded-[28px] px-8 pt-8 shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
           <p className="flex items-center px-8 py-4 text-left text-2xl">しばらくお待ちください</p>
         </div>
