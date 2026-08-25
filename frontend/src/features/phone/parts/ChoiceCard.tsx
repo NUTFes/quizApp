@@ -4,7 +4,7 @@ type Props = { choice: Choice; isCorrect?: boolean; type: string | null }
 
 export function ChoiceCard({ choice, isCorrect = false, type }: Props) {
   const normalStyle = 'w-43.5 rounded-[18px] shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]'
-  const correctStyle = ''
+  const correctStyle = 'w-43.5 rounded-[18px] shadow-[0_6px_16px_0_rgba(25,32,133,0.08)] bg-blue-200'
   const isRight = choice.id === 'B' || choice.id === 'D' ? 'ml-auto' : ''
   const isTwo = type === 'four_choice' ? 'h-33' : 'h-69'
 
