@@ -3,7 +3,7 @@ import type { AdminState } from '../../../types'
 export const adminQuestionFour: AdminState = {
   phase: 'question',
   serverTime: '2026-09-13T13:05:10+09:00',
-  timeLimitSec: 30,
+  timeLimitSec: null,
   questionStartedAt: '2026-09-13T13:05:00+09:00',
   revealedSegments: 2,
   totalSegments: 3,

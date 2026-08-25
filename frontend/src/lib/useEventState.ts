@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
-
 import type { AdminState, MonitorState, ViewerState } from '../types'
-
+import { assertStateContract } from './assertStateContract'
 import {
   adminWaiting,
   adminQuestionFour,
@@ -26,23 +25,36 @@ import {
   phoneAnswerNashi,
   phoneFinished,
 } from './mock/phone/index'
-
 import { BASE, getAdminToken, USE_MOCK } from './config'
 import { getAdminState, getMonitorState, getViewerState } from './api'
 
-type Opts<Type> = {
+type EventState = AdminState | MonitorState | ViewerState
+
+type Opts<Type extends EventState> = {
   path: string
   getState: () => Promise<Type>
   testSteps: { at: number; mock: Type }[]
+  view?: 'phone' | 'monitor' | 'admin'
 }
 
-function useEventState<Type>({ path, getState, testSteps }: Opts<Type>): Type | null {
+function useEventState<Type extends EventState>({
+  path,
+  getState,
+  testSteps,
+  view,
+}: Opts<Type>): Type | null {
   const [state, setState] = useState<Type | null>(null)
+
   useEffect(() => {
+    const updateState = (nextState: Type) => {
+      assertStateContract(nextState, view)
+      setState(nextState)
+    }
+
     if (USE_MOCK) {
       const ts: ReturnType<typeof setTimeout>[] = []
       for (const { at, mock } of testSteps) {
-        ts.push(setTimeout(() => setState(mock), at))
+        ts.push(setTimeout(() => updateState(mock), at))
       }
       return () => {
         console.log('in useEffect.return() 接続解除のため通信切断')
@@ -51,37 +63,41 @@ function useEventState<Type>({ path, getState, testSteps }: Opts<Type>): Type | 
         }
       }
     }
+
     const es = new EventSource(`${BASE}${path}`)
     let revision = 0
     let closed = false
+
     // 初回接続時、再接続時に State を能動的にとってくる
     es.onopen = () => {
       const runnningAt = ++revision
       getState()
         .then((state) => {
           // getState を呼んだときと、返ってきたときで revision が変わっていたら、または、すでに接続を切っていたら、返ってきた state を捨てる
+          // これをしないと、ページ切り替えの度、アンマウントされる仕様により、エラー表示となり、デバッグがしずらくなる
           if (closed || runnningAt !== revision) return
-          setState(state)
+          updateState(state)
         })
         .catch((e) => {
           // 既に接続を切っていたら エラーが出ないようにする
-          // これをしないと、ページ切り替えの度、アンマウントされる仕様により、エラー表示となり、デバッグがしずらくなる
           if (closed) return
           console.error('SSE 接続時に State が取得できませんでした', e)
         })
     }
-    // サーバーから送られたときに State を更新する
+
+    // SSE でのサーバーからのState送信があったらrevision を増やす
     es.addEventListener('state', (event: MessageEvent) => {
-      // SSE でのサーバーからのState送信があったらrevision を増やす
       revision++
-      setState(JSON.parse(event.data) as Type)
+      updateState(JSON.parse(event.data) as Type)
     })
+
     // コンポーネントレンダー終了時に接続を解除
     return () => {
       closed = true
       es.close()
     }
-  }, [path, getState, testSteps])
+  }, [path, getState, testSteps, view])
+
   return state
 }
 
@@ -99,6 +115,7 @@ export const useAdminState = () =>
     path: `/api/admin/events?token=${encodeURIComponent(getAdminToken())}`,
     getState: getAdminState,
     testSteps: ADMIN_STEPS,
+    view: 'admin',
   })
 
 const MONITOR_STEPS = [
@@ -115,6 +132,7 @@ export const useMonitorState = () =>
     path: '/api/events?view=monitor',
     getState: getMonitorState,
     testSteps: MONITOR_STEPS,
+    view: 'monitor',
   })
 
 const VIEWER_STEP = [
@@ -131,4 +149,5 @@ export const useViewerState = () =>
     path: '/api/events?view=phone',
     getState: getViewerState,
     testSteps: VIEWER_STEP,
+    view: 'phone',
   })
