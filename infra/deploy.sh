@@ -23,7 +23,12 @@ COMPOSE="docker compose -f docker-compose.prod.yml --env-file .env.prod"
 # ★ 本番はタグを使うこと。ブランチはポインタが動くので「当日動いていたもの」を
 #   後から特定できない。タグは動かないので特定でき、戻すのも REF を変えるだけ。
 #   デプロイ専用ブランチは作らない(→ dev_policy/Git運用・CI_policy.md GitHub Flow)。
-REF="${REF:-main}"
+#
+# ★ REF を省略したときは main ではなく「いまチェックアウト中のもの」を使う。
+#   main 固定にすると、検証中のブランチで作業しているときに REF を書き忘れただけで
+#   勝手に main に戻され、docker-compose.prod.yml ごと消えて謎のエラーになる
+#   (2026-08-25 に実際に踏んだ)。既定値は cd したあとで決める。
+REF="${REF:-}"
 
 cd "$APP_DIR"
 
@@ -43,21 +48,46 @@ for key in POSTGRES_PASSWORD ADMIN_TOKEN IMPORT_TOKEN; do
 done
 if [ -n "$missing" ]; then
   echo "!! .env.prod の次の値が空です:${missing}" >&2
-  echo "   生成例: openssl rand -base64 24  /  openssl rand -hex 32" >&2
+  echo "   生成例: openssl rand -hex 24  /  openssl rand -hex 32" >&2
   exit 1
 fi
 
-echo "=== ① コードを取得(${REF}) ==============================="
-git fetch --prune --tags origin
-if git rev-parse -q --verify "refs/tags/${REF}" >/dev/null; then
-  # タグ: detached HEAD で固定する(動かない = 何が動いているか特定できる)
-  git checkout -q --detach "refs/tags/${REF}"
-else
-  # ブランチ: 追従する。--ff-only なので、勝手なマージコミットは作られない
-  git checkout -q "${REF}"
-  git merge --ff-only "origin/${REF}"
+# REF 省略時の既定値 = いまチェックアウト中のブランチ。
+# detached HEAD(= タグでデプロイ済み)なら、そのまま動かさない。
+if [ -z "$REF" ]; then
+  REF="$(git rev-parse --abbrev-ref HEAD)"
+  if [ "$REF" = "HEAD" ]; then
+    echo "=== ① コードを取得(現状維持) ============================="
+    echo "detached HEAD のため切り替えません。別のものを入れるなら REF=<タグ名> を指定してください。"
+    REF=""
+  else
+    echo "(REF 未指定のため、いまのブランチ ${REF} を使います)"
+  fi
+fi
+
+if [ -n "$REF" ]; then
+  echo "=== ① コードを取得(${REF}) ==============================="
+  git fetch --prune --tags origin
+  if git rev-parse -q --verify "refs/tags/${REF}" >/dev/null; then
+    # タグ: detached HEAD で固定する(動かない = 何が動いているか特定できる)
+    git checkout -q --detach "refs/tags/${REF}"
+  else
+    # ブランチ: 追従する。--ff-only なので、勝手なマージコミットは作られない
+    git checkout -q "${REF}"
+    git merge --ff-only "origin/${REF}"
+  fi
 fi
 echo "デプロイ対象: $(git --no-pager log -1 --format='%h %s')"
+
+# ★ 切り替えた先に本番用ファイルが無いことがある(まだマージされていないブランチ等)。
+#   ここで止めないと docker compose の "no such file or directory" になり、
+#   原因が REF の指定ミスだと気づきにくい。
+if [ ! -f docker-compose.prod.yml ]; then
+  echo "!! docker-compose.prod.yml がありません。REF の指定が間違っている可能性があります。" >&2
+  echo "   いまの HEAD: $(git --no-pager log -1 --format='%h %s')" >&2
+  echo "   本番構成が入っているブランチ/タグを REF= で指定してください。" >&2
+  exit 1
+fi
 
 echo "=== ② ビルドして起動 ====================================="
 $COMPOSE up -d --build
