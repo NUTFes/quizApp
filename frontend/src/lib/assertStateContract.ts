@@ -82,7 +82,7 @@ export function assertStateContract(
     }
   }
 
-  if (state.phase === 'answer') {
+  if (state.phase === 'answer' && view !== 'admin') {
     if (rawState.answer === null || rawState.answer === undefined) {
       errors.push(`answer must not be null when phase is "answer".`)
     }

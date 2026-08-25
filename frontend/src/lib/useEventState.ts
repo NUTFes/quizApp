@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { AdminState, MonitorState, ViewerState } from '../types'
 import { assertStateContract } from './assertStateContract'
-
-type EventState = AdminState | MonitorState | ViewerState
-
 import {
   adminWaiting,
   adminQuestionFour,
@@ -28,24 +25,29 @@ import {
   phoneAnswerNashi,
   phoneFinished,
 } from './mock/phone/index'
-
 import { BASE, getAdminToken, USE_MOCK } from './config'
 import { getAdminState, getMonitorState, getViewerState } from './api'
 
-type Opts<Type> = {
+type EventState = AdminState | MonitorState | ViewerState
+
+type Opts<Type extends EventState> = {
   path: string
   getState: () => Promise<Type>
   testSteps: { at: number; mock: Type }[]
   view?: 'phone' | 'monitor' | 'admin'
 }
 
-function useEventState<Type>({ path, getState, testSteps, view }: Opts<Type>): Type | null {
+function useEventState<Type extends EventState>({
+  path,
+  getState,
+  testSteps,
+  view,
+}: Opts<Type>): Type | null {
   const [state, setState] = useState<Type | null>(null)
 
   useEffect(() => {
-    // state を更新する前に契約チェックを行う関数
     const updateState = (nextState: Type) => {
-      assertStateContract(nextState as unknown as EventState, view)
+      assertStateContract(nextState, view)
       setState(nextState)
     }
 
@@ -71,16 +73,19 @@ function useEventState<Type>({ path, getState, testSteps, view }: Opts<Type>): T
       const runnningAt = ++revision
       getState()
         .then((state) => {
+          // getState を呼んだときと、返ってきたときで revision が変わっていたら、または、すでに接続を切っていたら、返ってきた state を捨てる
+          // これをしないと、ページ切り替えの度、アンマウントされる仕様により、エラー表示となり、デバッグがしずらくなる
           if (closed || runnningAt !== revision) return
           updateState(state)
         })
         .catch((e) => {
+          // 既に接続を切っていたら エラーが出ないようにする
           if (closed) return
           console.error('SSE 接続時に State が取得できませんでした', e)
         })
     }
 
-    // サーバーから送られたときに State を更新する
+    // SSE でのサーバーからのState送信があったらrevision を増やす
     es.addEventListener('state', (event: MessageEvent) => {
       revision++
       updateState(JSON.parse(event.data) as Type)
