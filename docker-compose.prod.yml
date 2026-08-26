@@ -40,6 +40,7 @@ services:
     # ports は開けない。nginx 経由(/api/)でしか到達できないようにする
     environment:
       - DATABASE_URL=postgresql://quiz:${POSTGRES_PASSWORD}@db:5432/quiz?sslmode=disable
+      - JOIN_URL=${JOIN_URL}
       - ADMIN_TOKEN=${ADMIN_TOKEN}
       - IMPORT_TOKEN=${IMPORT_TOKEN}
       - SPREADSHEET_ID=${SPREADSHEET_ID:-}

@@ -40,7 +40,7 @@ func getState(c *gin.Context, db *gorm.DB) {
 }
 
 // スマホやモニタへ ViewerState か MonitorState で State を渡す 
-func getViewState(c *gin.Context, db *gorm.DB){
+func getViewState(c *gin.Context, db *gorm.DB, joinURL string){
 	// view をクエリから取得
 	view := c.DefaultQuery("view", "phone") // デフォルトで phone に設定
 
@@ -73,7 +73,6 @@ func getViewState(c *gin.Context, db *gorm.DB){
 	case "phone":
 		c.JSON(http.StatusOK, vs)
 	case "monitor":
-		joinURL := ""
 		c.JSON(http.StatusOK, MonitorState{ViewerState: vs,JoinURL: joinURL})
 	default:
 		platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "view には正しいデバイス（phone, monitor）を指定してください")
