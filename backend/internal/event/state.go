@@ -127,6 +127,8 @@ func buildViewerState(es EventState, q *question.Question, askedCount int) Viewe
 		return vs
 	}
 
+	// question か answer の時の処理
+
 	// question から、 正答に関する項目を除く
 	vq := question.ViewerQuestion{
 		Number: q.Number,
@@ -134,6 +136,11 @@ func buildViewerState(es EventState, q *question.Question, askedCount int) Viewe
 		ImageURL: q.ImageURL,
 		Choices: q.Choices,
 	}
+
+	tls := es.TimeLimitSec // ポインタに代入するには、変数のポインタとしてしか渡せない
+	vs.TimeLimitSec = &tls
+	vs.QuestionStartedAt = es.QuestionStartedAt
+	vs.Question = &vq // vq は実体で宣言したので、& でポインタを渡す
 
 	return vs
 }
