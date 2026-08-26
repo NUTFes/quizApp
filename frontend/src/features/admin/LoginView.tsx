@@ -6,6 +6,7 @@ import { verify } from '../../lib/api'
 export function LoginView({ onSuccess }: { onSuccess: () => void }) {
   const [token, setToken] = useState<string>('')
   const [busy, setBusy] = useState<boolean>(false)
+  const [error, setError] = useState<string | null>(null)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setBusy(true)
@@ -16,6 +17,7 @@ export function LoginView({ onSuccess }: { onSuccess: () => void }) {
     } catch {
       clearAdminToken()
       console.log('トークンが違います')
+      setError('トークンが違います')
     } finally {
       setBusy(false)
     }
@@ -36,6 +38,7 @@ export function LoginView({ onSuccess }: { onSuccess: () => void }) {
           {busy ? '認証中...' : 'ログイン'}
         </button>
       </form>
+      {error != null && <p>{error}</p> /* error があるときはエラーを表示、なければ何も出ない */}
     </div>
   )
 }
