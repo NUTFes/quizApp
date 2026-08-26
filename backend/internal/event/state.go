@@ -129,12 +129,16 @@ func buildViewerState(es EventState, q *question.Question, askedCount int) Viewe
 
 	// question か answer の時の処理
 
+	// 問題文を、表示する部分まで切り取る
+	revealed := es.RevealedSegments
+	vseg := q.TextSegments[:revealed]
 	// question から、 正答に関する項目を除く
 	vq := question.ViewerQuestion{
 		Number: q.Number,
 		Type: q.Type,
 		ImageURL: q.ImageURL,
 		Choices: q.Choices,
+		TextSegments: vseg,
 	}
 
 	tls := es.TimeLimitSec // ポインタに代入するには、変数のポインタとしてしか渡せない
