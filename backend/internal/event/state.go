@@ -131,40 +131,43 @@ func buildViewerState(es EventState, q *question.Question, askedCount int) Viewe
 
 	// 問題文を、表示する部分まで切り取る
 	// revealedSegments は DB の値なので、そのまま信用しない
-	revealed := es.RevealedSegments
-	if revealed < 0 {
-		revealed = 0
-	}
-	if revealed > len(q.TextSegments) {
-		revealed = len(q.TextSegments)
-	}
-	// そのままスライスを代入すると、 revealed が 0 のとき nil になる
-	vseg := make([]string,revealed)// make で, revealed が 0　でも [] として扱える
-	copy(vseg, q.TextSegments[:revealed])
+	// q == nil の場合、何もなくエラーになるため、これじゃない if で囲む
+	if q != nil {
+		revealed := es.RevealedSegments
+		if revealed < 0 {
+			revealed = 0
+		}
+		if revealed > len(q.TextSegments) {
+			revealed = len(q.TextSegments)
+		}
+		// そのままスライスを代入すると、 revealed が 0 のとき nil になる
+		vseg := make([]string,revealed)// make で, revealed が 0　でも [] として扱える
+		copy(vseg, q.TextSegments[:revealed])
 
-	// question から、 正答に関する項目を除く
-	vq := question.ViewerQuestion{
-		Number: q.Number,
-		Type: q.Type,
-		ImageURL: q.ImageURL,
-		Choices: q.Choices,
-		TextSegments: vseg,
-	}
+		// question から、 正答に関する項目を除く
+		vq := question.ViewerQuestion{
+			Number: q.Number,
+			Type: q.Type,
+			ImageURL: q.ImageURL,
+			Choices: q.Choices,
+			TextSegments: vseg,
+		}
 
-	tls := es.TimeLimitSec // ポインタに代入するには、変数のポインタとしてしか渡せない
-	vs.TimeLimitSec = &tls
-	vs.QuestionStartedAt = es.QuestionStartedAt
-	vs.Question = &vq // vq は実体で宣言したので、& でポインタを渡す
+		tls := es.TimeLimitSec // ポインタに代入するには、変数のポインタとしてしか渡せない
+		vs.TimeLimitSec = &tls
+		vs.QuestionStartedAt = es.QuestionStartedAt
+		vs.Question = &vq // vq は実体で宣言したので、& でポインタを渡す
 
-	// question の時は、 answer はゼロ値（nil -> null）で返す
-	if es.Phase == "question" {
-		return vs
-	}
+		// question の時は、 answer はゼロ値（nil -> null）で返す
+		if es.Phase == "question" {
+			return vs
+		}
 
-	// answer の時は、 Answer に正答、解説を入れる
-	vs.Answer = &question.Answer{
-		CorrectChoiceID: q.CorrectChoiceID,
-		Explanation: q.Explanation,
+		// answer の時は、 Answer に正答、解説を入れる
+		vs.Answer = &question.Answer{
+			CorrectChoiceID: q.CorrectChoiceID,
+			Explanation: q.Explanation,
+		}
 	}
 	return vs
 }
