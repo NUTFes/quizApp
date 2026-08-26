@@ -16,7 +16,6 @@ export function LoginView({ onSuccess }: { onSuccess: () => void }) {
       onSuccess()
     } catch {
       clearAdminToken()
-      console.log('トークンが違います')
       setError('トークンが違います')
     } finally {
       setBusy(false)
