@@ -5,8 +5,10 @@ import { verify } from '../../lib/api'
 // ログイン（トークン入力）ページ
 export function LoginView({ onSuccess }: { onSuccess: () => void }) {
   const [token, setToken] = useState<string>('')
+  const [busy, setBusy] = useState<boolean>(false)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setBusy(true)
     setAdminToken(token.trim())
     try {
       await verify()
@@ -14,6 +16,8 @@ export function LoginView({ onSuccess }: { onSuccess: () => void }) {
     } catch {
       clearAdminToken()
       console.log('トークンが違います')
+    } finally {
+      setBusy(false)
     }
   }
   return (
@@ -25,9 +29,12 @@ export function LoginView({ onSuccess }: { onSuccess: () => void }) {
           name="tokenForm"
           type="password"
           value={token}
+          disabled={busy}
           onChange={(e) => setToken(e.target.value)}
         />
-        <button type="submit">ログイン</button>
+        <button type="submit" disabled={busy}>
+          {busy ? '認証中...' : 'ログイン'}
+        </button>
       </form>
     </div>
   )
