@@ -39,8 +39,8 @@ func getState(c *gin.Context, db *gorm.DB) {
 	c.JSON(http.StatusOK, buildState(es, q, int(askedCount)))
 }
 
-// スマホやモニタへ ViewerState か MonitorState で State を渡す 
-func getViewState(c *gin.Context, db *gorm.DB, joinURL string){
+// スマホやモニタへ ViewerState か MonitorState で State を渡す
+func getViewState(c *gin.Context, db *gorm.DB, joinURL string) {
 	// view をクエリから取得
 	view := c.DefaultQuery("view", "phone") // デフォルトで phone に設定
 
@@ -69,11 +69,11 @@ func getViewState(c *gin.Context, db *gorm.DB, joinURL string){
 
 	vs := buildViewerState(es, q, int(askedCount))
 
-	switch view{
+	switch view {
 	case "phone":
 		c.JSON(http.StatusOK, vs)
 	case "monitor":
-		c.JSON(http.StatusOK, MonitorState{ViewerState: vs,JoinURL: joinURL})
+		c.JSON(http.StatusOK, MonitorState{ViewerState: vs, JoinURL: joinURL})
 	default:
 		platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "view には正しいデバイス（phone, monitor）を指定してください")
 	}
@@ -113,7 +113,7 @@ func buildState(es EventState, q *question.Question, askedCount int) State {
 }
 
 // State を スマホやモニタ用へ変換
-func buildViewerState(es EventState, q *question.Question, askedCount int) ViewerState{
+func buildViewerState(es EventState, q *question.Question, askedCount int) ViewerState {
 	vs := ViewerState{
 		Phase:      es.Phase,
 		ServerTime: time.Now(),
@@ -141,15 +141,15 @@ func buildViewerState(es EventState, q *question.Question, askedCount int) Viewe
 			revealed = len(q.TextSegments)
 		}
 		// そのままスライスを代入すると、 revealed が 0 のとき nil になる
-		vseg := make([]string,revealed)// make で, revealed が 0　でも [] として扱える
+		vseg := make([]string, revealed) // make で, revealed が 0　でも [] として扱える
 		copy(vseg, q.TextSegments[:revealed])
 
 		// question から、 正答に関する項目を除く
 		vq := question.ViewerQuestion{
-			Number: q.Number,
-			Type: q.Type,
-			ImageURL: q.ImageURL,
-			Choices: q.Choices,
+			Number:       q.Number,
+			Type:         q.Type,
+			ImageURL:     q.ImageURL,
+			Choices:      q.Choices,
 			TextSegments: vseg,
 		}
 
@@ -166,7 +166,7 @@ func buildViewerState(es EventState, q *question.Question, askedCount int) Viewe
 		// answer の時は、 Answer に正答、解説を入れる
 		vs.Answer = &question.Answer{
 			CorrectChoiceID: q.CorrectChoiceID,
-			Explanation: q.Explanation,
+			Explanation:     q.Explanation,
 		}
 	}
 	return vs

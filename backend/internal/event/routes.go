@@ -17,7 +17,7 @@ func RegisterRoutes(db *gorm.DB, adminToken string, joinURL string) platform.Reg
 	return func(r *gin.Engine) {
 		// api 全体のグループ
 		api := r.Group("/api")
-		api.GET("/state", func(c *gin.Context) { getViewState(c, db, joinURL)})
+		api.GET("/state", func(c *gin.Context) { getViewState(c, db, joinURL) })
 
 		// admin のパスグループ
 		adminApi := api.Group("/admin", platform.RequireToken(adminToken))
