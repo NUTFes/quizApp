@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { clearAdminToken, setAdminToken } from '../../lib/config'
-import { verify } from '../../lib/api'
+import { ApiError, verify } from '../../lib/api'
 
 // ログイン（トークン入力）ページ
 export function LoginView({ onSuccess }: { onSuccess: () => void }) {
@@ -16,7 +16,14 @@ export function LoginView({ onSuccess }: { onSuccess: () => void }) {
       onSuccess()
     } catch {
       clearAdminToken()
-      setError('トークンが違います')
+      if (e instanceof ApiError && e.status === 401) {
+        // エラーのタイプを判定し、
+        // アクセスが出来ないエラーじゃない事と、 401 エラーであることを確認
+        setError('トークンが違います')
+      } else {
+        // 通信関係のエラーなどでアクセス自体が出来ない
+        setError('サーバーに接続できませんでした')
+      }
     } finally {
       setBusy(false)
     }
