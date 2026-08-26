@@ -15,9 +15,9 @@ export function LoginView({ onSuccess }: { onSuccess: () => void }) {
     try {
       await verify()
       onSuccess()
-    } catch {
+    } catch (err) {
       clearAdminToken()
-      if (e instanceof ApiError && e.status === 401) {
+      if (err instanceof ApiError && err.status === 401) {
         // エラーのタイプを判定し、
         // アクセスが出来ないエラーじゃない事と、 401 エラーであることを確認
         setError('トークンが違います')
