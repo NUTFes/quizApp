@@ -41,6 +41,9 @@ func getState(c *gin.Context, db *gorm.DB) {
 
 // スマホやモニタへ ViewerState か MonitorState で State を渡す 
 func getViewState(c *gin.Context, db *gorm.DB){
+	// view をクエリから取得
+	view := c.DefaultQuery("view", "phone") // デフォルトで phone に設定
+
 	var es EventState
 	if ok := readEventState(c, db, &es); !ok {
 		return
@@ -64,7 +67,17 @@ func getViewState(c *gin.Context, db *gorm.DB){
 		return
 	}
 
-	c.JSON(http.StatusOK, buildViewState(es, q, int(askedCount)))
+	vs := buildViewerState(es, q, int(askedCount))
+
+	switch view{
+	case "phone":
+		c.JSON(http.StatusOK, vs)
+	case "monitor":
+		joinURL := ""
+		c.JSON(http.StatusOK, MonitorState{ViewerState: vs,JoinURL: joinURL})
+	default:
+		platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "view には正しいデバイス（phone, monitor）を指定してください")
+	}
 }
 
 // DBにある、EventState の形のものをAPIで返すState型に直す
@@ -101,8 +114,8 @@ func buildState(es EventState, q *question.Question, askedCount int) State {
 }
 
 // State を スマホやモニタ用へ変換
-func buildViewState(es EventState, q *question.Question, askedCount int) State{
-	vs := State{
+func buildViewerState(es EventState, q *question.Question, askedCount int) ViewerState{
+	vs := ViewerState{
 		Phase:      es.Phase,
 		ServerTime: time.Now(),
 		AskedCount: askedCount,
