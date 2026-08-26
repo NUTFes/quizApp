@@ -1,4 +1,9 @@
 // 管理者用ページ
+// このページでは、認証状態によるコンポーネントの切り替えのみを行う
+
+// 認証状態
+type AuthStatus = 'ready' | 'needsLogin' | 'checking' | 'unreachable'
+
 function AdminPage() {
   return (
     <div className="bg-canvas min-h-screen p-4">
