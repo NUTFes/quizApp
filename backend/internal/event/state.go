@@ -39,6 +39,34 @@ func getState(c *gin.Context, db *gorm.DB) {
 	c.JSON(http.StatusOK, buildState(es, q, int(askedCount)))
 }
 
+// スマホやモニタへ ViewerState か MonitorState で State を渡す 
+func getViewState(c *gin.Context, db *gorm.DB){
+	var es EventState
+	if ok := readEventState(c, db, &es); !ok {
+		return
+	}
+
+	// 今表示する問題を取得する
+	var q *question.Question
+	if es.CurrentQuestionID != nil {
+		var found question.Question
+		if db.First(&found, *es.CurrentQuestionID).Error != nil {
+			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "指定された問題が読み込めませんでした")
+			return
+		}
+		q = &found
+	}
+
+	// 今何問目かを数える
+	var askedCount int64
+	if db.Model(&question.Question{}).Where("asked = ?", true).Count(&askedCount).Error != nil {
+		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "出題数を数えられませんでした")
+		return
+	}
+
+	c.JSON(http.StatusOK, buildViewState(es, q, int(askedCount)))
+}
+
 // DBにある、EventState の形のものをAPIで返すState型に直す
 //
 // phase が waiting または finished のときは出題関係は全部 0/null にする
@@ -72,9 +100,14 @@ func buildState(es EventState, q *question.Question, askedCount int) State {
 	return s
 }
 
-// AdminState で来る State を ViewerState か MonitorState へ変換
-func getViewState(c *gin.Context, db *gorm.DB){
-	getState(c, db)
+// State を スマホやモニタ用へ変換
+func buildViewState(es EventState, q *question.Question, askedCount int) State{
+	vs := State{
+		Phase:      es.Phase,
+		ServerTime: time.Now(),
+		AskedCount: askedCount,
+	}
+	return vs
 }
 
 // event_states テーブルから読み込む
