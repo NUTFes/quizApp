@@ -10,6 +10,7 @@ export function LoginView({ onSuccess }: { onSuccess: () => void }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setBusy(true)
+    setError(null)
     setAdminToken(token.trim())
     try {
       await verify()
