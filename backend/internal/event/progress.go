@@ -118,7 +118,12 @@ func advanceText(c *gin.Context, db *gorm.DB) {
 
 	// RevealedSegments だけ指定して次の仕切りまで進める
 	if db.Model(&es).
-		Where("revealed_segments < ?", TotalSegments). // 上限に達していないときという条件
+		Where(
+			"phase = ? AND current_question_id = ? AND revealed_segments < ?",
+			"question",			   // 別のAPIを実行中にまた別のAPIを実行してしまったとき、
+			*es.CurrentQuestionID, // DBに残る矛盾が起きないようにする
+			TotalSegments, // 上限に達していないときという条件
+		). 
 		Update("revealed_segments", gorm.Expr("revealed_segments + 1")).Error != nil {
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
 		return
@@ -161,7 +166,13 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 	TotalSegments := len(q.TextSegments)
 
 	// event_states に書き込み 指定した要素のみ書き換え
-	if db.Model(&es).Updates(map[string]any{
+	if db.Model(&es).
+	Where(
+		"phase = ? AND current_question_id = ?",
+		"question",
+		*es.CurrentQuestionID,
+	).
+	Updates(map[string]any{
 		"phase":            "answer",
 		"revealedSegments": TotalSegments,
 	}).Error != nil {
