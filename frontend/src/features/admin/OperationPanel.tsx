@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AdminState } from '../../types'
+import { AdminState, Question } from '../../types'
 import { getAdminState } from '../../lib/api'
 
 // 操作パネル
@@ -24,9 +24,29 @@ export function OperationPanel() {
       cancelled = true
     }
   }, [])
+
+  if (adminState == null) return <p>接続中...</p>
+
+  const q = adminState.question
+  const qDetail = (q: Question | null) => {
+    if (q == null) return <p>表示中の問題はありません</p>
+    return (
+      <div>
+        <p>問題タイプ : {q.type}</p>
+        <p>問題 id : {q.number}</p>
+        <p>問題文 : {q.textSegments}</p>
+      </div>
+    )
+  }
   return (
     <div>
       <h1>操作画面</h1>
+      <p>局面 : {adminState.phase}</p>
+      <p>第{adminState.askedCount}問</p>
+      <p>
+        進行状況 : {adminState.revealedSegments} / {adminState.totalSegments}
+      </p>
+      {qDetail(q)}
     </div>
   )
 }
