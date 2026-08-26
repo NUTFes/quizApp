@@ -72,6 +72,11 @@ func buildState(es EventState, q *question.Question, askedCount int) State {
 	return s
 }
 
+// AdminState で来る State を ViewerState か MonitorState へ変換
+func getViewState(c *gin.Context, db *gorm.DB){
+	getState(c, db)
+}
+
 // event_states テーブルから読み込む
 //
 // es に状態を書き込む
