@@ -28,13 +28,13 @@ export function OperationPanel() {
   if (adminState == null) return <p>接続中...</p>
 
   const q = adminState.question
-  const qDetail = (q: Question | null) => {
-    if (q == null) return <p>表示中の問題はありません</p>
+  const qDetail = (question: Question | null) => {
+    if (question == null) return <p>表示中の問題はありません</p>
     return (
       <div>
-        <p>問題タイプ : {q.type}</p>
-        <p>問題 id : {q.number}</p>
-        <p>問題文 : {q.textSegments}</p>
+        <p>問題タイプ : {question.type}</p>
+        <p>問題 id : {question.number}</p>
+        <p>問題文 : {question.textSegments.join(' / ')}</p>
       </div>
     )
   }
