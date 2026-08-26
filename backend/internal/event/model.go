@@ -35,9 +35,8 @@ type ViewerState struct {
 	ServerTime        time.Time          `json:"serverTime"`
 	TimeLimitSec      *int               `json:"timeLimitSec"`
 	QuestionStartedAt *time.Time         `json:"questionStartedAt"`
-	RevealedSegments  int                `json:"revealedSegments"`
-	TotalSegments     int                `json:"totalSegments"`
 	Question          *question.ViewerQuestion `json:"question"`
+	Answer *question.Answer `json:"answer"`
 	AskedCount        int                `json:"askedCount"`
 }
 

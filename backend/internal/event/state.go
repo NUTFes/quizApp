@@ -122,6 +122,7 @@ func buildViewerState(es EventState, q *question.Question, askedCount int) Viewe
 
 	// waiting か finished の時はここで返す
 	// TimeLimitSec などはポインタであるから nil となるが、 JSON への変換で null になる
+	// Answer もポインタのため、 nil 扱い -> nullとなる
 	if es.Phase == "waiting" || es.Phase == "finished" {
 		return vs
 	}
