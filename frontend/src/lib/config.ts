@@ -1,9 +1,15 @@
-export const BASE: string = import.meta.env.VITE_API_URL
-if (!BASE) {
-  throw new Error(
-    'VITE_API_URL が設定されていません。.env.example をコピーして .env を作り、mise run down && mise run up で開発サーバーを再起動してください。',
-  )
-}
+// API のベースURL。
+//
+// 未設定なら空文字 = 相対パスにする。本番はフロント(nginx)とAPIが同一サブドメイン
+// (quiz.○○○.jp)に同居し、パスで振り分ける構成なので、'/api/state' で正しく届く。
+// 開発では docker-compose.yml の VITE_API_URL=http://localhost:3000 が入る。
+//
+// ここで throw してはいけない。Vite の環境変数は「ビルドした瞬間の値」がJSに
+// 焼き込まれ、実行時に読み直されない。本番ビルドで渡し忘れると localhost:3000 が
+// 全参加者の端末に配られて全滅する。「手順を守る」より「間違えられない形」を採る。
+// → dev_policy/インフラ・デプロイ_policy.md §フロントに localhost が焼き込まれる事故
+export const BASE: string = import.meta.env.VITE_API_URL ?? ''
+
 export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 // 毎回呼び出す度に実行されてほしいから、定数としては扱えないため、関数オブジェクトで定義
 export const getAdminToken = () => localStorage.getItem('adminToken') ?? ''
