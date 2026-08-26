@@ -119,7 +119,13 @@ func buildViewerState(es EventState, q *question.Question, askedCount int) Viewe
 		ServerTime: time.Now(),
 		AskedCount: askedCount,
 	}
-	
+
+	// waiting か finished の時はここで返す
+	// TimeLimitSec などはポインタであるから nil となるが、 JSON への変換で null になる
+	if es.Phase == "waiting" || es.Phase == "finished" {
+		return vs
+	}
+
 	// question から、 正答に関する項目を除く
 	vq := question.ViewerQuestion{
 		Number: q.Number,
