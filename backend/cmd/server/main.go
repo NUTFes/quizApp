@@ -34,11 +34,17 @@ func main() {
 		log.Fatalf("DB接続が出来ませんでした: %v", err)
 	}
 
+	// 参加者向けのURLを取得
+	joinURL := os.Getenv("JOIN_URL")
+	if joinURL == "" {
+		log.Fatal("JOIN_URL が設定されていません")
+	}
+
 	r := platform.NewRouter(
 		// 各機能の RegisterRoutes をここに1行ずつ足していく。
 		registerEvents,
 		admin.RegisterRoutes(adminToken),
-		event.RegisterRoutes(db, adminToken),
+		event.RegisterRoutes(db, adminToken, joinURL),
 	)
 
 	addr := ":3000"
