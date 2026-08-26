@@ -50,7 +50,7 @@ function AdminPage() {
     case 'unreachable':
       return <p>サーバーに接続できません</p>
     case 'needsLogin':
-      return <LoginView />
+      return <LoginView onSuccess={() => setAuthStatus('ready')} />
     default:
       return <OperationPanel />
   }
