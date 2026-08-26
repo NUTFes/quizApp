@@ -2,7 +2,7 @@
 // このページでは、認証状態によるコンポーネントの切り替えのみを行う
 
 import { useEffect, useState } from 'react'
-import { getAdminToken } from '../../lib/config'
+import { clearAdminToken, getAdminToken } from '../../lib/config'
 import { ApiError, verify } from '../../lib/api'
 import { LoginView } from './LoginView'
 import { OperationPanel } from './OperationPanel'
@@ -34,6 +34,7 @@ function AdminPage() {
           // エラーのタイプを判定し、
           // アクセスが出来ないエラーじゃない事と、 401 エラーであることを確認
           setAuthStatus('needsLogin')
+          clearAdminToken() // 分かり切った失敗認証を LoginView で繰り返さない
           return
         }
         // 通信関係のエラーなどでアクセス自体が出来ない
