@@ -119,6 +119,15 @@ func buildViewerState(es EventState, q *question.Question, askedCount int) Viewe
 		ServerTime: time.Now(),
 		AskedCount: askedCount,
 	}
+	
+	// question から、 正答に関する項目を除く
+	vq := question.ViewerQuestion{
+		Number: q.Number,
+		Type: q.Type,
+		ImageURL: q.ImageURL,
+		Choices: q.Choices,
+	}
+
 	return vs
 }
 
