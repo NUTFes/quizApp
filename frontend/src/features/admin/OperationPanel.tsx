@@ -33,7 +33,7 @@ export function OperationPanel() {
     return (
       <div>
         <p>問題タイプ : {question.type}</p>
-        <p>問題 id : {question.number}</p>
+        <p>クイズ番号 : {question.number}</p>
         <p>問題文 : {question.textSegments.join(' / ')}</p>
       </div>
     )
