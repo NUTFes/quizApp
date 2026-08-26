@@ -156,6 +156,16 @@ func buildViewerState(es EventState, q *question.Question, askedCount int) Viewe
 	vs.QuestionStartedAt = es.QuestionStartedAt
 	vs.Question = &vq // vq は実体で宣言したので、& でポインタを渡す
 
+	// question の時は、 answer はゼロ値（nil -> null）で返す
+	if es.Phase == "question" {
+		return vs
+	}
+
+	// answer の時は、 Answer に正答、解説を入れる
+	vs.Answer = &question.Answer{
+		CorrectChoiceID: q.CorrectChoiceID,
+		Explanation: q.Explanation,
+	}
 	return vs
 }
 
