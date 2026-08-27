@@ -31,21 +31,23 @@ export function AnswerView({ state }: props) {
   const attentionText = '次の問題までその場でお待ちください'
 
   return (
-    <main className="min-h-dvh pt-[env(safe-area-inset-top)]">
-      <header className="flex h-15.5 items-center shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
+    <main className="min-h-dvh bg-canvas pt-[env(safe-area-inset-top)] font-zen-kaku-gothic-new text-brand">
+      <header className="flex h-15.5 items-center bg-canvas shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
         <div className="h-full w-15.5 px-3 py-4">
-          <img src="" alt="logo" className="flex h-full w-full justify-center rounded-[10px]" />
+          <img
+            src=""
+            alt="logo"
+            className="flex h-full w-full justify-center rounded-[10px] bg-brand"
+          />
         </div>
-        <p className="flex justify-center py-2.5 text-[17px] font-bold">45th Quiz</p>
-        <p className="ml-auto flex justify-center py-2.5 pr-4 text-[17px] font-bold">{`${questionType}クイズ`}</p>
+        <p className="flex justify-center py-2.5 text-header">45th Quiz</p>
+        <p className="ml-auto flex justify-center py-2.5 pr-4 text-header">{`${questionType}クイズ`}</p>
       </header>
       <div className="w-full">
-        <div className="mx-5 my-7 rounded-[20px] shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
+        <div className="mx-5 my-7 rounded-[20px] border border-border-soft bg-surface shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
           <div className="flex">
             <QuestionNumber count={state.askedCount} />
-            <p
-              className={`m-2 ml-auto flex items-center justify-center rounded-[20px] px-5 py-2 text-xs shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]`}
-            >
+            <p className="m-2 ml-auto flex items-center justify-center rounded-[20px] bg-live px-5 py-2 text-status-answer shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
               正解発表
             </p>
           </div>
@@ -71,7 +73,7 @@ export function AnswerView({ state }: props) {
         />
       </div>
       <footer className="h-full w-full">
-        <div className="px-2.5 pt-8 text-center text-base">{attentionText}</div>
+        <div className="px-2.5 pt-8 text-center text-notes">{attentionText}</div>
       </footer>
     </main>
   )
