@@ -1,0 +1,160 @@
+package question
+
+import (
+	"strings"
+	"testing"
+)
+
+// テスト用の正しい4択問題を作るヘルパ(架空の問題のみ使用)
+func validFourChoice(sourceRow, number int) importQuestion {
+	return importQuestion{
+		SourceRow:    sourceRow,
+		Number:       number,
+		Type:         "four_choice",
+		Difficulty:   "normal",
+		TextSegments: []string{"日本一高い山は", "どれ?"},
+		Choices: []Choice{
+			{ID: "A", Text: "富士山"},
+			{ID: "B", Text: "北岳"},
+			{ID: "C", Text: "穂高岳"},
+			{ID: "D", Text: "槍ヶ岳"},
+		},
+		CorrectChoiceID: "A",
+	}
+}
+
+func validTwoChoice(sourceRow, number int) importQuestion {
+	return importQuestion{
+		SourceRow:    sourceRow,
+		Number:       number,
+		Type:         "two_choice",
+		Difficulty:   "easy",
+		TextSegments: []string{"地球は青い"},
+		Choices: []Choice{
+			{ID: "A", Text: "○"},
+			{ID: "B", Text: "×"},
+		},
+		CorrectChoiceID: "A",
+	}
+}
+
+func validArunashi(sourceRow, number int) importQuestion {
+	return importQuestion{
+		SourceRow:    sourceRow,
+		Number:       number,
+		Type:         "arunashi",
+		Difficulty:   "hard",
+		TextSegments: []string{"次のグループの共通点は?"},
+		Choices: []Choice{
+			{ID: "A", Text: "ある:いか/くも/あり"},
+			{ID: "B", Text: "ない:アルパカ/くま/マントヒヒ"},
+		},
+		CorrectChoiceID: "A",
+	}
+}
+
+// reason に部分文字列 want を含む issue が sourceRow 行に対して出ているか
+func hasIssue(issues []RowIssue, sourceRow int, want string) bool {
+	for _, i := range issues {
+		if i.SourceRow == sourceRow && strings.Contains(i.Reason, want) {
+			return true
+		}
+	}
+	return false
+}
+
+func TestValidateImport_正常系はエラーなし(t *testing.T) {
+	issues := validateImport([]importQuestion{
+		validFourChoice(2, 1),
+		validTwoChoice(3, 2),
+		validArunashi(4, 3),
+	})
+	if len(issues) != 0 {
+		t.Fatalf("エラーは0件のはずが %d 件: %+v", len(issues), issues)
+	}
+}
+
+func TestValidateImport_hayaoshiはv1未対応(t *testing.T) {
+	q := validFourChoice(5, 1)
+	q.Type = "hayaoshi"
+	issues := validateImport([]importQuestion{q})
+	if !hasIssue(issues, 5, "hayaoshi") {
+		t.Fatalf("hayaoshi のエラーが出ていない: %+v", issues)
+	}
+}
+
+func TestValidateImport_correctChoiceIdが選択肢に無い(t *testing.T) {
+	q := validFourChoice(5, 1)
+	q.CorrectChoiceID = "E"
+	issues := validateImport([]importQuestion{q})
+	if !hasIssue(issues, 5, "correctChoiceId 'E'") {
+		t.Fatalf("correctChoiceId のエラーが出ていない: %+v", issues)
+	}
+}
+
+func TestValidateImport_choices数がtypeと不一致(t *testing.T) {
+	q := validTwoChoice(9, 1)
+	q.Choices = validFourChoice(9, 1).Choices // 2択なのに4件
+	issues := validateImport([]importQuestion{q})
+	if !hasIssue(issues, 9, "choices が4件") {
+		t.Fatalf("choices件数のエラーが出ていない: %+v", issues)
+	}
+}
+
+func TestValidateImport_numberの重複(t *testing.T) {
+	issues := validateImport([]importQuestion{
+		validFourChoice(2, 7),
+		validTwoChoice(3, 7), // number 重複
+	})
+	if !hasIssue(issues, 3, "重複") {
+		t.Fatalf("number重複のエラーが出ていない: %+v", issues)
+	}
+}
+
+func TestValidateImport_arunashiの書式違反(t *testing.T) {
+	q := validArunashi(6, 1)
+	q.Choices[0].Text = "いか/くも/あり" // コロンが無い
+	issues := validateImport([]importQuestion{q})
+	if !hasIssue(issues, 6, "書式が不正") {
+		t.Fatalf("arunashi書式のエラーが出ていない: %+v", issues)
+	}
+}
+
+func TestValidateImport_difficultyは内部表現のみ許可(t *testing.T) {
+	q := validFourChoice(4, 1)
+	q.Difficulty = "難しい" // 日本語→英語変換はGASの責務。サーバーは英語のみ受ける
+	issues := validateImport([]importQuestion{q})
+	if !hasIssue(issues, 4, "difficulty") {
+		t.Fatalf("difficultyのエラーが出ていない: %+v", issues)
+	}
+}
+
+func TestValidateImport_複数問のエラーが全件まとまる(t *testing.T) {
+	q1 := validFourChoice(2, 1)
+	q1.CorrectChoiceID = "E"
+	q2 := validTwoChoice(3, 2)
+	q2.Difficulty = "普通"
+	issues := validateImport([]importQuestion{q1, q2})
+	if !hasIssue(issues, 2, "correctChoiceId") || !hasIssue(issues, 3, "difficulty") {
+		t.Fatalf("2問分のエラーがまとまっていない: %+v", issues)
+	}
+}
+
+func TestIsValidArunashiChoice(t *testing.T) {
+	cases := []struct {
+		text string
+		want bool
+	}{
+		{"ある:いか/くも/あり", true},
+		{"ない:アルパカ", true},   // 項目1個でもOK
+		{"いか/くも/あり", false}, // コロンが無い
+		{":いか/くも", false},   // ラベルが空
+		{"ある:", false},      // 項目が無い
+		{"ある: / / ", false}, // 項目が全部空
+	}
+	for _, c := range cases {
+		if got := isValidArunashiChoice(c.text); got != c.want {
+			t.Errorf("isValidArunashiChoice(%q) = %v, want %v", c.text, got, c.want)
+		}
+	}
+}
