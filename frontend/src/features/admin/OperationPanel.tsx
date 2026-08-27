@@ -5,6 +5,8 @@ import { getAdminState } from '../../lib/api'
 // 操作パネル
 export function OperationPanel() {
   const [adminState, setAdminState] = useState<AdminState | null>(null)
+  const [busy, setBusy] = useState<boolean>(false)
+  const [error, setError] = useState<string | null>(null)
   useEffect(() => {
     let cancelled = false
     getAdminState()
