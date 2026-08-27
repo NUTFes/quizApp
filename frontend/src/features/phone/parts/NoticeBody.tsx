@@ -6,7 +6,7 @@ type Props = {
   children?: ReactNode
 }
 
-export function LoadingBody({ isHayaoshi = false, children = 'しばらくお待ちください' }: Props) {
+export function NoticeBody({ isHayaoshi = false, children = 'しばらくお待ちください' }: Props) {
   return (
     <PhoneLayout questionType={isHayaoshi ? 'hayaoshi' : undefined}>
       <div className="w-full px-5 pt-7">

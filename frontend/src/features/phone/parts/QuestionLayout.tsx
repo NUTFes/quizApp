@@ -5,7 +5,7 @@ import { QuestionText } from './QuestionText'
 import { RemainingTime } from './RemainingTime'
 import { ChoiceList } from './ChoiceList'
 import { PhoneLayout } from './PhoneLayout'
-import { LoadingBody } from './LoadingBody'
+import { NoticeBody } from './NoticeBody'
 
 type Status = 'accepting' | 'closed' | 'answer'
 
@@ -30,9 +30,9 @@ export function QuestionLayout({
   footMessage,
   children,
 }: QuestionLayoutProps) {
-  if (state.question === null) return <LoadingBody />
+  if (state.question === null) return <NoticeBody />
   if (state.question.type === 'hayaoshi')
-    return <LoadingBody isHayaoshi={true}>会場モニターをご覧ください</LoadingBody>
+    return <NoticeBody isHayaoshi>会場モニターをご覧ください</NoticeBody>
   return (
     <PhoneLayout questionType={state.question.type} footMessage={footMessage}>
       <div className="w-full">
