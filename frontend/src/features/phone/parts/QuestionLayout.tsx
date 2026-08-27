@@ -31,6 +31,8 @@ export function QuestionLayout({
   children,
 }: QuestionLayoutProps) {
   if (state.question === null) return <LoadingBody />
+  if (state.question.type === 'hayaoshi')
+    return <LoadingBody>会場モニターをご覧ください</LoadingBody>
   return (
     <PhoneLayout questionType={state.question.type} footMessage={footMessage}>
       <div className="w-full">
