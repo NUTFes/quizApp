@@ -11,31 +11,10 @@ import (
 	"gorm.io/gorm"
 )
 
-// RegisterRoutes は、エンドポイントの登録を行う
-//
-// db を扱うため、dbを引数に取る
-// admin の State を扱うため、認証トークン adminToken を引数にとる
-//
-// 上記の変数を引数として扱い、グローバルにしないのは、
-// 各関数がどんな値を必要とするのか明示的にするため
-func RegisterRoutes(db *gorm.DB, adminToken string) platform.RegisterFunc {
-	return func(r *gin.Engine) {
-		g := r.Group("/api/admin", platform.RequireToken(adminToken))
-		g.GET("/state", func(c *gin.Context) { getState(c, db) })
-	}
-}
-
 // State を返す関数
 func getState(c *gin.Context, db *gorm.DB) {
 	var es EventState
-	// es に event_states テーブルから１行目を指定して書き込む
-	if err := db.First(&es, 1).Error; err != nil { // if 分の中でerr による分岐が入るため、一度err に入れる
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL",
-				"event_states(id=1)がありません。mise run db:reset を実行して下さい")
-			return
-		}
-		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_statesを読み込めませんでした")
+	if ok := readEventState(c, db, &es); !ok {
 		return
 	}
 
@@ -91,4 +70,21 @@ func buildState(es EventState, q *question.Question, askedCount int) State {
 	}
 
 	return s
+}
+
+// event_states テーブルから読み込む
+//
+// es に状態を書き込む
+func readEventState(c *gin.Context, db *gorm.DB, es *EventState) bool {
+	// まず、event_states テーブル側に問題がないかをチェック
+	if err := db.First(es, 1).Error; err != nil { // if 分の中でerr による分岐が入るため、一度err に入れる
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL",
+				"event_states(id=1)がありません。mise run db:reset を実行して下さい")
+			return false
+		}
+		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_statesを読み込めませんでした")
+		return false
+	}
+	return true
 }
