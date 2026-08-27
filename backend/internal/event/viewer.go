@@ -71,16 +71,9 @@ func buildViewerState(es EventState, q *question.Question, askedCount int) Viewe
 	// revealedSegments は DB の値なので、そのまま信用しない
 	// q == nil の場合、何もなくエラーになるため、これじゃない if で囲む
 	if q != nil {
-		revealed := es.RevealedSegments
-		if revealed < 0 {
-			revealed = 0
-		}
-		if revealed > len(q.TextSegments) {
-			revealed = len(q.TextSegments)
-		}
+		revealed := min(max(0, es.RevealedSegments), len(q.TextSegments))
 		// そのままスライスを代入すると、 revealed が 0 のとき nil になる
-		vseg := make([]string, revealed) // make で, revealed が 0　でも [] として扱える
-		copy(vseg, q.TextSegments[:revealed])
+		vseg := append([]string{}, q.TextSegments[:revealed]...) // append で, revealed が 0　でも [] として扱える
 
 		// question から、 正答に関する項目を除く
 		vq := question.ViewerQuestion{
