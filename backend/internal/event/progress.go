@@ -2,6 +2,7 @@ package event
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -16,29 +17,20 @@ import (
 func showQuestion(c *gin.Context, db *gorm.DB) {
 	// リクエスト を取得するためのリクエストの型を定義
 	var req struct {
-		QuestionID   uint `json:"questionId"`
-		TimeLimitSec *int `json:"timeLimitSec"` // これは任意
+		QuestionID   uint `json:"questionId" binding:"required"` // 必須条件を gin で設定
+		TimeLimitSec *int `json:"timeLimitSec" binding:"omitnil,gte=5,lte=120"` // これは任意 , 無くてもいいを omitnil 、最低、最少も設定
 	}
 
 	// 指定したリクエストの型でリクエストが来ているかのチェック
-	if c.ShouldBind(&req) != nil {
+	if err := c.ShouldBind(&req); err != nil {
+		log.Printf("show-question invalid request: %v", err)// エラーが一本化されているので、デバッグのためにフィールド情報を渡す
 		platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "リクエストの形が不正です")
-		return
-	}
-
-	// questionId がリクエストにふくまれるか？（questionIdが含まれない場合、Go によるゼロ値代入で、 0 が入る）　０じゃないか？
-	if req.QuestionID == 0 {
-		platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "questionId は必須です")
 		return
 	}
 
 	// timeLimitSec が正しい範囲内で設定されているか
 	timeLimitSec := 30 // timeLimitSec を省略するときは規定値 30 に設定
 	if req.TimeLimitSec != nil {
-		if *req.TimeLimitSec < 5 || *req.TimeLimitSec > 120 {
-			platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "timeLimitSec は 5~120 で指定してください")
-			return
-		}
 		timeLimitSec = *req.TimeLimitSec
 	}
 
@@ -185,11 +177,12 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 func reset(c *gin.Context, db *gorm.DB) {
 	// リクエストを読み込む
 	var req struct {
-		To *string `json:"to"` // これは任意
+		To *string `json:"to" binding:"omitnil,oneof=waiting finished"` // これは任意
 	}
 
 	// 指定したリクエストの型でリクエストが来ているかのチェック
-	if c.ShouldBindJSON(&req) != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("reset invalid request: %v", err)// エラーが一本化されているので、デバッグのためにフィールド情報を渡す
 		platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "リクエストの形が不正です")
 		return
 	}
@@ -197,10 +190,6 @@ func reset(c *gin.Context, db *gorm.DB) {
 	to := "waiting" // デフォルト値を代入
 
 	if req.To != nil { //もし指定があれば検証し、代入
-		if *req.To != "waiting" && *req.To != "finished" {
-			platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "リセット先は waiting か finished にしてください")
-			return
-		}
 		to = *req.To
 	}
 
