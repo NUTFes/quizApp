@@ -13,8 +13,8 @@ export function useRemainingTime({
 }: UseRemainingTimeProps): number {
   const [remainingTime, setRemainingTime] = useState(0)
 
-  // nullの場合処理は開始しない
   useEffect(() => {
+    // nullの場合処理をせず、useEffectを出る
     if (timeLimitSec === null || questionStartedAt === null) {
       return
     }
@@ -23,17 +23,19 @@ export function useRemainingTime({
     const clockOffset = Date.now() - new Date(serverTime).getTime()
 
     const updateRemainingTime = () => {
-      // 残り秒数 = timeLimitSec - (手元の現在時刻 - 時計ずれ - questionStartedAt)
+      // 残り秒数（ms） = timeLimitSec - (手元の現在時刻 - 時計ずれ - questionStartedAt)
       const remaining =
         timeLimitSec * 1000 - (Date.now() - clockOffset - new Date(questionStartedAt).getTime())
 
-      // 0のままにする
+      // マイナスが入らないようにし、ms 単位を 1000 で割って 1秒段位へ変換する
+      // 切り上げをするのは、残り0.1秒の時に、０秒と表示されてほしくないから。
       setRemainingTime(Math.max(0, Math.ceil(remaining / 1000)))
     }
 
     // 初回起動
     updateRemainingTime()
 
+    // 表示に合わせて1秒で更新するようにする
     const intervalId = setInterval(updateRemainingTime, 1000)
 
     return () => {
@@ -42,9 +44,10 @@ export function useRemainingTime({
     }
   }, [serverTime, timeLimitSec, questionStartedAt])
 
-  // 残り時間を返す
+  // 問題フェーズではないときは前の値が残った remainigTime を読まない
   if (timeLimitSec === null || questionStartedAt === null) {
     return 0
   }
+  // 残り時間を返す
   return remainingTime
 }
