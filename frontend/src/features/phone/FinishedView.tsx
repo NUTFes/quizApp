@@ -10,7 +10,7 @@ export function FinishedView() {
       </header>
       <div className="w-full px-5 pt-7">
         <div className="flex w-full flex-col items-center justify-center rounded-[28px] shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
-          <p className="flex justify-center px-8 pt-16 pb-17 text-left text-[28px] whitespace-nowrap">
+          <p className="flex justify-center px-8 pt-16 pb-17 text-left text-[28px]">
             ご参加
             <br />
             ありがとうございました
@@ -25,7 +25,7 @@ export function FinishedView() {
           </p>
           <a
             href=""
-            className="mx-auto flex h-[57px] w-[323px] items-center justify-center rounded-[20px] text-xl text-[17px]"
+            className="mx-auto flex h-[57px] w-full items-center justify-center rounded-[20px] text-xl text-[17px]"
           >
             Googleフォームを開く
           </a>
