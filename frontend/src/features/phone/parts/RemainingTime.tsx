@@ -30,15 +30,6 @@ export function RemainingTime({ remainingTime, timeLimitSec }: Props) {
   const divClass = 'flex items-center'
   const timeClass = 'flex pl-6 pb-1 text-timelimit'
 
-  const isClosed = remainingTime <= 0
-
-  if (isClosed)
-    return (
-      <div className={divClass}>
-        <p className={timeClass}>{formatTime(0)}</p>
-        <TimeView seconds={0} max={timeLimitSec}></TimeView>
-      </div>
-    )
   return (
     <div className={divClass}>
       <p className={timeClass}>{formatTime(remainingTime)}</p>
