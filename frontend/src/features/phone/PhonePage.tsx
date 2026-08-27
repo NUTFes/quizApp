@@ -19,6 +19,8 @@ function PhonePage() {
       return <AnswerView state={state} />
     case 'finished':
       return <FinishedView />
+    default:
+      return <LoadingView />
   }
 }
 
