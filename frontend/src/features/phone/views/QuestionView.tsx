@@ -15,8 +15,7 @@ export function QuestionView({ state }: props) {
   return (
     <QuestionLayout
       state={state}
-      statusStyle={isAccepting ? 'bg-accepting-answer' : 'bg-closed-answer'}
-      statusText={isAccepting ? '回答受付中' : '回答締切'}
+      status={isAccepting ? 'accepting' : 'closed'}
       footMessage={
         isAccepting ? '歩きスマホや走っての移動はご遠慮ください' : '移動はご遠慮ください'
       }

@@ -15,8 +15,7 @@ export function AnswerView({ state }: props) {
   return (
     <QuestionLayout
       state={state}
-      statusStyle={'bg-live'}
-      statusText={'正解発表'}
+      status={'answer'}
       footMessage="次の問題までその場でお待ちください"
     >
       <AnswerText

@@ -6,21 +6,22 @@ import { RemainingTime } from './RemainingTime'
 import { ChoiceList } from './ChoiceList'
 import { PhoneLayout } from './PhoneLayout'
 
+type Status = 'accepting' | 'closed' | 'answer'
+
+const STATUS = {
+  accepting: { text: '回答受付中', style: 'bg-accepting-answer' },
+  closed: { text: '回答締切', style: 'bg-closed-answer' },
+  answer: { text: '正解発表', style: 'bg-live' },
+} as const satisfies Record<Status, { text: string; style: string }>
+
 type QuestionLayoutProps = {
   state: ViewerState
-  statusStyle: string
-  statusText: string
+  status: Status
   footMessage?: string
   children: ReactNode
 }
 
-export function QuestionLayout({
-  state,
-  statusStyle,
-  statusText,
-  footMessage,
-  children,
-}: QuestionLayoutProps) {
+export function QuestionLayout({ state, status, footMessage, children }: QuestionLayoutProps) {
   if (state.question === null) return null
   return (
     <PhoneLayout questionType={state.question.type} footMessage={footMessage}>
@@ -29,9 +30,9 @@ export function QuestionLayout({
           <div className="flex">
             <QuestionNumber count={state.askedCount} />
             <p
-              className={`m-2 ml-auto flex items-center justify-center rounded-[20px] px-5 py-2 text-status-answer shadow-[0_6px_16px_0_rgba(25,32,133,0.08)] ${statusStyle}`}
+              className={`m-2 ml-auto flex items-center justify-center rounded-[20px] px-5 py-2 text-status-answer shadow-[0_6px_16px_0_rgba(25,32,133,0.08)] ${STATUS[status].style}`}
             >
-              {statusText}
+              {STATUS[status].text}
             </p>
           </div>
           <QuestionText segments={state.question?.textSegments ?? []} />
