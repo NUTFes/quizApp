@@ -45,9 +45,6 @@ export function ChoiceCard({ choice, isCorrect = false, type }: Props) {
             <img src={batsu} alt="" className="h-20 w-20" />
           )}
         </p>
-        <p className="p-4 pb-7.5 text-center text-choice-arunashi-example text-brand">
-          {choice.text}
-        </p>
       </div>
     )
   }
