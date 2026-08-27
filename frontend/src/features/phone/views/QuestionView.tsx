@@ -6,11 +6,12 @@ type props = { state: ViewerState }
 
 export function QuestionView({ state }: props) {
   // useRemainingTimeで回答受付終了かどうかの判定を行う
-  const isAccepting = useRemainingTime({
+  const remainingTime = useRemainingTime({
     serverTime: state.serverTime,
     timeLimitSec: state.timeLimitSec,
     questionStartedAt: state.questionStartedAt,
   })
+  const isAccepting = remainingTime > 0
 
   return (
     <QuestionLayout
