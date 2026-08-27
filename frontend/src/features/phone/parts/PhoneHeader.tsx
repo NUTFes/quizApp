@@ -1,7 +1,7 @@
 import { QuestionType } from '../../../types'
 
 type HeaderProps = {
-  questionType: QuestionType
+  questionType?: QuestionType
 }
 
 const LABELS: Record<QuestionType, string> = {
@@ -12,8 +12,6 @@ const LABELS: Record<QuestionType, string> = {
 }
 
 export function PhoneHeader({ questionType }: HeaderProps) {
-  const questionTypeText = LABELS[questionType]
-
   return (
     <header className="flex h-15 items-center bg-canvas shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
       <div className="h-full w-17 px-4 py-3">
@@ -24,8 +22,8 @@ export function PhoneHeader({ questionType }: HeaderProps) {
         />
       </div>
       <p className="flex justify-center py-2.5 text-header">45th Quiz</p>
-      {questionTypeText != undefined && (
-        <p className="ml-auto flex justify-center py-2.5 pr-4 text-header">{`${questionTypeText}クイズ`}</p>
+      {questionType !== undefined && (
+        <p className="ml-auto flex justify-center py-2.5 pr-4 text-header">{`${LABELS[questionType]}クイズ`}</p>
       )}
     </header>
   )
