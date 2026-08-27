@@ -71,10 +71,10 @@ export function OperationPanel() {
       </p>
       <div>
         <button name="advance-text" onClick={() => run(advanceText)} disabled={busy}>
-          問題文を進める
+          {busy ? '処理中...' : '問題文を進める'}
         </button>
         <button name="show-answer" onClick={() => run(showAnswer)} disabled={busy}>
-          正答を表示
+          {busy ? '処理中...' : '正答を表示'}
         </button>
       </div>
       {qDetail(q)}
