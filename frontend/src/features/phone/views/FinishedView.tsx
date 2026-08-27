@@ -1,5 +1,5 @@
-import { PhoneFooter } from './parts/PhoneFooter'
-import { PhoneHeader } from './parts/PhoneHeader'
+import { PhoneFooter } from '../parts/PhoneFooter'
+import { PhoneHeader } from '../parts/PhoneHeader'
 
 // 終了、アンケート誘導画面
 export function FinishedView() {

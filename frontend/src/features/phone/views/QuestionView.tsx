@@ -1,12 +1,12 @@
 // 問題表示画面
-import { useRemainingTime } from '../../lib/useRemainingTime'
-import { ViewerState } from '../../types'
-import { ChoiceList } from './parts/ChoiceList'
-import { PhoneFooter } from './parts/PhoneFooter'
-import { PhoneHeader } from './parts/PhoneHeader'
-import { QuestionNumber } from './parts/QuestionNumber'
-import { QuestionText } from './parts/QuestionText'
-import { RemainingTime } from './parts/RemainingTime'
+import { useRemainingTime } from '../../../lib/useRemainingTime'
+import { ViewerState } from '../../../types'
+import { ChoiceList } from '../parts/ChoiceList'
+import { PhoneFooter } from '../parts/PhoneFooter'
+import { PhoneHeader } from '../parts/PhoneHeader'
+import { QuestionNumber } from '../parts/QuestionNumber'
+import { QuestionText } from '../parts/QuestionText'
+import { RemainingTime } from '../parts/RemainingTime'
 
 type props = { state: ViewerState }
 

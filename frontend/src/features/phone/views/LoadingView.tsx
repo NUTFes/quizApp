@@ -1,5 +1,5 @@
-import { PhoneFooter } from './parts/PhoneFooter'
-import { PhoneHeader } from './parts/PhoneHeader'
+import { PhoneFooter } from '../parts/PhoneFooter'
+import { PhoneHeader } from '../parts/PhoneHeader'
 
 // 読み込み中画面
 export function LoadingView() {

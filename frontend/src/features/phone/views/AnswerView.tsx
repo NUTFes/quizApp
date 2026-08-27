@@ -1,12 +1,12 @@
 // 回答表示画面
-import { ViewerState } from '../../types'
-import { AnswerText } from './parts/AnswerText'
-import { ChoiceList } from './parts/ChoiceList'
-import { PhoneFooter } from './parts/PhoneFooter'
-import { PhoneHeader } from './parts/PhoneHeader'
-import { QuestionNumber } from './parts/QuestionNumber'
-import { QuestionText } from './parts/QuestionText'
-import { RemainingTime } from './parts/RemainingTime'
+import { ViewerState } from '../../../types'
+import { AnswerText } from '../parts/AnswerText'
+import { ChoiceList } from '../parts/ChoiceList'
+import { PhoneFooter } from '../parts/PhoneFooter'
+import { PhoneHeader } from '../parts/PhoneHeader'
+import { QuestionNumber } from '../parts/QuestionNumber'
+import { QuestionText } from '../parts/QuestionText'
+import { RemainingTime } from '../parts/RemainingTime'
 
 type props = { state: ViewerState | null }
 
