@@ -9,6 +9,13 @@ import { RemainingTime } from './parts/RemainingTime'
 type props = { state: ViewerState }
 
 export function QuestionView({ state }: props) {
+  // useRemainingTimeで問題終了かどうかの判定を行う
+  const isAccepting = useRemainingTime({
+    serverTime: state.serverTime,
+    timeLimitSec: state.timeLimitSec,
+    questionStartedAt: state.questionStartedAt,
+  })
+
   if (state.question === null) return null
 
   let questionType
@@ -23,12 +30,6 @@ export function QuestionView({ state }: props) {
       questionType = 'あるなし'
       break
   }
-  // useRemainingTimeで問題終了かどうかの判定を行う
-  const isAccepting = useRemainingTime({
-    serverTime: state.serverTime,
-    timeLimitSec: state.timeLimitSec,
-    questionStartedAt: state.questionStartedAt,
-  })
   const isAcceptText = isAccepting ? '回答受付中' : '回答締切'
   const isAcceptStyle = isAccepting ? 'bg-accepting-answer' : 'bg-closed-answer'
   const announceTextTop = isAccepting ? '選んだ選択肢のエリアに' : '回答を締め切りました'
