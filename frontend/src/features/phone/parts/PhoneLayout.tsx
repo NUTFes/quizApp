@@ -11,7 +11,7 @@ type PhoneLayoutProps = {
 
 export function PhoneLayout({ questionType, footMessage, children }: PhoneLayoutProps) {
   return (
-    <main className="min-h-dvh bg-canvas pt-[env(safe-area-inset-top)] font-zen-kaku-gothic-new text-brand">
+    <main className="flex min-h-dvh bg-canvas pt-[env(safe-area-inset-top)] font-zen-kaku-gothic-new text-brand">
       <PhoneHeader questionType={questionType} />
       {children}
       <PhoneFooter footMessage={footMessage} />
