@@ -1,12 +1,33 @@
 import { useEffect, useState } from 'react'
 import { AdminState, Question } from '../../types'
-import { getAdminState } from '../../lib/api'
+import { ApiError, getAdminState } from '../../lib/api'
 
 // 操作パネル
 export function OperationPanel() {
   const [adminState, setAdminState] = useState<AdminState | null>(null)
   const [busy, setBusy] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
+
+  const run = async (progressFn: () => Promise<AdminState>) => {
+    setBusy(true)
+    setError(null)
+
+    try {
+      const nextState = await progressFn()
+      setAdminState(nextState)
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        // エラーのタイプを判定し、
+        // アクセスが出来ないエラーじゃない事と、 401 エラーであることを確認
+        setError('トークンが失効しています')
+      } else {
+        // 通信関係のエラーなどでアクセス自体が出来ない
+        setError('サーバーに接続できませんでした')
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
   useEffect(() => {
     let cancelled = false
     getAdminState()
