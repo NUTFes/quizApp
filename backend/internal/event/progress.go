@@ -153,7 +153,7 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 		).
 		Updates(map[string]any{
 			"phase":             "answer",
-			"revealed-segments": len(q.TextSegments),
+			"revealed_segments": len(q.TextSegments),
 		}).Error != nil {
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
 		return
