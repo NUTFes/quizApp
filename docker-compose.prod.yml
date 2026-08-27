@@ -1,0 +1,75 @@
+# ============================================================
+# docker-compose.prod.yml — 本番用の編成表
+#
+# 開発用(docker-compose.yml)との違い:
+#   ・frontend は Vite開発サーバーではなく「ビルド済み静的ファイル + nginx」
+#   ・ソースの bind mount をしない(焼き込む)
+#   ・外に開ける窓は nginx の1つだけ。backend と db は外から直接叩けない
+#   ・restart: always で、CT再起動やクラッシュから自動復帰する
+#   ・設定値は .env.prod から注入する(このファイルに秘密を書かない)
+#
+# 起動:  docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+# → 手順の全体は docs/ガイドライン/デプロイ手順.md
+# ============================================================
+
+services:
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    ports:
+      - "8080:80"              # CTの8080番だけを外に開ける。Cloudflareはここを向く
+    environment:
+      - TZ=Asia/Tokyo          # 既定はUTC。当日ログをJSTで読むために入れる
+    ulimits:
+      # ★ 既定は 1024。SSE 1接続につきクライアント側+backend側で2本のfdを使うため、
+      #   200人だと400本を超えて詰まる。実測で 65535 まで上げられることを確認済み。
+      #   → dev_policy/インフラ・デプロイ_policy.md I5
+      nofile:
+        soft: 65535
+        hard: 65535
+    depends_on:
+      - backend
+    restart: always
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    # ports は開けない。nginx 経由(/api/)でしか到達できないようにする
+    environment:
+      - DATABASE_URL=postgresql://quiz:${POSTGRES_PASSWORD}@db:5432/quiz?sslmode=disable
+      - ADMIN_TOKEN=${ADMIN_TOKEN}
+      - IMPORT_TOKEN=${IMPORT_TOKEN}
+      - SPREADSHEET_ID=${SPREADSHEET_ID:-}
+      - GOOGLE_CREDENTIALS_JSON=${GOOGLE_CREDENTIALS_JSON:-}
+      - GIN_MODE=release       # 開発用のデバッグログを止める
+      - TZ=Asia/Tokyo
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+
+  db:
+    image: postgres:16
+    # ports は開けない。DBを外から触りたい時は docker compose exec 経由で入る
+    environment:
+      - POSTGRES_USER=quiz
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=quiz
+      - TZ=Asia/Tokyo
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quiz"]
+      interval: 3s
+      retries: 10
+    restart: always
+
+volumes:
+  db-data:

@@ -25,6 +25,20 @@
     "editor.formatOnSave": true
   },
 
+  // YAML は保存時に整形しない。
+  // docker-compose.yml や ci.yml のコメントは読みやすさのために桁を揃えてあり、
+  // Prettier にかけると全部1スペースに詰められて「1行直したいだけ」が全行差分になる。
+  // CI の format:check は frontend/ の中でしか走らない(= ルートのYAMLは元々対象外)ので、
+  // 整形しないほうが CI と手元の動きが一致する。
+  "[yaml]": {
+    "editor.formatOnSave": false
+  },
+  // docker-compose.yml は Docker拡張が "yaml" ではなく "dockercompose" という
+  // 別の言語として扱うので、[yaml] だけでは効かない。両方書く必要がある。
+  "[dockercompose]": {
+    "editor.formatOnSave": false
+  },
+
   // 改行コードを LF に統一(Windows と Mac/Linux の混在対策)
   "files.eol": "\n"
 }

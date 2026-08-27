@@ -1,0 +1,39 @@
+# backend の箱(本番用)の作り方。
+#
+# 開発用の Dockerfile とは目的が違う:
+#   開発 … air でホットリロード。ソースを bind mount する
+#   本番 … ソースを焼き込んで静的バイナリを1つ作り、それだけを積んだ小さな箱にする
+#
+# multi-stage build: ビルド用の大きな箱(golang:1.25 ≒ 1GB)で作り、
+# 出来上がったバイナリだけを小さな箱(alpine ≒ 8MB)に移す。
+# CTのディスクが12GBしかないため、この差は無視できない。
+
+# ---- ビルド用ステージ ----------------------------------------
+FROM golang:1.25 AS build
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+# CGO_ENABLED=0 で静的バイナリにする(alpine には glibc が無いため必須)
+# -trimpath / -ldflags="-s -w" はバイナリを小さくするための定石
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/server ./cmd/server
+
+# マイグレーション用のコマンドも同じバージョンで用意する(開発と揃える)
+RUN CGO_ENABLED=0 go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1
+
+# ---- 実行用ステージ ------------------------------------------
+FROM alpine:3.20
+# ca-certificates: Google スプレッドシート API への HTTPS 通信に必要
+# tzdata: TZ=Asia/Tokyo を効かせるために必要(alpine には既定で入っていない)
+RUN apk add --no-cache ca-certificates tzdata
+
+WORKDIR /app
+COPY --from=build /out/server      /usr/local/bin/server
+COPY --from=build /go/bin/migrate  /usr/local/bin/migrate
+COPY migrations ./migrations
+
+EXPOSE 3000
+CMD ["server"]
