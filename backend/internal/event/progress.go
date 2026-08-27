@@ -96,7 +96,7 @@ func advanceText(c *gin.Context, db *gorm.DB) {
 	// question 側の読み込み
 	var q question.Question
 	if err := db.First(&q, *es.CurrentQuestionID).Error; err != nil { //err による分岐が必要
-		log.Printf("show-answer : couldnt load question (id=%d) %v",int(*es.CurrentQuestionID), err) // 何処でエラーが起きたかはわかるようにする
+		log.Printf("advance-text : couldnt load question (id=%d) %v",int(*es.CurrentQuestionID), err) // 何処でエラーが起きたかはわかるようにする
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "問題データを読み込めませんでした") // DB が落ちている
 		return
 	}
@@ -153,7 +153,7 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 		).
 		Updates(map[string]any{
 			"phase":            "answer",
-			"revealedSegments": len(q.TextSegments),
+			"revealed-segments": len(q.TextSegments),
 		}).Error != nil {
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
 		return
