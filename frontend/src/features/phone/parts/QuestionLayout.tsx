@@ -18,11 +18,18 @@ const STATUS = {
 type QuestionLayoutProps = {
   state: ViewerState
   status: Status
+  remainingTime: number
   footMessage?: string
   children: ReactNode
 }
 
-export function QuestionLayout({ state, status, footMessage, children }: QuestionLayoutProps) {
+export function QuestionLayout({
+  state,
+  status,
+  remainingTime,
+  footMessage,
+  children,
+}: QuestionLayoutProps) {
   if (state.question === null) return <LoadingView />
   return (
     <PhoneLayout questionType={state.question.type} footMessage={footMessage}>
@@ -37,11 +44,7 @@ export function QuestionLayout({ state, status, footMessage, children }: Questio
             </p>
           </div>
           <QuestionText segments={state.question.textSegments} />
-          <RemainingTime
-            serverTime={state.serverTime}
-            timeLimitSec={state.timeLimitSec}
-            questionStartedAt={state.questionStartedAt}
-          />
+          <RemainingTime remainingTime={remainingTime} timeLimitSec={state.timeLimitSec} />
         </div>
         <div className="w-full px-5">
           <ChoiceList

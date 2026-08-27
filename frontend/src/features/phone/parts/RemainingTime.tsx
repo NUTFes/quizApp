@@ -1,7 +1,7 @@
-import { useRemainingTime } from '../../../lib/useRemainingTime'
-import { ViewerState } from '../../../types'
-
-type Props = Pick<ViewerState, 'serverTime' | 'timeLimitSec' | 'questionStartedAt'>
+type Props = {
+  remainingTime: number
+  timeLimitSec: number | null
+}
 type TimeViewProps = {
   seconds: number | null
   max: number | null
@@ -26,16 +26,11 @@ export function TimeView({ seconds, max }: TimeViewProps) {
   )
 }
 
-export function RemainingTime({ serverTime, timeLimitSec, questionStartedAt }: Props) {
-  const remaining = useRemainingTime({
-    serverTime: serverTime,
-    timeLimitSec: timeLimitSec,
-    questionStartedAt: questionStartedAt,
-  })
+export function RemainingTime({ remainingTime, timeLimitSec }: Props) {
   const divClass = 'flex items-center'
   const timeClass = 'flex pl-6 pb-1 text-timelimit'
 
-  const isClosed = remaining <= 0
+  const isClosed = remainingTime <= 0
 
   if (isClosed)
     return (
@@ -46,8 +41,8 @@ export function RemainingTime({ serverTime, timeLimitSec, questionStartedAt }: P
     )
   return (
     <div className={divClass}>
-      <p className={timeClass}>{formatTime(remaining)}</p>
-      <TimeView seconds={remaining} max={timeLimitSec}></TimeView>
+      <p className={timeClass}>{formatTime(remainingTime)}</p>
+      <TimeView seconds={remainingTime} max={timeLimitSec}></TimeView>
     </div>
   )
 }

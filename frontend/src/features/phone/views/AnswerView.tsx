@@ -13,7 +13,12 @@ export function AnswerView({ state }: props) {
   const correctChoice = state.question.choices.find((choice) => choice.id === answer)
 
   return (
-    <QuestionLayout state={state} status="answer" footMessage="次の問題までその場でお待ちください">
+    <QuestionLayout
+      state={state}
+      status="answer"
+      remainingTime={0}
+      footMessage="次の問題までその場でお待ちください"
+    >
       <AnswerText
         correctText={correctChoice?.text ?? null}
         explanation={explanation ?? null}

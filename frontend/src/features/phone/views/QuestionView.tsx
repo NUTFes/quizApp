@@ -5,7 +5,7 @@ import { QuestionLayout } from '../parts/QuestionLayout'
 type props = { state: ViewerState }
 
 export function QuestionView({ state }: props) {
-  // useRemainingTimeで回答受付終了かどうかの判定を行う
+  // useRemainingTimeで 表示時間を求める
   const remainingTime = useRemainingTime({
     serverTime: state.serverTime,
     timeLimitSec: state.timeLimitSec,
@@ -17,6 +17,7 @@ export function QuestionView({ state }: props) {
     <QuestionLayout
       state={state}
       status={isAccepting ? 'accepting' : 'closed'}
+      remainingTime={remainingTime}
       footMessage={
         isAccepting ? '歩きスマホや走っての移動はご遠慮ください' : '移動はご遠慮ください'
       }
