@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AdminState, Question } from '../../types'
-import { ApiError, getAdminState } from '../../lib/api'
+import { advanceText, ApiError, getAdminState, showAnswer } from '../../lib/api'
 
 // 操作パネル
 export function OperationPanel() {
@@ -69,6 +69,14 @@ export function OperationPanel() {
       <p>
         進行状況 : {adminState.revealedSegments} / {adminState.totalSegments}
       </p>
+      <div>
+        <button name="advance-text" onClick={() => run(advanceText)} disabled={busy}>
+          問題文を進める
+        </button>
+        <button name="show-answer" onClick={() => run(showAnswer)} disabled={busy}>
+          正答を表示
+        </button>
+      </div>
       {qDetail(q)}
     </div>
   )
