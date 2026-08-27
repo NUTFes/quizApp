@@ -78,6 +78,7 @@ export function OperationPanel() {
         </button>
       </div>
       {qDetail(q)}
+      {error != null && <p>{error}</p>}
     </div>
   )
 }
