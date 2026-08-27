@@ -16,10 +16,10 @@ import (
 func RegisterRoutes(db *gorm.DB, adminToken string, joinURL string) platform.RegisterFunc {
 	return func(r *gin.Engine) {
 		// スマホ、モニタ向けの state
-		r.GET("api/state", func(c *gin.Context) { getViewerState(c, db, joinURL) })
+		r.GET("/api/state", func(c *gin.Context) { getViewerState(c, db, joinURL) })
 
 		// admin のパスグループ
-		g := r.Group("api/admin", platform.RequireToken(adminToken))
+		g := r.Group("/api/admin", platform.RequireToken(adminToken))
 		g.GET("/state", func(c *gin.Context) { getState(c, db) })
 		g.POST("/show-question", func(c *gin.Context) { showQuestion(c, db) })
 		g.POST("/advance-text", func(c *gin.Context) { advanceText(c, db) })
