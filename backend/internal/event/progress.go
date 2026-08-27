@@ -35,7 +35,7 @@ func showQuestion(c *gin.Context, db *gorm.DB) {
 	}
 
 	// questionId の question が実際に存在するか
-	var q *question.Question
+	var q question.Question
 	if err := db.First(&q, req.QuestionID).Error; err != nil { //err による分岐が必要
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			platform.RespondError(c, http.StatusNotFound, "QUESTION_NOT_FOUND", "指定された問題が見つかりませんでした")
@@ -95,7 +95,7 @@ func advanceText(c *gin.Context, db *gorm.DB) {
 
 	// TotalSegments を上限にするために、問題を見る
 	// question 側の読み込み
-	var q *question.Question
+	var q question.Question
 	if err := db.First(&q, *es.CurrentQuestionID).Error; err != nil { //err による分岐が必要
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL",
@@ -142,7 +142,7 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 
 	// TotalSegments を計算
 	// // question 側の読み込み
-	var q *question.Question
+	var q question.Question
 	if err := db.First(&q, *es.CurrentQuestionID).Error; err != nil { //err による分岐が必要
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL",
