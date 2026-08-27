@@ -105,8 +105,6 @@ func advanceText(c *gin.Context, db *gorm.DB) {
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "問題データを読み込めませんでした") // DB が落ちている
 		return
 	}
-	// 上限の取得
-	TotalSegments := len(q.TextSegments)
 
 	// RevealedSegments だけ指定して次の仕切りまで進める
 	if db.Model(&es).
@@ -114,7 +112,7 @@ func advanceText(c *gin.Context, db *gorm.DB) {
 			"phase = ? AND current_question_id = ? AND revealed_segments < ?",
 			"question",            // 別のAPIを実行中にまた別のAPIを実行してしまったとき、
 			*es.CurrentQuestionID, // DBに残る矛盾が起きないようにする
-			TotalSegments,         // 上限に達していないときという条件
+			len(q.TextSegments),         // 上限に達していないときという条件
 		).
 		Update("revealed_segments", gorm.Expr("revealed_segments + 1")).Error != nil {
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
@@ -154,8 +152,6 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "問題データを読み込めませんでした") // DB が落ちている
 		return
 	}
-	// TotalSegments の計算
-	TotalSegments := len(q.TextSegments)
 
 	// event_states に書き込み 指定した要素のみ書き換え
 	if db.Model(&es).
@@ -166,7 +162,7 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 		).
 		Updates(map[string]any{
 			"phase":            "answer",
-			"revealedSegments": TotalSegments,
+			"revealedSegments": len(q.TextSegments),
 		}).Error != nil {
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
 		return
