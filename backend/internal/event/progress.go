@@ -2,8 +2,8 @@ package event
 
 import (
 	"errors"
+	"log"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -16,34 +16,25 @@ import (
 func showQuestion(c *gin.Context, db *gorm.DB) {
 	// リクエスト を取得するためのリクエストの型を定義
 	var req struct {
-		QuestionID   uint `json:"questionId"`
-		TimeLimitSec *int `json:"timeLimitSec"` // これは任意
+		QuestionID   uint `json:"questionId" binding:"required"`                // 必須条件を gin で設定
+		TimeLimitSec *int `json:"timeLimitSec" binding:"omitnil,gte=5,lte=120"` // これは任意 , 無くてもいいを omitnil 、最低、最少も設定
 	}
 
 	// 指定したリクエストの型でリクエストが来ているかのチェック
-	if c.ShouldBind(&req) != nil {
+	if err := c.ShouldBind(&req); err != nil {
+		log.Printf("show-question invalid request: %v", err) // エラーが一本化されているので、デバッグのためにフィールド情報を渡す
 		platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "リクエストの形が不正です")
-		return
-	}
-
-	// questionId がリクエストにふくまれるか？（questionIdが含まれない場合、Go によるゼロ値代入で、 0 が入る）　０じゃないか？
-	if req.QuestionID == 0 {
-		platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "questionId は必須です")
 		return
 	}
 
 	// timeLimitSec が正しい範囲内で設定されているか
 	timeLimitSec := 30 // timeLimitSec を省略するときは規定値 30 に設定
 	if req.TimeLimitSec != nil {
-		if *req.TimeLimitSec < 5 || *req.TimeLimitSec > 120 {
-			platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "timeLimitSec は 5~120 で指定してください")
-			return
-		}
 		timeLimitSec = *req.TimeLimitSec
 	}
 
 	// questionId の question が実際に存在するか
-	var q *question.Question
+	var q question.Question
 	if err := db.First(&q, req.QuestionID).Error; err != nil { //err による分岐が必要
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			platform.RespondError(c, http.StatusNotFound, "QUESTION_NOT_FOUND", "指定された問題が見つかりませんでした")
@@ -103,22 +94,21 @@ func advanceText(c *gin.Context, db *gorm.DB) {
 
 	// TotalSegments を上限にするために、問題を見る
 	// question 側の読み込み
-	var q *question.Question
+	var q question.Question
 	if err := db.First(&q, *es.CurrentQuestionID).Error; err != nil { //err による分岐が必要
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL",
-				"出題された問題 (id="+strconv.Itoa(int(*es.CurrentQuestionID))+")が存在しません")
-			return
-		}
-		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "問題データを読み込めませんでした") // DB が落ちている
+		log.Printf("advance-text : couldnt load question (id=%d) %v", int(*es.CurrentQuestionID), err) // 何処でエラーが起きたかはわかるようにする
+		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "問題データを読み込めませんでした")       // DB が落ちている
 		return
 	}
-	// 上限の取得
-	TotalSegments := len(q.TextSegments)
 
 	// RevealedSegments だけ指定して次の仕切りまで進める
 	if db.Model(&es).
-		Where("revealed_segments < ?", TotalSegments). // 上限に達していないときという条件
+		Where(
+			"phase = ? AND current_question_id = ? AND revealed_segments < ?",
+			"question",            // 別のAPIを実行中にまた別のAPIを実行してしまったとき、
+			*es.CurrentQuestionID, // DBに残る矛盾が起きないようにする
+			len(q.TextSegments),   // 上限に達していないときという条件
+		).
 		Update("revealed_segments", gorm.Expr("revealed_segments + 1")).Error != nil {
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
 		return
@@ -147,24 +137,24 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 
 	// TotalSegments を計算
 	// // question 側の読み込み
-	var q *question.Question
+	var q question.Question
 	if err := db.First(&q, *es.CurrentQuestionID).Error; err != nil { //err による分岐が必要
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL",
-				"出題された問題 (id="+strconv.Itoa(int(*es.CurrentQuestionID))+")が存在しません")
-			return
-		}
-		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "問題データを読み込めませんでした") // DB が落ちている
+		log.Printf("show-answer : couldnt load question (id=%d) %v", int(*es.CurrentQuestionID), err) // 何処でエラーが起きたかはわかるようにする
+		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "問題データを読み込めませんでした")      // DB が落ちている
 		return
 	}
-	// TotalSegments の計算
-	TotalSegments := len(q.TextSegments)
 
 	// event_states に書き込み 指定した要素のみ書き換え
-	if db.Model(&es).Updates(map[string]any{
-		"phase":            "answer",
-		"revealedSegments": TotalSegments,
-	}).Error != nil {
+	if db.Model(&es).
+		Where(
+			"phase = ? AND current_question_id = ?",
+			"question",
+			*es.CurrentQuestionID,
+		).
+		Updates(map[string]any{
+			"phase":             "answer",
+			"revealed_segments": len(q.TextSegments),
+		}).Error != nil {
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
 		return
 	}
@@ -174,11 +164,12 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 func reset(c *gin.Context, db *gorm.DB) {
 	// リクエストを読み込む
 	var req struct {
-		To *string `json:"to"` // これは任意
+		To *string `json:"to" binding:"omitnil,oneof=waiting finished"` // これは任意
 	}
 
 	// 指定したリクエストの型でリクエストが来ているかのチェック
-	if c.ShouldBindJSON(&req) != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("reset invalid request: %v", err) // エラーが一本化されているので、デバッグのためにフィールド情報を渡す
 		platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "リクエストの形が不正です")
 		return
 	}
@@ -186,10 +177,6 @@ func reset(c *gin.Context, db *gorm.DB) {
 	to := "waiting" // デフォルト値を代入
 
 	if req.To != nil { //もし指定があれば検証し、代入
-		if *req.To != "waiting" && *req.To != "finished" {
-			platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "リセット先は waiting か finished にしてください")
-			return
-		}
 		to = *req.To
 	}
 
