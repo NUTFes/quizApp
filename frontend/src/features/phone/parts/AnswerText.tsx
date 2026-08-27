@@ -25,7 +25,11 @@ export function AnswerText({ correctText, explanation, correctId }: Props) {
   return (
     <div className="px-6 pt-4 text-surface">
       <div className="flex border-b border-surface pb-3">
-        <img src="" alt="" className="h-12.5 w-12.5" />
+        <img
+          src="../../../assets/correctAnswerIcon.svg"
+          alt="correct answer icon"
+          className="h-12.5 w-12.5"
+        />
         <div>
           <p className="px-3 text-pre-answer-exp">正解は</p>
           <div className="flex justify-center">
