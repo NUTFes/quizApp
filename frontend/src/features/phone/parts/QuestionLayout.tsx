@@ -43,7 +43,7 @@ export function QuestionLayout({ state, status, footMessage, children }: Questio
             questionStartedAt={state.questionStartedAt}
           />
         </div>
-        <div className="flex w-full justify-between px-5">
+        <div className="w-full px-5">
           <ChoiceList
             question={state.question}
             correctChoiceId={state.answer?.correctChoiceId ?? null}
