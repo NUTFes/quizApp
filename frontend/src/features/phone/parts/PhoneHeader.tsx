@@ -4,19 +4,15 @@ type HeaderProps = {
   questionType: QuestionType
 }
 
+const LABELS: Record<QuestionType, string> = {
+  four_choice: '4択',
+  two_choice: '〇×',
+  arunashi: 'あるなし',
+  hayaoshi: '早押し',
+}
+
 export function PhoneHeader({ questionType }: HeaderProps) {
-  let questionTypeText
-  switch (questionType) {
-    case 'four_choice':
-      questionTypeText = '4択'
-      break
-    case 'two_choice':
-      questionTypeText = '〇×'
-      break
-    case 'arunashi':
-      questionTypeText = 'あるなし'
-      break
-  }
+  const questionTypeText = LABELS[questionType]
 
   return (
     <header className="flex h-15 items-center bg-canvas shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
