@@ -6,10 +6,9 @@ import { QuestionNumber } from './parts/QuestionNumber'
 import { QuestionText } from './parts/QuestionText'
 import { RemainingTime } from './parts/RemainingTime'
 
-type props = { state: ViewerState | null }
+type props = { state: ViewerState }
 
 export function QuestionView({ state }: props) {
-  if (state === null) return null
   if (state.question === null) return null
 
   let questionType
