@@ -1,6 +1,6 @@
-import type { Choice } from '../../../types'
+import type { Choice, QuestionType } from '../../../types'
 
-type Props = { choice: Choice; isCorrect?: boolean; type: string | null }
+type Props = { choice: Choice; isCorrect?: boolean; type: QuestionType }
 
 export function ChoiceCard({ choice, isCorrect = false, type }: Props) {
   const normalStyle =
