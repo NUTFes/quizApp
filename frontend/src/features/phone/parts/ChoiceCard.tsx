@@ -1,4 +1,6 @@
 import type { Choice, QuestionType } from '../../../types'
+import maru from '../../../assets/maru.svg'
+import batsu from '../../../assets/batsu.svg'
 
 type Props = { choice: Choice; isCorrect?: boolean; type: QuestionType }
 
@@ -25,6 +27,23 @@ export function ChoiceCard({ choice, isCorrect = false, type }: Props) {
           className={`mt-12 flex items-center justify-center px-10 pt-10 pb-16 text-arunashi-label ${choice.id === 'A' ? 'text-maru' : 'text-batsu'}`}
         >
           {choice.id === 'A' ? 'ある' : 'なし'}
+        </p>
+        <p className="p-4 pb-7.5 text-center text-choice-arunashi-example text-brand">
+          {choice.text}
+        </p>
+      </div>
+    )
+  }
+
+  if (type === 'two_choice') {
+    return (
+      <div className={`${isCorrect ? correctStyle : normalStyle} ${isTwo}`}>
+        <p className={`mt-12 flex items-center justify-center px-10 pt-10 pb-16 `}>
+          {choice.id === 'A' ? (
+            <img src={maru} alt="" className="h-19 w-19" />
+          ) : (
+            <img src={batsu} alt="" className="h-20 w-20" />
+          )}
         </p>
         <p className="p-4 pb-7.5 text-center text-choice-arunashi-example text-brand">
           {choice.text}
