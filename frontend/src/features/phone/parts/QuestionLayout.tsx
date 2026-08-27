@@ -5,6 +5,7 @@ import { QuestionText } from './QuestionText'
 import { RemainingTime } from './RemainingTime'
 import { ChoiceList } from './ChoiceList'
 import { PhoneLayout } from './PhoneLayout'
+import { LoadingView } from '../views/LoadingView'
 
 type Status = 'accepting' | 'closed' | 'answer'
 
@@ -22,7 +23,7 @@ type QuestionLayoutProps = {
 }
 
 export function QuestionLayout({ state, status, footMessage, children }: QuestionLayoutProps) {
-  if (state.question === null) return null
+  if (state.question === null) return <LoadingView />
   return (
     <PhoneLayout questionType={state.question.type} footMessage={footMessage}>
       <div className="w-full">
