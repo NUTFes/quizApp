@@ -20,18 +20,6 @@ export function QuestionView({ state }: props) {
 
   if (state.question === null) return null
 
-  let questionType
-  switch (state.question.type) {
-    case 'four_choice':
-      questionType = '4択'
-      break
-    case 'two_choice':
-      questionType = '〇×'
-      break
-    case 'arunashi':
-      questionType = 'あるなし'
-      break
-  }
   const isAcceptText = isAccepting ? '回答受付中' : '回答締切'
   const isAcceptStyle = isAccepting ? 'bg-accepting-answer' : 'bg-closed-answer'
   const announceTextTop = isAccepting ? '選んだ選択肢のエリアに' : '回答を締め切りました'
@@ -42,7 +30,7 @@ export function QuestionView({ state }: props) {
 
   return (
     <main className="min-h-dvh bg-canvas pt-[env(safe-area-inset-top)] font-zen-kaku-gothic-new text-brand">
-      <PhoneHeader questionType={questionType} />
+      <PhoneHeader questionType={state.question.type} />
       <div className="w-full">
         <div className="mx-5 my-7 rounded-[20px] border border-border-soft bg-surface shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
           <div className="flex">

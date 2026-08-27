@@ -17,24 +17,11 @@ export function AnswerView({ state }: props) {
   const answer = state.answer?.correctChoiceId
   const correctChoice = state.question.choices.find((choice) => choice.id === answer)
 
-  let questionType
-  switch (state.question.type) {
-    case 'four_choice':
-      questionType = '4択'
-      break
-    case 'two_choice':
-      questionType = '〇×'
-      break
-    case 'arunashi':
-      questionType = 'あるなし'
-      break
-  }
-
   const attentionText = '次の問題までその場でお待ちください'
 
   return (
     <main className="min-h-dvh bg-canvas pt-[env(safe-area-inset-top)] font-zen-kaku-gothic-new text-brand">
-      <PhoneHeader questionType={questionType} />
+      <PhoneHeader questionType={state.question.type} />
       <div className="w-full">
         <div className="mx-5 my-7 rounded-[20px] border border-border-soft bg-surface shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
           <div className="flex">
