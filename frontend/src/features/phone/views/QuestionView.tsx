@@ -2,9 +2,9 @@
 import { useRemainingTime } from '../../../lib/useRemainingTime'
 import { ViewerState } from '../../../types'
 import { QuestionLayout } from '../parts/QuestionLayout'
-type props = { state: ViewerState }
+type Props = { state: ViewerState }
 
-export function QuestionView({ state }: props) {
+export function QuestionView({ state }: Props) {
   // useRemainingTimeで 表示時間を求める
   const remainingTime = useRemainingTime({
     serverTime: state.serverTime,
