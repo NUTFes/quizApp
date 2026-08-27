@@ -1,6 +1,6 @@
 import type { MonitorState } from '../../../types'
-import { NoticeBody } from '../parts/NoticeBody'
 import { QuestionLayout } from '../parts/QuestionLayout'
+import { HayaoshiView } from './HayaoshiView'
 import { LoadingView } from './LoadingView'
 
 type Props = { state: MonitorState }
@@ -10,7 +10,7 @@ export function AnswerView({ state }: Props) {
   if (state.question === null) return <LoadingView />
 
   if (state.question.type === 'hayaoshi') {
-    return <NoticeBody>早押しクイズの正解を表示しています</NoticeBody>
+    return <HayaoshiView state={state} showAnswer />
   }
 
   return <QuestionLayout state={state} status="answer" remainingTime={0} />

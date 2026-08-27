@@ -1,8 +1,8 @@
 // 問題表示画面
 import { useRemainingTime } from '../../../lib/useRemainingTime'
 import type { MonitorState } from '../../../types'
-import { NoticeBody } from '../parts/NoticeBody'
 import { QuestionLayout } from '../parts/QuestionLayout'
+import { HayaoshiView } from './HayaoshiView'
 type Props = { state: MonitorState }
 
 export function QuestionView({ state }: Props) {
@@ -15,7 +15,7 @@ export function QuestionView({ state }: Props) {
   const isAccepting = remainingTime > 0
 
   if (state.question?.type === 'hayaoshi') {
-    return <NoticeBody>早押しクイズの問題を準備しています</NoticeBody>
+    return <HayaoshiView state={state} />
   }
 
   return (
