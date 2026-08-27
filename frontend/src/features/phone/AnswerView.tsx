@@ -2,6 +2,7 @@
 import { ViewerState } from '../../types'
 import { AnswerText } from './parts/AnswerText'
 import { ChoiceList } from './parts/ChoiceList'
+import { PhoneFooter } from './parts/PhoneFooter'
 import { PhoneHeader } from './parts/PhoneHeader'
 import { QuestionNumber } from './parts/QuestionNumber'
 import { QuestionText } from './parts/QuestionText'
@@ -63,9 +64,7 @@ export function AnswerView({ state }: props) {
           correctId={answer ?? null}
         />
       </div>
-      <footer className="h-full w-full">
-        <div className="px-2.5 pt-8 text-center text-notes">{attentionText}</div>
-      </footer>
+      <PhoneFooter footMessage={attentionText} />
     </main>
   )
 }

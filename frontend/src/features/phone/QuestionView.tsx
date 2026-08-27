@@ -2,6 +2,7 @@
 import { useRemainingTime } from '../../lib/useRemainingTime'
 import { ViewerState } from '../../types'
 import { ChoiceList } from './parts/ChoiceList'
+import { PhoneFooter } from './parts/PhoneFooter'
 import { PhoneHeader } from './parts/PhoneHeader'
 import { QuestionNumber } from './parts/QuestionNumber'
 import { QuestionText } from './parts/QuestionText'
@@ -71,9 +72,7 @@ export function QuestionView({ state }: props) {
         <br />
         {announceTextBottom}
       </div>
-      <footer className="h-full w-full">
-        <div className="px-2.5 pt-8 text-center text-notes">{attentionText}</div>
-      </footer>
+      <PhoneFooter footMessage={attentionText} />
     </main>
   )
 }

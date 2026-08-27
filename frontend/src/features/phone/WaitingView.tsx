@@ -1,3 +1,4 @@
+import { PhoneFooter } from './parts/PhoneFooter'
 import { PhoneHeader } from './parts/PhoneHeader'
 
 // 待機画面
@@ -27,9 +28,7 @@ export function WaitingView() {
           移動の際は走らないでください
         </div>
       </div>
-      <footer className="h-full w-full">
-        <div className="px-2.5 pt-8 text-center text-notes">第45回 技大祭実行委員会</div>
-      </footer>
+      <PhoneFooter />
     </main>
   )
 }
