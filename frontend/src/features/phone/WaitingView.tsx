@@ -8,7 +8,7 @@ export function WaitingView() {
         </div>
         <p className="flex justify-center py-2.5 text-[17px] font-bold">45th Quiz</p>
       </header>
-      <div className="h-113 w-full px-5 pt-7">
+      <div className="w-full px-5 pt-7">
         <div className="h-full space-y-7 rounded-[28px] px-8 pt-8 shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
           <div className="pb-4">
             <p className="flex justify-start pt-8 text-left text-4xl">
@@ -26,7 +26,7 @@ export function WaitingView() {
         </div>
       </div>
       <div className="px-4 pt-7 pb-2.5">
-        <div className="flex h-[153px] w-full items-center justify-start rounded-[20px] p-6 text-xl shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
+        <div className="flex min-h-[153px] w-full items-center justify-start rounded-[20px] p-6 text-xl shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
           移動の際は走らないでください
         </div>
       </div>
