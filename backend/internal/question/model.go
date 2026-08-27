@@ -22,9 +22,9 @@ type Question struct {
 type ViewerQuestion struct {
 	Number       int      `json:"number"`
 	Type         string   `json:"type"`
-	TextSegments []string `json:"textSegments" gorm:"serializer:json"`
+	TextSegments []string `json:"textSegments"`
 	ImageURL     *string  `json:"imageUrl"`
-	Choices      []Choice `json:"choices" gorm:"serializer:json"`
+	Choices      []Choice `json:"choices"`
 }
 
 // モニタ・スマホ用 Answer
