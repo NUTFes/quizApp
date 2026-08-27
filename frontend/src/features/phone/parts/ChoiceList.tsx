@@ -17,7 +17,12 @@ export function ChoiceList({ question, correctChoiceId }: Props) {
   return (
     <div className={layout}>
       {question.choices.map((c) => (
-        <ChoiceCard key={c.id} choice={c} isCorrect={c.id === correctChoiceId} type={question.type} />
+        <ChoiceCard
+          key={c.id}
+          choice={c}
+          isCorrect={c.id === correctChoiceId}
+          type={question.type}
+        />
       ))}
     </div>
   )

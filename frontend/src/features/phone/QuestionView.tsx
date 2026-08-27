@@ -31,7 +31,7 @@ export function QuestionView({ state }: props) {
     questionStartedAt: state.questionStartedAt,
   })
   const isAcceptText = isAccepting ? '回答受付中' : '回答締切'
-  const isAcceptStyle = isAccepting ? 'bg-amber-200' : 'bg-gray-300'
+  const isAcceptStyle = isAccepting ? 'bg-accepting-answer' : 'bg-closed-answer'
   const announceTextTop = isAccepting ? '選んだ選択肢のエリアに' : '回答を締め切りました'
   const announceTextBottom = isAccepting ? '移動してください' : 'その場でお待ちください'
   const attentionText = isAccepting
@@ -39,20 +39,24 @@ export function QuestionView({ state }: props) {
     : '移動はご遠慮ください'
 
   return (
-    <main className="min-h-dvh pt-[env(safe-area-inset-top)]">
-      <header className="flex h-15.5 items-center shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
+    <main className="min-h-dvh bg-canvas pt-[env(safe-area-inset-top)] font-zen-kaku-gothic-new text-brand">
+      <header className="flex h-15.5 items-center bg-canvas shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
         <div className="h-full w-15.5 px-3 py-4">
-          <img src="" alt="logo" className="flex h-full w-full justify-center rounded-[10px]" />
+          <img
+            src=""
+            alt="logo"
+            className="flex h-full w-full justify-center rounded-[10px] bg-brand"
+          />
         </div>
-        <p className="flex justify-center py-2.5 text-[17px] font-bold">45th Quiz</p>
-        <p className="ml-auto flex justify-center py-2.5 pr-4 text-[17px] font-bold">{`${questionType}クイズ`}</p>
+        <p className="flex justify-center py-2.5 text-header">45th Quiz</p>
+        <p className="ml-auto flex justify-center py-2.5 pr-4 text-header">{`${questionType}クイズ`}</p>
       </header>
       <div className="w-full">
-        <div className="mx-5 my-7 rounded-[20px] shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
+        <div className="mx-5 my-7 rounded-[20px] border border-border-soft bg-surface shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
           <div className="flex">
             <QuestionNumber count={state.askedCount} />
             <p
-              className={`m-2 ml-auto flex items-center justify-center rounded-[20px] px-5 py-2 text-xs shadow-[0_6px_16px_0_rgba(25,32,133,0.08)] ${isAcceptStyle}`}
+              className={`m-2 ml-auto flex items-center justify-center rounded-[20px] px-5 py-2 text-status-answer shadow-[0_6px_16px_0_rgba(25,32,133,0.08)] ${isAcceptStyle}`}
             >
               {isAcceptText}
             </p>
@@ -71,13 +75,13 @@ export function QuestionView({ state }: props) {
           />
         </div>
       </div>
-      <div className="mx-4 mt-7 mb-2.5 flex min-h-[153px] items-center justify-center rounded-[20px] p-6 text-center text-2xl shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
+      <div className="mx-4 mt-7 mb-2.5 flex min-h-[153px] items-center justify-center rounded-[20px] bg-brand p-6 text-center text-instruction text-surface shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
         {announceTextTop}
         <br />
         {announceTextBottom}
       </div>
       <footer className="h-full w-full">
-        <div className="px-2.5 pt-8 text-center text-base">{attentionText}</div>
+        <div className="px-2.5 pt-8 text-center text-notes">{attentionText}</div>
       </footer>
     </main>
   )
