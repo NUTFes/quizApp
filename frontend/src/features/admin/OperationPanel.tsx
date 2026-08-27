@@ -1,12 +1,20 @@
 import { useEffect, useState } from 'react'
 import { AdminState, Question } from '../../types'
-import { advanceText, ApiError, getAdminState, showAnswer } from '../../lib/api'
+import {
+  advanceText,
+  ApiError,
+  getAdminState,
+  reset,
+  showAnswer,
+  showQuestion,
+} from '../../lib/api'
 
 // 操作パネル
 export function OperationPanel() {
   const [adminState, setAdminState] = useState<AdminState | null>(null)
   const [busy, setBusy] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
+  const [questionID, setQuestionID] = useState<string>('')
 
   const run = async (progressFn: () => Promise<AdminState>) => {
     setBusy(true)
@@ -76,6 +84,21 @@ export function OperationPanel() {
         <button name="show-answer" onClick={() => run(showAnswer)} disabled={busy}>
           {busy ? '処理中...' : '正答を表示'}
         </button>
+        <button name="reset-waiting" onClick={() => run(() => reset('waiting'))} disabled={busy}>
+          {busy ? '処理中...' : '待機画面へ'}
+        </button>
+        <form>
+          <input
+            type="text"
+            name="question-id"
+            value={questionID}
+            onChange={(e) => setQuestionID(e.target.value)}
+          />
+          <button
+            name="show-question"
+            onClick={() => run(() => showQuestion(Number(questionID)))}
+          ></button>
+        </form>
       </div>
       {qDetail(q)}
       {error != null && <p>{error}</p>}
