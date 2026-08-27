@@ -1,9 +1,9 @@
 import { useViewerState } from '../../lib/useEventState'
-import { WaitingView } from './WaitingView'
-import { QuestionView } from './QuestionView'
-import { FinishedView } from './FinishedView'
-import { AnswerView } from './AnswerView'
-import { LoadingView } from './LoadingView'
+import { WaitingView } from './views/WaitingView'
+import { QuestionView } from './views/QuestionView'
+import { FinishedView } from './views/FinishedView'
+import { AnswerView } from './views/AnswerView'
+import { LoadingView } from './views/LoadingView'
 
 function PhonePage() {
   const state = useViewerState()
@@ -19,6 +19,8 @@ function PhonePage() {
       return <AnswerView state={state} />
     case 'finished':
       return <FinishedView />
+    default:
+      return <LoadingView />
   }
 }
 

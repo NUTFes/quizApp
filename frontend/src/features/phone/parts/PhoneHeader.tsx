@@ -1,20 +1,30 @@
+import { QuestionType } from '../../../types'
+
 type HeaderProps = {
-  questionType?: string
+  questionType?: QuestionType
+}
+
+const LABELS: Record<QuestionType, string> = {
+  four_choice: '4択',
+  two_choice: '〇×',
+  arunashi: 'あるなし',
+  hayaoshi: '早押し',
 }
 
 export function PhoneHeader({ questionType }: HeaderProps) {
+  // questionType はサーバー由来なので、型にない値が届くことがある。
+  // ラベルが引けないときはバッジごと出さない(「undefinedクイズ」を出さないため)
+  const label: string | undefined = questionType === undefined ? undefined : LABELS[questionType]
   return (
-    <header className="flex h-13 items-center bg-canvas shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
-      <div className="h-full w-14 px-4 py-3">
-        <img
-          src=""
-          alt="logo"
-          className="flex h-full w-full justify-center rounded-[10px] bg-brand"
-        />
+    <header className="flex h-15 items-center bg-canvas shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
+      <div className="h-full w-17 px-4 py-3">
+        <div className="flex h-full w-full justify-center rounded-[10px] bg-brand">
+          {/*ここは、本来ロゴが入る img タグである。ロゴが出来次第、追加する*/}
+        </div>
       </div>
       <p className="flex justify-center py-2.5 text-header">45th Quiz</p>
-      {questionType != undefined && (
-        <p className="ml-auto flex justify-center py-2.5 pr-4 text-header">{`${questionType}クイズ`}</p>
+      {label !== undefined && (
+        <p className="ml-auto flex justify-center py-2.5 pr-4 text-header">{`${label}クイズ`}</p>
       )}
     </header>
   )

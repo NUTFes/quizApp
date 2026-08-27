@@ -18,6 +18,7 @@ services:                            # ① 並べる箱の一覧。名前がそ�
     environment:
       - VITE_API_URL=                # 空 = 相対パス。/api は Vite が backend へ転送(本番の nginx と同じ)
       - VITE_USE_MOCK=${VITE_USE_MOCK:-false}
+      - VITE_SURVEY_URL=${VITE_SURVEY_URL:-}   # アンケートのGoogle FormのURL。空なら導線を出さない
 
   backend:
     build: ./backend                 # ② backend/Dockerfile(air入り)で自作。CMDはair起動

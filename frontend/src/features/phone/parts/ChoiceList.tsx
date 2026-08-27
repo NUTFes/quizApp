@@ -9,13 +9,8 @@ type Props = {
 export function ChoiceList({ question, correctChoiceId }: Props) {
   if (question === null) return null
 
-  const layout =
-    question.type === 'four_choice'
-      ? 'grid grid-cols-2 w-full' // 2×2
-      : 'grid grid-cols-2 w-full' // 左右（2つしか無いので同じ書き方で並ぶ）
-
   return (
-    <div className={layout}>
+    <div className="grid grid-cols-2 gap-4 w-full">
       {question.choices.map((c) => (
         <ChoiceCard
           key={c.id}

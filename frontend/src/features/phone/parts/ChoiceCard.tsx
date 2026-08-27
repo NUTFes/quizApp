@@ -1,6 +1,6 @@
-import type { Choice } from '../../../types'
+import type { Choice, QuestionType } from '../../../types'
 
-type Props = { choice: Choice; isCorrect?: boolean; type: string | null }
+type Props = { choice: Choice; isCorrect?: boolean; type: QuestionType }
 
 export function ChoiceCard({ choice, isCorrect = false, type }: Props) {
   const normalStyle =
@@ -16,12 +16,11 @@ export function ChoiceCard({ choice, isCorrect = false, type }: Props) {
   const choiceIdStyle = isCorrect
     ? 'bg-brand text-surface'
     : `${choiceColorStyle[choice.id] ?? 'bg-choice-a'} text-brand`
-  const isRight = choice.id === 'B' || choice.id === 'D' ? 'ml-auto' : ''
   const isTwo = type === 'four_choice' ? 'min-h-33' : 'min-h-69'
 
   if (type === 'arunashi') {
     return (
-      <div className={`${isCorrect ? correctStyle : normalStyle} ${isRight} ${isTwo}`}>
+      <div className={`${isCorrect ? correctStyle : normalStyle} ${isTwo}`}>
         <p
           className={`mt-12 flex items-center justify-center px-10 pt-10 pb-16 text-arunashi-label ${choice.id === 'A' ? 'text-maru' : 'text-batsu'}`}
         >
@@ -35,7 +34,7 @@ export function ChoiceCard({ choice, isCorrect = false, type }: Props) {
   }
 
   return (
-    <div className={`${isCorrect ? correctStyle : normalStyle} ${isRight} ${isTwo}`}>
+    <div className={`${isCorrect ? correctStyle : normalStyle} ${isTwo}`}>
       <p
         className={`m-3 flex h-9 w-9 items-center justify-center rounded-[10px] text-choice-id ${choiceIdStyle}`}
       >
