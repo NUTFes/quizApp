@@ -5,7 +5,7 @@ type HeaderProps = {
 export function PhoneHeader({ questionType }: HeaderProps) {
   return (
     <header className="flex h-13 items-center bg-canvas shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
-      <div className="h-full w-14 px-3 py-4">
+      <div className="h-full w-14 px-4 py-3">
         <img
           src=""
           alt="logo"
