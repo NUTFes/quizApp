@@ -3,10 +3,9 @@ import { ViewerState } from '../../../types'
 import { AnswerText } from '../parts/AnswerText'
 import { QuestionLayout } from '../parts/QuestionLayout'
 
-type props = { state: ViewerState | null }
+type props = { state: ViewerState }
 
 export function AnswerView({ state }: props) {
-  if (state === null) return null
   if (state.question === null) return null
   const explanation = state.answer?.explanation
   const answer = state.answer?.correctChoiceId

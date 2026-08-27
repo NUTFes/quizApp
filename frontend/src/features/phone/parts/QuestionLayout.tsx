@@ -35,7 +35,7 @@ export function QuestionLayout({ state, status, footMessage, children }: Questio
               {STATUS[status].text}
             </p>
           </div>
-          <QuestionText segments={state.question?.textSegments ?? []} />
+          <QuestionText segments={state.question.textSegments} />
           <RemainingTime
             serverTime={state.serverTime}
             timeLimitSec={state.timeLimitSec}
