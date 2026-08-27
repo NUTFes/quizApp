@@ -2,8 +2,7 @@
 import { useRemainingTime } from '../../../lib/useRemainingTime'
 import { ViewerState } from '../../../types'
 import { ChoiceList } from '../parts/ChoiceList'
-import { PhoneFooter } from '../parts/PhoneFooter'
-import { PhoneHeader } from '../parts/PhoneHeader'
+import { PhoneLayout } from '../parts/PhoneLayout'
 import { QuestionNumber } from '../parts/QuestionNumber'
 import { QuestionText } from '../parts/QuestionText'
 import { RemainingTime } from '../parts/RemainingTime'
@@ -29,8 +28,7 @@ export function QuestionView({ state }: props) {
     : '移動はご遠慮ください'
 
   return (
-    <main className="min-h-dvh bg-canvas pt-[env(safe-area-inset-top)] font-zen-kaku-gothic-new text-brand">
-      <PhoneHeader questionType={state.question.type} />
+    <PhoneLayout questionType={state.question.type} footMessage={attentionText}>
       <div className="w-full">
         <div className="mx-5 my-7 rounded-[20px] border border-border-soft bg-surface shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
           <div className="flex">
@@ -60,7 +58,6 @@ export function QuestionView({ state }: props) {
         <br />
         {announceTextBottom}
       </div>
-      <PhoneFooter footMessage={attentionText} />
-    </main>
+    </PhoneLayout>
   )
 }

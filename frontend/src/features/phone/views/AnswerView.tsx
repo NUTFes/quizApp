@@ -2,8 +2,7 @@
 import { ViewerState } from '../../../types'
 import { AnswerText } from '../parts/AnswerText'
 import { ChoiceList } from '../parts/ChoiceList'
-import { PhoneFooter } from '../parts/PhoneFooter'
-import { PhoneHeader } from '../parts/PhoneHeader'
+import { PhoneLayout } from '../parts/PhoneLayout'
 import { QuestionNumber } from '../parts/QuestionNumber'
 import { QuestionText } from '../parts/QuestionText'
 import { RemainingTime } from '../parts/RemainingTime'
@@ -20,8 +19,7 @@ export function AnswerView({ state }: props) {
   const attentionText = '次の問題までその場でお待ちください'
 
   return (
-    <main className="min-h-dvh bg-canvas pt-[env(safe-area-inset-top)] font-zen-kaku-gothic-new text-brand">
-      <PhoneHeader questionType={state.question.type} />
+    <PhoneLayout questionType={state.question.type} footMessage={attentionText}>
       <div className="w-full">
         <div className="mx-5 my-7 rounded-[20px] border border-border-soft bg-surface shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
           <div className="flex">
@@ -51,7 +49,6 @@ export function AnswerView({ state }: props) {
           correctId={answer ?? null}
         />
       </div>
-      <PhoneFooter footMessage={attentionText} />
-    </main>
+    </PhoneLayout>
   )
 }
