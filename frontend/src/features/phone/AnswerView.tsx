@@ -65,7 +65,7 @@ export function AnswerView({ state }: props) {
           />
         </div>
       </div>
-      <div className="mx-4 mt-7 mb-2.5 flex min-h-[153px] items-center justify-center rounded-[20px] shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
+      <div className="mx-4 mt-7 mb-2.5 flex min-h-[153px] items-center justify-center rounded-[20px] bg-brand shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
         <AnswerText
           correctText={correctChoice?.text ?? null}
           explanation={explanation ?? null}
