@@ -2,6 +2,7 @@
 import { useRemainingTime } from '../../lib/useRemainingTime'
 import { ViewerState } from '../../types'
 import { ChoiceList } from './parts/ChoiceList'
+import { PhoneHeader } from './parts/PhoneHeader'
 import { QuestionNumber } from './parts/QuestionNumber'
 import { QuestionText } from './parts/QuestionText'
 import { RemainingTime } from './parts/RemainingTime'
@@ -40,17 +41,7 @@ export function QuestionView({ state }: props) {
 
   return (
     <main className="min-h-dvh bg-canvas pt-[env(safe-area-inset-top)] font-zen-kaku-gothic-new text-brand">
-      <header className="flex h-15.5 items-center bg-canvas shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
-        <div className="h-full w-15.5 px-3 py-4">
-          <img
-            src=""
-            alt="logo"
-            className="flex h-full w-full justify-center rounded-[10px] bg-brand"
-          />
-        </div>
-        <p className="flex justify-center py-2.5 text-header">45th Quiz</p>
-        <p className="ml-auto flex justify-center py-2.5 pr-4 text-header">{`${questionType}クイズ`}</p>
-      </header>
+      <PhoneHeader questionType={questionType} />
       <div className="w-full">
         <div className="mx-5 my-7 rounded-[20px] border border-border-soft bg-surface shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
           <div className="flex">

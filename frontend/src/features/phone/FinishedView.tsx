@@ -1,17 +1,10 @@
+import { PhoneHeader } from './parts/PhoneHeader'
+
 // 終了、アンケート誘導画面
 export function FinishedView() {
   return (
     <main className="min-h-dvh bg-canvas pt-[env(safe-area-inset-top)] font-zen-kaku-gothic-new text-brand">
-      <header className="flex h-15.5 items-center bg-canvas shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
-        <div className="h-full w-15.5 px-3 py-4">
-          <img
-            src=""
-            alt="logo"
-            className="flex h-full w-full justify-center rounded-[10px] bg-brand"
-          />
-        </div>
-        <p className="flex justify-center py-2.5 text-header">45th Quiz</p>
-      </header>
+      <PhoneHeader />
       <div className="w-full px-5 pt-7">
         <div className="flex w-full flex-col items-center justify-center rounded-[28px] border border-border-soft bg-surface shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
           <p className="flex justify-center px-8 pt-16 pb-17 text-left text-message-l">
