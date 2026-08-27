@@ -16,13 +16,13 @@ import (
 func showQuestion(c *gin.Context, db *gorm.DB) {
 	// リクエスト を取得するためのリクエストの型を定義
 	var req struct {
-		QuestionID   uint `json:"questionId" binding:"required"` // 必須条件を gin で設定
+		QuestionID   uint `json:"questionId" binding:"required"`                // 必須条件を gin で設定
 		TimeLimitSec *int `json:"timeLimitSec" binding:"omitnil,gte=5,lte=120"` // これは任意 , 無くてもいいを omitnil 、最低、最少も設定
 	}
 
 	// 指定したリクエストの型でリクエストが来ているかのチェック
 	if err := c.ShouldBind(&req); err != nil {
-		log.Printf("show-question invalid request: %v", err)// エラーが一本化されているので、デバッグのためにフィールド情報を渡す
+		log.Printf("show-question invalid request: %v", err) // エラーが一本化されているので、デバッグのためにフィールド情報を渡す
 		platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "リクエストの形が不正です")
 		return
 	}
@@ -96,8 +96,8 @@ func advanceText(c *gin.Context, db *gorm.DB) {
 	// question 側の読み込み
 	var q question.Question
 	if err := db.First(&q, *es.CurrentQuestionID).Error; err != nil { //err による分岐が必要
-		log.Printf("advance-text : couldnt load question (id=%d) %v",int(*es.CurrentQuestionID), err) // 何処でエラーが起きたかはわかるようにする
-		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "問題データを読み込めませんでした") // DB が落ちている
+		log.Printf("advance-text : couldnt load question (id=%d) %v", int(*es.CurrentQuestionID), err) // 何処でエラーが起きたかはわかるようにする
+		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "問題データを読み込めませんでした")       // DB が落ちている
 		return
 	}
 
@@ -107,7 +107,7 @@ func advanceText(c *gin.Context, db *gorm.DB) {
 			"phase = ? AND current_question_id = ? AND revealed_segments < ?",
 			"question",            // 別のAPIを実行中にまた別のAPIを実行してしまったとき、
 			*es.CurrentQuestionID, // DBに残る矛盾が起きないようにする
-			len(q.TextSegments),         // 上限に達していないときという条件
+			len(q.TextSegments),   // 上限に達していないときという条件
 		).
 		Update("revealed_segments", gorm.Expr("revealed_segments + 1")).Error != nil {
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
@@ -139,8 +139,8 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 	// // question 側の読み込み
 	var q question.Question
 	if err := db.First(&q, *es.CurrentQuestionID).Error; err != nil { //err による分岐が必要
-		log.Printf("show-answer : couldnt load question (id=%d) %v",int(*es.CurrentQuestionID), err) // 何処でエラーが起きたかはわかるようにする
-		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "問題データを読み込めませんでした") // DB が落ちている
+		log.Printf("show-answer : couldnt load question (id=%d) %v", int(*es.CurrentQuestionID), err) // 何処でエラーが起きたかはわかるようにする
+		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "問題データを読み込めませんでした")      // DB が落ちている
 		return
 	}
 
@@ -152,7 +152,7 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 			*es.CurrentQuestionID,
 		).
 		Updates(map[string]any{
-			"phase":            "answer",
+			"phase":             "answer",
 			"revealed-segments": len(q.TextSegments),
 		}).Error != nil {
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
@@ -169,7 +169,7 @@ func reset(c *gin.Context, db *gorm.DB) {
 
 	// 指定したリクエストの型でリクエストが来ているかのチェック
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("reset invalid request: %v", err)// エラーが一本化されているので、デバッグのためにフィールド情報を渡す
+		log.Printf("reset invalid request: %v", err) // エラーが一本化されているので、デバッグのためにフィールド情報を渡す
 		platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "リクエストの形が不正です")
 		return
 	}
