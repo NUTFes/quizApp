@@ -15,7 +15,7 @@ import (
 // 各関数がどんな値を必要とするのか明示的にするため
 func RegisterRoutes(db *gorm.DB, adminToken string, joinURL string) platform.RegisterFunc {
 	return func(r *gin.Engine) {
-		// スマホ、モニタ向けの state 
+		// スマホ、モニタ向けの state
 		r.GET("api/state", func(c *gin.Context) { getViewerState(c, db, joinURL) })
 
 		// admin のパスグループ
