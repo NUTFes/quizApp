@@ -13,7 +13,7 @@ export function WaitingView() {
               始まります
             </p>
           </div>
-          <p className="py-4 text-accent text-notes">会場中央へお集まりください</p>
+          <p className="py-4 text-info text-notes">会場中央へお集まりください</p>
           <p className="py-4 text-surface text-message-s">
             この画面はモニターと自動で同期します
             <br />
