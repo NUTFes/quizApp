@@ -14,7 +14,7 @@ function formatTime(seconds: number): string {
   return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
 }
 
-export function TimeView({ seconds, max }: TimeViewProps) {
+function TimeView({ seconds, max }: TimeViewProps) {
   const time = seconds ?? 0
   const maxTime = max ?? 0
   const progress = maxTime > 0 ? Math.max(0, Math.min(1, time / maxTime)) : 0
