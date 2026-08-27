@@ -13,9 +13,13 @@ import (
 //
 // 上記の変数を引数として扱い、グローバルにしないのは、
 // 各関数がどんな値を必要とするのか明示的にするため
-func RegisterRoutes(db *gorm.DB, adminToken string) platform.RegisterFunc {
+func RegisterRoutes(db *gorm.DB, adminToken string, joinURL string) platform.RegisterFunc {
 	return func(r *gin.Engine) {
-		g := r.Group("/api/admin", platform.RequireToken(adminToken))
+		// スマホ、モニタ向けの state
+		r.GET("api/state", func(c *gin.Context) { getViewerState(c, db, joinURL) })
+
+		// admin のパスグループ
+		g := r.Group("api/admin", platform.RequireToken(adminToken))
 		g.GET("/state", func(c *gin.Context) { getState(c, db) })
 		g.POST("/show-question", func(c *gin.Context) { showQuestion(c, db) })
 		g.POST("/advance-text", func(c *gin.Context) { advanceText(c, db) })
