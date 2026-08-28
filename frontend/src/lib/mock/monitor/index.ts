@@ -1,4 +1,5 @@
 export * from './monitorAnswer'
 export * from './monitorFinished'
+export * from './monitorHayaoshi'
 export * from './monitorQuestion'
 export * from './monitorWaiting'
