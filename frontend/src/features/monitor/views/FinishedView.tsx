@@ -30,7 +30,11 @@ export function FinishedView() {
             </p>
           </div>
           <div className="flex size-[668px] shrink-0 items-center justify-center overflow-hidden rounded-[80px] bg-canvas p-12">
-            <MonitorQrCode url={SURVEY_URL} size={572} alt="技大祭アンケートのQR" />
+            {SURVEY_URL === '' ? (
+              <p className="text-p-instruction text-brand">アンケートURL未設定</p>
+            ) : (
+              <MonitorQrCode url={SURVEY_URL} size={572} alt="技大祭アンケートのQR" />
+            )}
           </div>
         </section>
       </div>
