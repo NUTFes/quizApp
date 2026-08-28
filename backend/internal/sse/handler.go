@@ -49,7 +49,7 @@ func handleEvents(c *gin.Context, b *Broadcaster) {
 			fmt.Fprintf(c.Writer, "event: state\ndata: %s\n\n", msg)
 			c.Writer.Flush()
 		case <-ticker.C: // ハートビートが来たら（15秒ごと）
-			fmt.Fprint(c.Writer, "event: ping\ndata: \n\n")
+			fmt.Fprint(c.Writer, "event: ping\ndata: {}\n\n")
 			c.Writer.Flush()
 		}
 	}
