@@ -15,7 +15,7 @@ import (
 func RegisterRoutes(b *Broadcaster, adminToken string) platform.RegisterFunc {
 	return func(r *gin.Engine) {
 		r.GET("/api/events", func(c *gin.Context) { handleEvents(c, b) })
-        r.GET("/api/admin/events", func(c *gin.Context) { handleAdminEvents(c, b, adminToken) })
+		r.GET("/api/admin/events", func(c *gin.Context) { handleAdminEvents(c, b, adminToken) })
 	}
 }
 
@@ -35,29 +35,29 @@ func handleEvents(c *gin.Context, b *Broadcaster) {
 // stream は選ばれた Hub にぶら下がり、切断まで配信を書き続ける。
 // 呼び手が Hub を決めてから渡す。認証やクエリの検証は呼び手の責任。
 func stream(c *gin.Context, hub *Hub) {
-      c.Header("Content-Type", "text/event-stream")
-      c.Header("Cache-Control", "no-cache")
-      c.Header("Connection", "keep-alive")
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
 
-      fmt.Fprint(c.Writer, "event: hello\ndata: {\"message\":\"SSE接続できました\"}\n\n")
-      c.Writer.Flush()
+	fmt.Fprint(c.Writer, "event: hello\ndata: {\"message\":\"SSE接続できました\"}\n\n")
+	c.Writer.Flush()
 
-      ticker := time.NewTicker(15 * time.Second)
-      defer ticker.Stop()
+	ticker := time.NewTicker(15 * time.Second)
+	defer ticker.Stop()
 
-      ch := hub.Add()
-      defer hub.Remove(ch)
+	ch := hub.Add()
+	defer hub.Remove(ch)
 
-      for {
-              select {
-              case <-c.Request.Context().Done():
-                      return
-              case msg := <-ch:
-                      fmt.Fprintf(c.Writer, "event: state\ndata: %s\n\n", msg)
-                      c.Writer.Flush()
-              case <-ticker.C:
-                      fmt.Fprint(c.Writer, "event: ping\ndata: {}\n\n")
-                      c.Writer.Flush()
-              }
-      }
+	for {
+		select {
+		case <-c.Request.Context().Done():
+			return
+		case msg := <-ch:
+			fmt.Fprintf(c.Writer, "event: state\ndata: %s\n\n", msg)
+			c.Writer.Flush()
+		case <-ticker.C:
+			fmt.Fprint(c.Writer, "event: ping\ndata: {}\n\n")
+			c.Writer.Flush()
+		}
+	}
 }
