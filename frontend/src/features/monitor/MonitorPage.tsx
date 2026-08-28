@@ -18,7 +18,7 @@ function MonitorPage() {
     case 'answer':
       return <AnswerView state={state} />
     case 'finished':
-      return <FinishedView state={state} />
+      return <FinishedView />
     default:
       return <LoadingView />
   }

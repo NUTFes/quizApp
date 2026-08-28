@@ -1,11 +1,9 @@
-import { MonitorState } from '../../../types'
+import { SURVEY_URL } from '../../../lib/config'
 import { MonitorLayout } from '../parts/MonitorLayout'
 import { MonitorQrCode } from '../parts/MonitorQrCode'
 
-type Props = { state: MonitorState }
-
 // 終了、アンケート誘導画面
-export function FinishedView({ state }: Props) {
+export function FinishedView() {
   return (
     <MonitorLayout>
       <div className="flex min-h-0 flex-1 px-12 py-9">
@@ -32,7 +30,7 @@ export function FinishedView({ state }: Props) {
             </p>
           </div>
           <div className="flex size-[668px] shrink-0 items-center justify-center overflow-hidden rounded-[80px] bg-canvas p-12">
-            <MonitorQrCode url={state.joinUrl} size={572} alt="スマホ画面へのアクセス用QRコード" />
+            <MonitorQrCode url={SURVEY_URL} size={572} alt="技大祭アンケートのQR" />
           </div>
         </section>
       </div>
