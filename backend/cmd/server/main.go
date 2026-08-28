@@ -43,7 +43,7 @@ func main() {
 		// 各機能の RegisterRoutes をここに1行ずつ足していく。
 		admin.RegisterRoutes(adminToken),
 		event.RegisterRoutes(db, adminToken, joinURL, b),
-		sse.RegisterRoutes(b),
+		sse.RegisterRoutes(b, adminToken),
 	)
 
 	addr := ":3000"

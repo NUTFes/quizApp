@@ -12,9 +12,10 @@ import (
 // registerEvents は SSE の疎通確認エンドポイント(既存実装の移植)。
 // 本実装は internal/sse に移す予定なので、標準ライブラリのハンドラを
 // gin.WrapF でそのまま包んで一時的にここに置いている。
-func RegisterRoutes(b *Broadcaster) platform.RegisterFunc {
+func RegisterRoutes(b *Broadcaster, adminToken string) platform.RegisterFunc {
 	return func(r *gin.Engine) {
 		r.GET("/api/events", func(c *gin.Context) { handleEvents(c, b) })
+        r.GET("/api/admin/events", func(c *gin.Context) { handleAdminEvents(c, b, adminToken) })
 	}
 }
 
