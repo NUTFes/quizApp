@@ -25,6 +25,11 @@ func RegisterRoutes(db *gorm.DB, adminToken string, importToken string) platform
 	return func(r *gin.Engine) {
 		g := r.Group("/api/admin", platform.RequireToken(adminToken, importToken))
 		g.PUT("/questions", func(c *gin.Context) { putQuestions(c, db) })
+
+		// 一覧(#80)は管理者画面が使うものなので、GASの IMPORT_TOKEN では読めないようにする。
+		// 投入(PUT)とは通したいトークンが違うため、グループを分けて adminToken だけで守る。
+		ag := r.Group("/api/admin", platform.RequireToken(adminToken))
+		ag.GET("/questions", func(c *gin.Context) { listQuestions(c, db) })
 	}
 }
 
