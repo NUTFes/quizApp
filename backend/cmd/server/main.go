@@ -42,7 +42,7 @@ func main() {
 	r := platform.NewRouter(
 		// 各機能の RegisterRoutes をここに1行ずつ足していく。
 		admin.RegisterRoutes(adminToken),
-		event.RegisterRoutes(db, adminToken, joinURL),
+		event.RegisterRoutes(db, adminToken, joinURL, b),
 		sse.RegisterRoutes(b),
 	)
 
