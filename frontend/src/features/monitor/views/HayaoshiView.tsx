@@ -18,7 +18,7 @@ export function HayaoshiView({ state, showAnswer = false }: HayaoshiViewProps) {
   const correctAnswer = correctChoice?.text ?? state.answer?.explanation ?? '—'
 
   return (
-    <MonitorLayout questionType="hayaoshi" showHeaderQrCode>
+    <MonitorLayout state={state} questionType="hayaoshi">
       <div
         className={`grid min-h-0 flex-1 gap-12 px-12 py-12 ${
           showAnswer ? 'grid-rows-[461px_339px]' : 'grid-rows-1'
