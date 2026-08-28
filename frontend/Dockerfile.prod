@@ -19,6 +19,11 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
+# サーベイ用URLは渡す
+ARG VITE_SURVEY_URL
+ENV VITE_SURVEY_URL=$VITE_SURVEY_URL
+RUN pnpm build
+
 # VITE_API_URL は意図的に渡さない。
 # 未設定なら相対パスになる(src/lib/config.ts)ので、ビルド時に本番URLを知る必要がない。
 RUN pnpm build

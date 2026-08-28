@@ -1,11 +1,27 @@
-// モニタ用ページ
+import { useMonitorState } from '../../lib/useEventState'
+import { WaitingView } from './views/WaitingView'
+import { QuestionView } from './views/QuestionView'
+import { FinishedView } from './views/FinishedView'
+import { AnswerView } from './views/AnswerView'
+import { LoadingView } from './views/LoadingView'
+
 function MonitorPage() {
-  return (
-    <div className="bg-canvas min-h-screen p-4">
-      {/* モニタ用トークンは接頭辞 p-。text-p-header は 48px */}
-      <h1 className="text-p-header text-brand">モニタ画面</h1>
-    </div>
-  )
+  const state = useMonitorState()
+
+  if (state === null) return <LoadingView />
+
+  switch (state.phase) {
+    case 'waiting':
+      return <WaitingView state={state} />
+    case 'question':
+      return <QuestionView state={state} />
+    case 'answer':
+      return <AnswerView state={state} />
+    case 'finished':
+      return <FinishedView />
+    default:
+      return <LoadingView />
+  }
 }
 
 export default MonitorPage
