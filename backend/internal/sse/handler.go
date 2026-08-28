@@ -2,6 +2,7 @@ package sse
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/naoto-anzai/quizApp/backend/internal/platform"
@@ -26,5 +27,8 @@ func handleEvents(c *gin.Context) {
 	fmt.Fprint(c.Writer, "event: hello\ndata: {\"message\":\"SSE接続できました\"}\n\n")
 	c.Writer.Flush()
 
+	ticker := time.NewTicker(15 * time.Second)
+	defer ticker.Stop() // この関数（handleEvents）が終わるとき必ず呼ばれ、ticker を開放しないとリークするため .Stop()
+	
 	<-c.Request.Context().Done() // 切断まではずっとここの行で待つ
 }
