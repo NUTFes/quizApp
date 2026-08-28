@@ -24,9 +24,9 @@ func handleEvents(c *gin.Context, b *Broadcaster) {
 	// ヘッダの前に検証
 	hub := b.hubFor(c.Query("view"))
 	if hub == nil {
-			platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST",
-					"view は monitor か phone を指定してください")
-			return
+		platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST",
+			"view は monitor か phone を指定してください")
+		return
 	}
 	c.Header("Content-Type", "text/event-stream")
 	c.Header("Cache-Control", "no-cache")

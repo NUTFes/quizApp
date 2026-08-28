@@ -8,9 +8,9 @@ type Broadcaster struct {
 
 func NewBroadcaster() *Broadcaster {
 	return &Broadcaster{
-		admin: NewHub(),
+		admin:   NewHub(),
 		monitor: NewHub(),
-		phone: NewHub(),
+		phone:   NewHub(),
 	}
 }
 
@@ -20,7 +20,7 @@ func (b *Broadcaster) BroadcastAll(adminJSON, monitorJSON, phoneJSON []byte) {
 	b.phone.Broadcast(phoneJSON)
 }
 
-func (b *Broadcaster) hubFor(view string) *Hub{
+func (b *Broadcaster) hubFor(view string) *Hub {
 	switch view {
 	case "monitor":
 		return b.monitor
