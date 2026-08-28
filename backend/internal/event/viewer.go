@@ -14,37 +14,16 @@ import (
 func getViewerState(c *gin.Context, db *gorm.DB, joinURL string) {
 	// view をクエリから取得
 	view := c.DefaultQuery("view", "phone") // デフォルトで phone に設定
-
-	var es EventState
-	if ok := readEventState(c, db, &es); !ok {
+	snap, err := loadSnapshot(db)
+	if err != nil {
+		respondSnapshotError(c, err)
 		return
 	}
-
-	// 今表示する問題を取得する
-	var q *question.Question
-	if es.CurrentQuestionID != nil {
-		var found question.Question
-		if db.First(&found, *es.CurrentQuestionID).Error != nil {
-			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "指定された問題が読み込めませんでした")
-			return
-		}
-		q = &found
-	}
-
-	// 今何問目かを数える
-	var askedCount int64
-	if db.Model(&question.Question{}).Where("asked = ?", true).Count(&askedCount).Error != nil {
-		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "出題数を数えられませんでした")
-		return
-	}
-
-	vs := buildViewerState(es, q, int(askedCount))
-
 	switch view {
 	case "phone":
-		c.JSON(http.StatusOK, vs)
+		c.JSON(http.StatusOK, buildViewerState(snap.es, snap.q, snap.askedCount))
 	case "monitor":
-		c.JSON(http.StatusOK, MonitorState{ViewerState: vs, JoinURL: joinURL})
+		c.JSON(http.StatusOK, MonitorState{ViewerState: buildViewerState(snap.es, snap.q, snap.askedCount), JoinURL: joinURL})
 	default:
 		platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "view には正しいデバイス（phone, monitor）を指定してください")
 	}
