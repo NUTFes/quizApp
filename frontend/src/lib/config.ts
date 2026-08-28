@@ -20,6 +20,5 @@ export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 // 「アンケートのリンクが出ない」だけで済むように、空文字を許す。
 // 呼び出し側は空文字のときリンク自体を描画しないこと(href="" は
 // 「現在のページ」を指すので、押すとリロードされてしまう)。
-export const SURVEY_URL: string = import.meta.env.VITE_SURVEY_URL ?? ''
 // 毎回呼び出す度に実行されてほしいから、定数としては扱えないため、関数オブジェクトで定義
 export const getAdminToken = () => localStorage.getItem('adminToken') ?? ''
