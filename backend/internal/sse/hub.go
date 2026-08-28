@@ -33,11 +33,11 @@ func (h *Hub) Remove(ch chan []byte){
 // ブロードキャスト（配信）する
 func (h *Hub) Broadcast(msg []byte) {
 	h.mu.Lock()
+	defer h.mu.Unlock() // この関数の最後にロックを解除
 	for ch := range h.clients {
 		select{
 		case ch <- msg: 
 		default: // 接続先（クライアント）がメッセージをためていたら、捨てる
 		}
 	}
-	defer h.mu.Unlock() // この関数の最後にロックを解除
 }
