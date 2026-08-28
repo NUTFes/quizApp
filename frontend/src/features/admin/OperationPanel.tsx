@@ -66,6 +66,17 @@ export function OperationPanel() {
     void loadQuestions()
   }, [])
 
+  // 手動での取り込み直し。
+  //
+  // 管理者画面は自分の操作の戻り値で更新されるので普段は要らないが、
+  // リロード直後・別のタブや端末から操作した後・通信が切れた後は表示が古くなる。
+  // 管理者向けSSE(#77)が入るまでの繋ぎで、当日は「おかしいと思ったら押す」ボタン。
+  const reload = () =>
+    run('最新の状態を取り込む', async () => {
+      const state = await getAdminState()
+      return state
+    })
+
   useEffect(() => {
     let cancelled = false
     getAdminState()
@@ -92,6 +103,9 @@ export function OperationPanel() {
   return (
     <div>
       <h1>操作画面</h1>
+      <button type="button" name="reload" onClick={reload} disabled={busy}>
+        最新の状態を取り込む
+      </button>
       <CurrentStatus state={adminState} />
       <section>
         <h2>問題一覧</h2>
