@@ -7,6 +7,12 @@ type Hub struct{
 	clients map[chan []byte]struct{}// 値を使わない（マップのキーのみ）＝set 型に等しい
 }
 
+func NewHub() *Hub{
+	return &Hub{
+		clients: make(map[chan []byte]struct{}),
+	}
+}
+
 // 接続する箱を make して、ハブに追加し、この箱を渡す
 func (h *Hub) Add() chan []byte{
 	ch := make(chan []byte, 8) // バッファ(キューの箱を作る)
