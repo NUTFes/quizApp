@@ -32,6 +32,9 @@ func NewRouter(registers ...RegisterFunc) *gin.Engine {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
+	// 問題・選択肢の画像を配信する(認証なし)。仕様書 §6。
+	r.Static("/images", "./static/images")
+
 	// 存在しないパスでも §0 の形でエラーを返す。
 	// これが無いと Gin 標準の 404(text/plain)が返ってしまい、
 	// フロントの「codeで分岐する」前提が壊れる。
