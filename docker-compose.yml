@@ -4,6 +4,11 @@
 # 初めての人は docs/docker-compose入門.md を先に読むこと。
 # ①〜⑥の番号は入門mdの「composeが決めること6項目」に対応。
 # 起動は直接 docker compose ではなく mise run up を使う。
+#
+# ★ PC側のポート番号は .env で上書きできる(既定は 5173/3000/5432)。
+#   git worktree を分けて2つ以上を同時に起動するときは、片方の .env で
+#   ずらす。同時に立ち上げないなら何も設定しなくてよい。
+#   → README「ワークツリーを分けて同時に起動する」
 # ============================================================
 
 services:                            # ① 並べる箱の一覧。名前がそのまま通信の宛先になる
@@ -11,22 +16,27 @@ services:                            # ① 並べる箱の一覧。名前がそ�
   frontend:
     build: ./frontend                # ② 中身は frontend/Dockerfile の手順書で自作
     ports:
-      - "5173:5173"                  # ③ PCの5173番 → 箱の5173番(Vite開発サーバー)
+      - "${FRONTEND_PORT:-5173}:5173" # ③ PCの5173番 → 箱の5173番(Vite開発サーバー)
     volumes:
       - ./frontend:/app              # ④(a) ソースを箱に直結(保存した瞬間ホットリロード)
       - /app/node_modules            #     箱の中のnode_modulesをホスト側と衝突させない
     environment:
-      - VITE_API_URL=                # 空 = 相対パス。/api は Vite が backend へ転送(本番の nginx と同じ)
+      # ⑤ フロントが叩くAPIの場所。空 = 相対パスで、/api は Vite が backend へ転送する
+      #   (本番の nginx と同じ構造。ブラウザから見た通信相手が1つになりCORSが起きない)。
+      #   BACKEND_PORT をずらしてもフロントの設定を変えなくてよいのはこのため。
+      - VITE_API_URL=
       - VITE_USE_MOCK=${VITE_USE_MOCK:-false}
+      - VITE_SURVEY_URL=${VITE_SURVEY_URL:-https://example.com/survey}   # 動作確認用の仮
 
   backend:
     build: ./backend                 # ② backend/Dockerfile(air入り)で自作。CMDはair起動
     ports:
-      - "3000:3000"                  # ③ PCの3000番 → 箱の3000番(Gin)
+      - "${BACKEND_PORT:-3000}:3000"  # ③ PCの3000番 → 箱の3000番(Gin)
     volumes:
       - ./backend:/app               # ④(a) ソース直結(保存するとairが自動再ビルド)
     environment:                     # ⑤ 開発用の設定値。本番は別の値を注入する
       - DATABASE_URL=postgresql://quiz:quiz@db:5432/quiz?sslmode=disable
+      - JOIN_URL=http://localhost:${FRONTEND_PORT:-5173}/
       - ADMIN_TOKEN=dev-admin-token
       - IMPORT_TOKEN=dev-import-token
       - GOOGLE_CREDENTIALS_JSON=     # スプシ同期用。開発では空でよい(同期機能だけ無効になる)
@@ -38,7 +48,7 @@ services:                            # ① 並べる箱の一覧。名前がそ�
   db:
     image: postgres:16               # ② 公式の完成品イメージを借りる(手順書不要)
     ports:
-      - "5432:5432"                  # ③ DBクライアントツールで手元から覗きたい時用
+      - "${DB_PORT:-5432}:5432"       # ③ DBクライアントツールで手元から覗きたい時用
     environment:                     # ⑤ 初回起動時に作られるユーザー/DB名(開発専用の値)
       - POSTGRES_USER=quiz
       - POSTGRES_PASSWORD=quiz

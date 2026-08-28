@@ -105,7 +105,7 @@ volumes:
 | Goパッケージ追加 | `go get` 後に `mise run up`(--build付き)で再ビルド、をREADMEに明記 |
 | npmパッケージ追加 | 同上(frontendコンテナの再ビルド) |
 | DBスキーマ変更 | golang-migrateに一本化。「migrations/ にSQLを足したら `mise run db:migrate`」だけ覚えればよい |
-| ポート衝突 | 使用ポート(5173/3000/5432)をREADMEに明記 |
+| ポート衝突 | 使用ポート(5173/3000/5432)をREADMEに明記。PC側の番号は `.env` の `FRONTEND_PORT`/`BACKEND_PORT`/`DB_PORT` で上書きでき、git worktree を分けて同時起動するときは片方を `mise run ports:shift 10` でずらす(コンテナ名・DBのボリュームは compose のプロジェクト名＝フォルダ名で元から別々) |
 | 本番との差分 | compose本体は開発用、`docker-compose.prod.yml` に本番差分(→インフラ_policy) |
 
 ## Windows勢への注意(チームにWindowsユーザーがいる前提)

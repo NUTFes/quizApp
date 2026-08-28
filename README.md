@@ -64,6 +64,29 @@ pnpm -v       # 10.x
 止めるときは `mise run down`。困ったら `mise run logs` でログを見る。
 使えるコマンド一覧は `mise tasks`。
 
+### ワークツリーを分けて同時に起動する
+
+`git worktree` で作業フォルダを複数持っている人向け(1つしか使わないなら読まなくてよい)。
+
+コンテナ名とDBのデータは **compose のプロジェクト名(＝フォルダ名)ごとに分かれる**ので、
+フォルダが違えば混ざらない。衝突するのは **PC側のポート番号だけ**で、
+2つ目を `mise run up` すると `port is already allocated` で失敗する。
+
+片方のフォルダでポートをずらせば、両方を同時に立ち上げられる。
+
+```bash
+cd ~/quizApp-phone     # ずらしたい方のフォルダで
+mise run ports:shift 10   # .env に FRONTEND_PORT=5183 などを書く
+mise run down && mise run up
+mise run ports            # 今この フォルダが使う番号を確認
+```
+
+この例なら <http://localhost:5183>(フロント)と <http://localhost:3010>(バックエンド)で開く。
+`VITE_API_URL` と `JOIN_URL`(モニタのQRコード)も自動で同じ番号に揃う。
+既定に戻すときは `mise run ports:shift 0`。
+
+`.env` はコミットされない(フォルダごとの設定)ので、他の人の環境には影響しない。
+
 ---
 
 ## フォルダ構成

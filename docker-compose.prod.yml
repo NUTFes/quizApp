@@ -18,6 +18,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.prod
+      args:
+        - VITE_SURVEY_URL=${VITE_SURVEY_URL}
     ports:
       - "8080:80"              # CTの8080番だけを外に開ける。Cloudflareはここを向く
     environment:
@@ -40,6 +42,7 @@ services:
     # ports は開けない。nginx 経由(/api/)でしか到達できないようにする
     environment:
       - DATABASE_URL=postgresql://quiz:${POSTGRES_PASSWORD}@db:5432/quiz?sslmode=disable
+      - JOIN_URL=${JOIN_URL}
       - ADMIN_TOKEN=${ADMIN_TOKEN}
       - IMPORT_TOKEN=${IMPORT_TOKEN}
       - SPREADSHEET_ID=${SPREADSHEET_ID:-}
