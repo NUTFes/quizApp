@@ -9,11 +9,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/naoto-anzai/quizApp/backend/internal/platform"
 	"github.com/naoto-anzai/quizApp/backend/internal/question"
+	"github.com/naoto-anzai/quizApp/backend/internal/sse"
 	"gorm.io/gorm"
 )
 
 // question フェーズへ移行する関数
-func showQuestion(c *gin.Context, db *gorm.DB) {
+func showQuestion(c *gin.Context, db *gorm.DB, joinURL string, b *sse.Broadcaster) {
 	// リクエスト を取得するためのリクエストの型を定義
 	var req struct {
 		QuestionID   uint `json:"questionId" binding:"required"`                // 必須条件を gin で設定
@@ -76,10 +77,12 @@ func showQuestion(c *gin.Context, db *gorm.DB) {
 		return
 	}
 
+	// 配信を行う
+	broadcastState(db, joinURL, b)
 	// 最後の処理として、getState で行うことをそのまま行うため、そのまま呼び出す
 	getState(c, db)
 }
-func advanceText(c *gin.Context, db *gorm.DB) {
+func advanceText(c *gin.Context, db *gorm.DB, joinURL string, b *sse.Broadcaster) {
 	var es EventState
 	// まず、event_states テーブルを読み込む
 	if ok := readEventState(c, db, &es); !ok {
@@ -113,11 +116,14 @@ func advanceText(c *gin.Context, db *gorm.DB) {
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
 		return
 	}
+
+	// 配信を行う
+	broadcastState(db, joinURL, b)
 	getState(c, db)
 }
 
 // 正解を公開する
-func showAnswer(c *gin.Context, db *gorm.DB) {
+func showAnswer(c *gin.Context, db *gorm.DB, joinURL string, b *sse.Broadcaster) {
 	// es を読み込む
 	var es EventState
 	if ok := readEventState(c, db, &es); !ok {
@@ -159,9 +165,11 @@ func showAnswer(c *gin.Context, db *gorm.DB) {
 		return
 	}
 
+	// 配信を行う
+	broadcastState(db, joinURL, b)
 	getState(c, db)
 }
-func reset(c *gin.Context, db *gorm.DB) {
+func reset(c *gin.Context, db *gorm.DB, joinURL string, b *sse.Broadcaster) {
 	// リクエストを読み込む
 	var req struct {
 		To *string `json:"to" binding:"omitnil,oneof=waiting finished"` // これは任意
@@ -206,5 +214,7 @@ func reset(c *gin.Context, db *gorm.DB) {
 		return
 	}
 
+	// 配信を行う
+	broadcastState(db, joinURL, b)
 	getState(c, db)
 }
