@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
-import { AdminState, Question } from '../../types'
+import { AdminState, Question, QuestionListItem } from '../../types'
 import {
   advanceText,
   ApiError,
   getAdminState,
+  getQuestions,
   reset,
   showAnswer,
   showQuestion,
 } from '../../lib/api'
+import { QuestionList } from './parts/QuestionList'
 
 // 操作パネル
 export function OperationPanel() {
@@ -15,6 +17,8 @@ export function OperationPanel() {
   const [busy, setBusy] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
   const [questionID, setQuestionID] = useState<string>('')
+  const [questions, setQuestions] = useState<QuestionListItem[] | null>(null)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
 
   const run = async (progressFn: () => Promise<AdminState>) => {
     setBusy(true)
@@ -36,6 +40,17 @@ export function OperationPanel() {
       setBusy(false)
     }
   }
+  // 問題一覧の取得。
+  // 出題すると asked が変わるので、進行操作のたびに取り直す(→ run の中でも呼ぶ)。
+  const loadQuestions = () =>
+    getQuestions()
+      .then((res) => setQuestions(res.questions))
+      .catch(() => setQuestions(null))
+
+  useEffect(() => {
+    void loadQuestions()
+  }, [])
+
   useEffect(() => {
     let cancelled = false
     getAdminState()
@@ -77,6 +92,20 @@ export function OperationPanel() {
       <p>
         進行状況 : {adminState.revealedSegments} / {adminState.totalSegments}
       </p>
+      <section>
+        <h2>問題一覧</h2>
+        {questions === null ? (
+          <p>問題一覧を取得できませんでした。</p>
+        ) : (
+          <QuestionList
+            items={questions}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            currentQuestionId={q?.id ?? null}
+            disabled={busy}
+          />
+        )}
+      </section>
       <div>
         <button name="advance-text" onClick={() => run(advanceText)} disabled={busy}>
           {busy ? '処理中...' : '問題文を進める'}
