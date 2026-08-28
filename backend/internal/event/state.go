@@ -56,13 +56,13 @@ func getState(c *gin.Context, db *gorm.DB) {
 
 // loadSnapshot のエラーを HTTP レスポンスに変換する。
 func respondSnapshotError(c *gin.Context, err error) {
-      if errors.Is(err, gorm.ErrRecordNotFound) {
-              platform.RespondError(c, http.StatusInternalServerError, "INTERNAL",
-                      "event_states(id=1)がありません。mise run db:reset を実行して下さい")
-              return
-      }
-      log.Printf("loadSnapshot failed: %v", err)
-      platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "state を読み込めませんでした")
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL",
+			"event_states(id=1)がありません。mise run db:reset を実行して下さい")
+		return
+	}
+	log.Printf("loadSnapshot failed: %v", err)
+	platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "state を読み込めませんでした")
 }
 
 // DBにある、EventState の形のものをAPIで返すState型に直す

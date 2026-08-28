@@ -116,7 +116,7 @@ func advanceText(c *gin.Context, db *gorm.DB, joinURL string, b *sse.Broadcaster
 		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
 		return
 	}
-	
+
 	// 配信を行う
 	broadcastState(db, joinURL, b)
 	getState(c, db)
@@ -214,7 +214,6 @@ func reset(c *gin.Context, db *gorm.DB, joinURL string, b *sse.Broadcaster) {
 		return
 	}
 
-	
 	// 配信を行う
 	broadcastState(db, joinURL, b)
 	getState(c, db)
