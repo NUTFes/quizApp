@@ -158,3 +158,38 @@ func TestIsValidArunashiChoice(t *testing.T) {
 		}
 	}
 }
+
+// type が不正な行でも、その行の共通項目(number / difficulty / textSegments)の
+// エラーが同時に返ることを確かめる。
+// ここが崩れると「1件直して再投入」を運営メンバーに繰り返させることになる(§3.5.3)。
+func TestValidateImport_typeが不正でも共通項目のエラーが同時に出る(t *testing.T) {
+	q := validFourChoice(2, 1)
+	broken := validFourChoice(3, 1) // number を 1 のまま重複させる
+	broken.Type = "yonntaku"        // type は不正
+	broken.Difficulty = "ふつう"       // 日本語は不可(変換はGASの責務)
+	broken.TextSegments = nil       // 問題文なし
+
+	issues := validateImport([]importQuestion{q, broken})
+
+	for _, want := range []string{"type 'yonntaku' は不正です", "number 1 が2行目と重複",
+		"difficulty 'ふつう' は不正です", "textSegments が空です"} {
+		if !hasIssue(issues, 3, want) {
+			t.Errorf("3行目に %q が出ていない: %+v", want, issues)
+		}
+	}
+}
+
+// hayaoshi の行でも同じ。v1未対応のエラーだけで打ち切らない。
+func TestValidateImport_hayaoshiでも共通項目のエラーが同時に出る(t *testing.T) {
+	q := validFourChoice(2, 5)
+	q.Type = "hayaoshi"
+	q.Difficulty = "むずかしい"
+
+	issues := validateImport([]importQuestion{q})
+
+	for _, want := range []string{"hayaoshi", "difficulty 'むずかしい' は不正です"} {
+		if !hasIssue(issues, 2, want) {
+			t.Errorf("2行目に %q が出ていない: %+v", want, issues)
+		}
+	}
+}
