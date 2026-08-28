@@ -11,9 +11,9 @@ import (
 // registerEvents は SSE の疎通確認エンドポイント(既存実装の移植)。
 // 本実装は internal/sse に移す予定なので、標準ライブラリのハンドラを
 // gin.WrapF でそのまま包んで一時的にここに置いている。
-func RegisterRoutes(hub *Hub) platform.RegisterFunc{
-	return func (r *gin.Engine) {
-		r.GET("/api/events", func(c *gin.Context) {handleEvents(c, hub)})
+func RegisterRoutes(hub *Hub) platform.RegisterFunc {
+	return func(r *gin.Engine) {
+		r.GET("/api/events", func(c *gin.Context) { handleEvents(c, hub) })
 	}
 }
 
@@ -34,14 +34,14 @@ func handleEvents(c *gin.Context, hub *Hub) {
 	defer hub.Remove(ch) // 切断時は必ず呼ぶ
 
 	for {
-		select{	
+		select {
 		case <-c.Request.Context().Done(): // 切断したとき
 			return
 		case msg := <-ch:
-			fmt.Fprintf(c.Writer, "event: state\ndata: %s\n\n", msg) 
+			fmt.Fprintf(c.Writer, "event: state\ndata: %s\n\n", msg)
 			c.Writer.Flush()
-		case <-ticker.C:// ハートビートが来たら（15秒ごと）
-			fmt.Fprint(c.Writer, "event: ping\ndata: \n\n") 
+		case <-ticker.C: // ハートビートが来たら（15秒ごと）
+			fmt.Fprint(c.Writer, "event: ping\ndata: \n\n")
 			c.Writer.Flush()
 		}
 	}
