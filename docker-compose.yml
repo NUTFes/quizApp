@@ -18,6 +18,7 @@ services:                            # ① 並べる箱の一覧。名前がそ�
     environment:
       - VITE_API_URL=http://localhost:3000   # ⑤ フロントが叩くAPIの場所(開発用の値)
       - VITE_USE_MOCK=${VITE_USE_MOCK:-false}
+      - VITE_SURVEY_URL=https://example.com/survey   # 動作確認用の仮
 
   backend:
     build: ./backend                 # ② backend/Dockerfile(air入り)で自作。CMDはair起動
