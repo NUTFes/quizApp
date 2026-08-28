@@ -11,13 +11,13 @@ import {
 } from '../../lib/api'
 import { DEV_QUESTIONS } from './parts/__devFixtures'
 import { QuestionList } from './parts/QuestionList'
+import { ShowQuestionForm } from './parts/ShowQuestionForm'
 
 // 操作パネル
 export function OperationPanel() {
   const [adminState, setAdminState] = useState<AdminState | null>(null)
   const [busy, setBusy] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
-  const [questionID, setQuestionID] = useState<string>('')
   const [questions, setQuestions] = useState<QuestionListItem[] | null>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
 
@@ -28,6 +28,8 @@ export function OperationPanel() {
     try {
       const nextState = await progressFn()
       setAdminState(nextState)
+      // 出題やリセットで asked が変わるので、一覧も取り直す
+      await loadQuestions()
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         // エラーのタイプを判定し、
@@ -116,6 +118,11 @@ export function OperationPanel() {
             disabled={busy}
           />
         )}
+        <ShowQuestionForm
+          selected={questions?.find((item) => item.id === selectedId) ?? null}
+          onSubmit={(id, timeLimitSec) => run(() => showQuestion(id, timeLimitSec))}
+          disabled={busy}
+        />
       </section>
       <div>
         <button name="advance-text" onClick={() => run(advanceText)} disabled={busy}>
@@ -127,18 +134,6 @@ export function OperationPanel() {
         <button name="reset-waiting" onClick={() => run(() => reset('waiting'))} disabled={busy}>
           {busy ? '処理中...' : '待機画面へ'}
         </button>
-        <form>
-          <input
-            type="text"
-            name="question-id"
-            value={questionID}
-            onChange={(e) => setQuestionID(e.target.value)}
-          />
-          <button
-            name="show-question"
-            onClick={() => run(() => showQuestion(Number(questionID)))}
-          ></button>
-        </form>
       </div>
       {qDetail(q)}
       {error != null && <p>{error}</p>}
