@@ -11,14 +11,14 @@ export function WaitingView({ state }: Props) {
       <div className="flex min-h-0 flex-1 px-12 py-9">
         <section className="flex w-full items-center justify-between overflow-hidden rounded-[80px] bg-brand pr-[100px] shadow-[0_10px_28px_0_rgba(25,32,133,0.1)]">
           <div className="relative flex h-full w-[1006px] shrink-0 flex-col justify-center gap-10 pl-[100px]">
-            <div className="relative">
-              <h2 className="relative z-10 text-p-message-xl text-surface">
+            <div className="flex items-center gap-10">
+              <h2 className="text-p-message-xl text-surface">
                 まもなく
                 <br />
                 始まります
               </h2>
-              <span className="absolute top-0 left-[326px] size-[260px] rounded-full bg-info opacity-40" />
-              <span className="absolute top-[190px] left-[516px] size-[110px] rounded-[55px] bg-live" />
+              <span className="size-[260px] shrink-0 self-start rounded-full bg-info opacity-40" />
+              <span className="size-[110px] shrink-0 self-end rounded-[55px] bg-live" />
             </div>
             <p className="text-p-note text-info">第45回 技大祭 クイズ大会</p>
             <p className="text-p-message-m text-surface">会場中央へお集まりください</p>
