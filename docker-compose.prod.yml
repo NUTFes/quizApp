@@ -19,9 +19,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.prod
       args:
-        # ★ environment ではなく args。Vite はビルド時に値を焼き込むため、
-        #   実行時の環境変数では届かない(→ frontend/Dockerfile.prod)
-        VITE_SURVEY_URL: ${VITE_SURVEY_URL:-}
+        - VITE_SURVEY_URL=${VITE_SURVEY_URL}
     ports:
       - "8080:80"              # CTの8080番だけを外に開ける。Cloudflareはここを向く
     environment:

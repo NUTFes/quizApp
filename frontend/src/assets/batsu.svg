@@ -1,4 +1,6 @@
-<svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M12 69L68.5685 12.4315" stroke="#0040FF" stroke-width="8"/>
-<path d="M69 69L12.4315 12.4315" stroke="#0040FF" stroke-width="8"/>
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Artwork">
+<path id="Stroke 01" d="M22 178.063L177.564 22.5" stroke="#0040FF" stroke-width="24"/>
+<path id="Stroke 02" d="M177.563 178.063L22 22.5" stroke="#0040FF" stroke-width="24"/>
+</g>
 </svg>

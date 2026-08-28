@@ -5,10 +5,13 @@ import { Link } from 'react-router-dom'
 // 画面プレビューを増やすときは PAGES に1行足す。
 // モニタ画面用（#19）は features/dev/MonitorPreviewPage.tsx が
 // parts/PreviewFrame をそのまま使って /dev/monitor に生やしている。
+// スマホ画面用（別イシュー）は features/dev/PhonePreviewPage.tsx を作り、
+// parts/PreviewFrame をそのまま使って /dev/phone に生やすこと。
 
 const PAGES = [
   { to: '/dev/tokens', title: 'デザイントークン', note: '@theme の色・書体が当たるかの確認' },
   { to: '/dev/phone', title: 'スマホ画面プレビュー', note: '4形式 × フェーズを並べて確認' },
+  { to: '/dev/monitor', title: 'モニタ画面プレビュー', note: '4形式 × フェーズを並べて確認' },
 ] as const
 
 function DevIndexPage() {

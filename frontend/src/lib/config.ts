@@ -9,7 +9,7 @@
 // 全参加者の端末に配られて全滅する。「手順を守る」より「間違えられない形」を採る。
 // → dev_policy/インフラ・デプロイ_policy.md §フロントに localhost が焼き込まれる事故
 export const BASE: string = import.meta.env.VITE_API_URL ?? ''
-
+export const SURVEY_URL: string = import.meta.env.VITE_SURVEY_URL ?? ''
 export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 
 // アンケート(Google Form)のURL。finished フェーズの導線に使う。
