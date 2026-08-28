@@ -29,6 +29,14 @@ func handleEvents(c *gin.Context) {
 
 	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop() // この関数（handleEvents）が終わるとき必ず呼ばれ、ticker を開放しないとリークするため .Stop()
-	
-	<-c.Request.Context().Done() // 切断まではずっとここの行で待つ
+
+	for {
+		select{	
+		case <-c.Request.Context().Done(): // 切断したとき
+			return
+		case <-ticker.C:
+			fmt.Fprint(c.Writer, "event: ping\ndata: {}\n\n") // ハートビートが来たら（15秒ごと）
+			c.Writer.Flush()
+		}
+	}
 }
