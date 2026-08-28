@@ -1,9 +1,9 @@
-import monitorQrCode from '../../../assets/monitor-qr-code.png'
-import type { QuestionType } from '../../../types'
+import type { MonitorState, QuestionType } from '../../../types'
+import { MonitorQrCode } from './MonitorQrCode'
 
 type MonitorHeaderProps = {
   questionType?: QuestionType
-  showQrCode?: boolean
+  state?: MonitorState
 }
 
 const TITLES: Record<QuestionType, string> = {
@@ -13,7 +13,7 @@ const TITLES: Record<QuestionType, string> = {
   hayaoshi: '45th 技大祭　早押しクイズ',
 }
 
-export function MonitorHeader({ questionType, showQrCode = false }: MonitorHeaderProps) {
+export function MonitorHeader({ questionType, state = undefined }: MonitorHeaderProps) {
   const title = questionType === undefined ? '45th 技大祭' : TITLES[questionType]
 
   return (
@@ -23,12 +23,8 @@ export function MonitorHeader({ questionType, showQrCode = false }: MonitorHeade
         <div className="size-19 rounded-2xl bg-brand shadow-[0_10px_28px_0_rgba(25,32,133,0.1)]" />
         <h1 className="text-p-header text-brand">{title}</h1>
       </div>
-      {showQrCode && (
-        <img
-          src={monitorQrCode}
-          alt="スマホ画面へのアクセス用QRコード"
-          className="ml-auto size-25 object-contain"
-        />
+      {state !== undefined && (
+        <MonitorQrCode joinUrl={state.joinUrl} alt="スマホ画面へのアクセス用QRコード" size={100} />
       )}
     </header>
   )
