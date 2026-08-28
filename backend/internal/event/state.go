@@ -11,6 +11,38 @@ import (
 	"gorm.io/gorm"
 )
 
+// state を組み立てるのに必要な材料一式
+type snapshot struct {
+	es         EventState
+	q          *question.Question
+	askedCount int
+}
+
+// http なしで、DBから必要な情報を組み立てる関数
+func loadSnapshot(db *gorm.DB) (snapshot, error) {
+	var snap snapshot
+
+	if err := db.First(&snap.es, 1).Error; err != nil {
+		return snap, err
+	}
+
+	if snap.es.CurrentQuestionID != nil {
+		var found question.Question
+		if err := db.First(&found, *snap.es.CurrentQuestionID).Error; err != nil {
+			return snap, err
+		}
+		snap.q = &found
+	}
+
+	var askedCount int64
+	if err := db.Model(&question.Question{}).Where("asked = ?", true).Count(&askedCount).Error; err != nil {
+		return snap, err
+	}
+	snap.askedCount = int(askedCount)
+
+	return snap, nil
+}
+
 // State を返す関数
 func getState(c *gin.Context, db *gorm.DB) {
 	var es EventState
