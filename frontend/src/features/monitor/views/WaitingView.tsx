@@ -1,8 +1,11 @@
+import { MonitorState } from '../../../types'
 import { MonitorLayout } from '../parts/MonitorLayout'
 import { MonitorQrCode } from '../parts/MonitorQrCode'
 
+type Props = { state: MonitorState }
+
 // 待機画面
-export function WaitingView() {
+export function WaitingView({ state }: Props) {
   return (
     <MonitorLayout>
       <div className="flex min-h-0 flex-1 px-12 py-9">
@@ -24,7 +27,13 @@ export function WaitingView() {
               <p className="text-p-message-m">QRコードを読み取って参加してください</p>
             </div>
           </div>
-          <MonitorQrCode alt="スマホ画面へのアクセス用QRコード" />
+          <div className="flex size-[668px] shrink-0 items-center justify-center overflow-hidden rounded-[80px] bg-canvas p-12">
+            <MonitorQrCode
+              joinUrl={state.joinUrl}
+              size={572}
+              alt="スマホ画面へのアクセス用QRコード"
+            />
+          </div>
         </section>
       </div>
     </MonitorLayout>
