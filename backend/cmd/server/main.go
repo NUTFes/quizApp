@@ -20,6 +20,7 @@ import (
 	"github.com/naoto-anzai/quizApp/backend/internal/admin"
 	"github.com/naoto-anzai/quizApp/backend/internal/event"
 	"github.com/naoto-anzai/quizApp/backend/internal/platform"
+	"github.com/naoto-anzai/quizApp/backend/internal/question"
 )
 
 func main() {
@@ -45,6 +46,7 @@ func main() {
 		registerEvents,
 		admin.RegisterRoutes(adminToken),
 		event.RegisterRoutes(db, adminToken, joinURL),
+		question.RegisterRoutes(db, adminToken),
 	)
 
 	addr := ":3000"
