@@ -121,8 +121,16 @@ func putQuestions(c *gin.Context, db *gorm.DB) {
 		}
 		return nil
 	})
-	// エラーレスポンスはトランザクション内で返しているので、ここでは打ち切るだけ
+	// エラーレスポンスは基本的にトランザクション内で返している。
+	// ただし db.Transaction は Begin / Commit 自体の失敗でもエラーを返し、
+	// そのときは何も書かれていない。放置すると Gin が空の 200 を返し、
+	// GAS や curl が「投入に成功した」と誤認する(実際には1件も入っていない)。
+	// 書かれていなければここで 500 を返す。
 	if err != nil {
+		if !c.Writer.Written() {
+			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL",
+				"問題データを保存できませんでした")
+		}
 		return
 	}
 
