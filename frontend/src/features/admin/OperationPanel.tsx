@@ -10,6 +10,7 @@ import {
   showQuestion,
 } from '../../lib/api'
 import { DEV_QUESTIONS } from './parts/__devFixtures'
+import { ControlPanel } from './parts/ControlPanel'
 import { CurrentStatus } from './parts/CurrentStatus'
 import { QuestionList } from './parts/QuestionList'
 import { ShowQuestionForm } from './parts/ShowQuestionForm'
@@ -111,17 +112,13 @@ export function OperationPanel() {
           disabled={busy}
         />
       </section>
-      <div>
-        <button name="advance-text" onClick={() => run(advanceText)} disabled={busy}>
-          {busy ? '処理中...' : '問題文を進める'}
-        </button>
-        <button name="show-answer" onClick={() => run(showAnswer)} disabled={busy}>
-          {busy ? '処理中...' : '正答を表示'}
-        </button>
-        <button name="reset-waiting" onClick={() => run(() => reset('waiting'))} disabled={busy}>
-          {busy ? '処理中...' : '待機画面へ'}
-        </button>
-      </div>
+      <ControlPanel
+        state={adminState}
+        busy={busy}
+        onAdvanceText={() => run(advanceText)}
+        onShowAnswer={() => run(showAnswer)}
+        onReset={(to) => run(() => reset(to))}
+      />
       {error != null && <p>{error}</p>}
     </div>
   )
