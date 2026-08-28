@@ -28,11 +28,7 @@ export function WaitingView({ state }: Props) {
             </div>
           </div>
           <div className="flex size-[668px] shrink-0 items-center justify-center overflow-hidden rounded-[80px] bg-canvas p-12">
-            <MonitorQrCode
-              joinUrl={state.joinUrl}
-              size={572}
-              alt="スマホ画面へのアクセス用QRコード"
-            />
+            <MonitorQrCode url={state.joinUrl} size={572} alt="スマホ画面へのアクセス用QRコード" />
           </div>
         </section>
       </div>
