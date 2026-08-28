@@ -41,12 +41,15 @@ export function StatusPanel({ state, status, remainingTime }: StatusPanelProps) 
 
       {status === 'answer' ? (
         <>
-          <div className="flex h-[335px] shrink-0 flex-col rounded-3xl border-2 border-border-soft bg-brand px-9 pb-12 text-surface shadow-[0_10px_28px_0_rgba(25,32,133,0.1)]">
+          {/* 解説が長いときは 335px を下限に伸び、下の案内カードを押しつぶす。
+              そのため shrink-0（自分は縮まない）と min-h（下限）の組み合わせにする */}
+          <div className="flex min-h-[335px] shrink-0 flex-col rounded-3xl border-2 border-border-soft bg-brand px-9 pb-12 text-surface shadow-[0_10px_28px_0_rgba(25,32,133,0.1)]">
             <div className="flex items-start gap-3 pt-3">
               <p className="pt-7 text-p-note">正解は</p>
               <p className="text-p-correct-id">{correctLabel}</p>
             </div>
-            <p className="flex min-h-0 flex-1 items-center justify-center text-center text-p-correct-body">
+            {/* min-h-0 を付けない。付けると高さが auto のときに 0 まで潰れ、解説が消える */}
+            <p className="flex flex-1 items-center justify-center text-center text-p-correct-body">
               {answerDescription}
             </p>
           </div>
