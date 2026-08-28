@@ -9,6 +9,7 @@ import {
   showAnswer,
   showQuestion,
 } from '../../lib/api'
+import { DEV_QUESTIONS } from './parts/__devFixtures'
 import { QuestionList } from './parts/QuestionList'
 
 // 操作パネル
@@ -45,7 +46,17 @@ export function OperationPanel() {
   const loadQuestions = () =>
     getQuestions()
       .then((res) => setQuestions(res.questions))
-      .catch(() => setQuestions(null))
+      .catch((err) => {
+        // GET /api/admin/questions(#80)は未実装。それまでの間、開発中だけ仮データで画面を作る。
+        // import.meta.env.DEV は本番ビルドで false に置き換わるので、この分岐ごと成果物から消える。
+        // ★ #80 がマージされたら、この if と __devFixtures.ts を削除すること。
+        if (import.meta.env.DEV && err instanceof ApiError && err.status === 404) {
+          console.warn('問題一覧APIが未実装のため、開発用の仮データを表示しています')
+          setQuestions(DEV_QUESTIONS)
+          return
+        }
+        setQuestions(null)
+      })
 
   useEffect(() => {
     void loadQuestions()
