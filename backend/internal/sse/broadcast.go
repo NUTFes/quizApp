@@ -7,13 +7,10 @@ type Broadcaster struct {
 }
 
 func NewBroadcaster() *Broadcaster {
-	admin := NewHub()
-	monitor := NewHub()
-	phone := NewHub()
 	return &Broadcaster{
-		admin,
-		monitor,
-		phone,
+		admin: NewHub(),
+		monitor: NewHub(),
+		phone: NewHub(),
 	}
 }
 
