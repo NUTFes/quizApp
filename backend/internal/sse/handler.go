@@ -38,7 +38,7 @@ func handleEvents(c *gin.Context, hub *Hub) {
 		case <-c.Request.Context().Done(): // 切断したとき
 			return
 		case msg := <-ch:
-			fmt.Fprint(c.Writer, "event: state\ndata: %s\n\n", msg) 
+			fmt.Fprintf(c.Writer, "event: state\ndata: %s\n\n", msg) 
 			c.Writer.Flush()
 		case <-ticker.C:// ハートビートが来たら（15秒ごと）
 			fmt.Fprint(c.Writer, "event: ping\ndata: \n\n") 
