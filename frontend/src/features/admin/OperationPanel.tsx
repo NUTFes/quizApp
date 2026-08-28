@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AdminState, Question, QuestionListItem } from '../../types'
+import { AdminState, QuestionListItem } from '../../types'
 import {
   advanceText,
   ApiError,
@@ -10,6 +10,7 @@ import {
   showQuestion,
 } from '../../lib/api'
 import { DEV_QUESTIONS } from './parts/__devFixtures'
+import { CurrentStatus } from './parts/CurrentStatus'
 import { QuestionList } from './parts/QuestionList'
 import { ShowQuestionForm } from './parts/ShowQuestionForm'
 
@@ -87,24 +88,10 @@ export function OperationPanel() {
   if (adminState == null) return <p>接続中...</p>
 
   const q = adminState.question
-  const qDetail = (question: Question | null) => {
-    if (question == null) return <p>表示中の問題はありません</p>
-    return (
-      <div>
-        <p>問題タイプ : {question.type}</p>
-        <p>クイズ番号 : {question.number}</p>
-        <p>問題文 : {question.textSegments.join(' / ')}</p>
-      </div>
-    )
-  }
   return (
     <div>
       <h1>操作画面</h1>
-      <p>局面 : {adminState.phase}</p>
-      <p>第{adminState.askedCount}問</p>
-      <p>
-        進行状況 : {adminState.revealedSegments} / {adminState.totalSegments}
-      </p>
+      <CurrentStatus state={adminState} />
       <section>
         <h2>問題一覧</h2>
         {questions === null ? (
@@ -135,7 +122,6 @@ export function OperationPanel() {
           {busy ? '処理中...' : '待機画面へ'}
         </button>
       </div>
-      {qDetail(q)}
       {error != null && <p>{error}</p>}
     </div>
   )
