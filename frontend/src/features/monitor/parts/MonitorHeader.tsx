@@ -24,7 +24,9 @@ export function MonitorHeader({ questionType, state = undefined }: MonitorHeader
         <h1 className="text-p-header text-brand">{title}</h1>
       </div>
       {state !== undefined && (
-        <MonitorQrCode joinUrl={state.joinUrl} alt="スマホ画面へのアクセス用QRコード" size={100} />
+        <div className="ml-auto">
+          <MonitorQrCode joinUrl={state.joinUrl} alt="スマホ画面へのアクセス用QRコード" size={100} />
+        </div>
       )}
     </header>
   )
