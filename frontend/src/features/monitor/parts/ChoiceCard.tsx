@@ -26,7 +26,7 @@ export function ChoiceCard({ choice, isCorrect = false, type }: Props) {
       <div className={`${cardStyle} flex flex-col items-center px-10`}>
         <CorrectBadge isVisible={isCorrect} />
         <p
-          className={`mt-[112px] text-p-arunashi-label ${choice.id === 'A' ? 'text-maru' : 'text-batsu'}`}
+          className={`mt-50 text-p-arunashi-label ${choice.id === 'A' ? 'text-maru' : 'text-batsu'}`}
         >
           {label}
         </p>
@@ -42,7 +42,7 @@ export function ChoiceCard({ choice, isCorrect = false, type }: Props) {
         <img
           src={choice.id === 'A' ? maru : batsu}
           alt={choice.id === 'A' ? '○' : '×'}
-          className="mt-[74px] size-[200px] object-contain"
+          className="mt-36 size-[200px] object-contain"
         />
         <p className="mt-12 text-p-area-label">{choice.id === 'A' ? '左エリア' : '右エリア'}</p>
       </div>
