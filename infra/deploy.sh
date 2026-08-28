@@ -14,6 +14,10 @@
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/opt/quizApp}"
+
+# 当日「何が動いているか」を記録するファイル。CT では /opt に置く。
+# 手元でリハーサルするときだけ STATE_FILE= で差し替える(→ 末尾の書き出し)。
+STATE_FILE="${STATE_FILE:-/opt/DEPLOYED_REF}"
 COMPOSE="docker compose -f docker-compose.prod.yml --env-file .env.prod"
 
 # デプロイする対象。ブランチ名でもタグ名でもよい。
@@ -38,19 +42,40 @@ if [ ! -f .env.prod ]; then
 fi
 
 # ★ 空欄を早期に検出する。
-# backend は ADMIN_TOKEN が空だと起動時に log.Fatal で落ちる(cmd/server/main.go)。
+# backend は ADMIN_TOKEN / JOIN_URL が空だと起動時に log.Fatal で落ちる(cmd/server/main.go)。
 # restart: always と組み合わさるとクラッシュループになり、原因が分かりにくい。
 # ここで止めれば「どの値が空か」がその場で分かる。
 missing=""
-for key in POSTGRES_PASSWORD ADMIN_TOKEN IMPORT_TOKEN; do
-  value="$(grep -E "^${key}=" .env.prod | head -1 | cut -d= -f2-)"
+for key in POSTGRES_PASSWORD ADMIN_TOKEN IMPORT_TOKEN JOIN_URL; do
+  # ★ || true が必須。set -o pipefail のもとでは、キーが1行も無いときに
+  #   grep が終了コード1を返し、set -e でここまでのメッセージを何も出さずに
+  #   スクリプトごと死ぬ(「何も言わずに落ちる」の正体)。
+  value="$(grep -E "^${key}=" .env.prod | head -1 | cut -d= -f2- || true)"
   [ -z "$value" ] && missing="${missing} ${key}"
 done
 if [ -n "$missing" ]; then
-  echo "!! .env.prod の次の値が空です:${missing}" >&2
-  echo "   生成例: openssl rand -hex 24  /  openssl rand -hex 32" >&2
+  echo "!! .env.prod の次の値が空です(行ごと無い場合も含む):${missing}" >&2
+  echo "   トークン類の生成例: openssl rand -hex 24  /  openssl rand -hex 32" >&2
+  echo "   JOIN_URL は参加者が開くURL。末尾のスラッシュまで含める(例: https://quiz.example.jp/)" >&2
   exit 1
 fi
+
+# ★ JOIN_URL は「値があるか」だけでなく「書式が正しいか」まで見る。
+#   モニタが表示するQRコードは、この文字列をそのまま画像にしたもの。
+#   間違っていても backend は普通に起動してしまい、当日QRを読んだ参加者だけが
+#   繋がらない。気づくのが本番中になるので、ここで弾く。
+#   末尾のスラッシュまで含めること(→ .env.prod.example)。
+join_url="$(grep -E '^JOIN_URL=' .env.prod | head -1 | cut -d= -f2- || true)"
+case "$join_url" in
+  http://*/|https://*/) : ;;
+  http://*|https://*)
+    echo "!! JOIN_URL の末尾がスラッシュではありません: ${join_url}" >&2
+    echo "   例: https://quiz.example.jp/" >&2
+    exit 1 ;;
+  *)
+    echo "!! JOIN_URL が http:// または https:// で始まっていません: ${join_url}" >&2
+    exit 1 ;;
+esac
 
 # REF 省略時の既定値 = いまチェックアウト中のブランチ。
 # detached HEAD(= タグでデプロイ済み)なら、そのまま動かさない。
@@ -89,6 +114,55 @@ if [ ! -f docker-compose.prod.yml ]; then
   exit 1
 fi
 
+# ★ フロントの依存漏れを、ビルドを始める前に検出する。
+#   本番ビルドは丸ごとやり直すと数分かかるので、落ちる理由が分かる形で先に止める。
+#
+#   実際に踏んだ2種類を両方見る(2026-08-28 のリハーサルで検出):
+#     (a) src が import しているのに package.json に無い
+#         → vite が "Rollup failed to resolve import" で落ちる
+#     (b) package.json にあるのに pnpm-lock.yaml に無い
+#         → Dockerfile.prod は `pnpm install --frozen-lockfile` なので
+#           ERR_PNPM_OUTDATED_LOCKFILE で落ちる
+#
+#   どちらも開発環境では気づけない。開発用 Dockerfile は --frozen-lockfile 無しで、
+#   Vite の開発サーバーは import を遅延解決するため、その画面を開くまで表に出ない。
+#   CT に node も pnpm も入れていないので、テキストとして突き合わせるだけにする。
+echo "=== ①.5 フロントの依存を確認 ============================="
+fe_deps="$(sed -n '/"\(devD\|d\)ependencies"[[:space:]]*:/,/^  }/p' frontend/package.json \
+           | grep -oE '^    "[^"]+"' | tr -d ' "')"
+
+# (a) src の import → package.json
+#   相対パス(./ ../)と node:/virtual: を除き、サブパスを削って
+#   パッケージ名だけにする(react-dom/client → react-dom、@scope/pkg/x → @scope/pkg)
+dep_missing=""
+for mod in $(grep -rhoE "from[[:space:]]+['\"][^'\"]+['\"]" frontend/src \
+             | sed -E "s/.*['\"]([^'\"]+)['\"].*/\1/" \
+             | grep -vE '^[./]' | grep -vE '^(node|virtual):' \
+             | sed -E 's#^(@[^/]+/[^/]+).*#\1#; s#^([^@][^/]*).*#\1#' | sort -u); do
+  echo "$fe_deps" | grep -qx "$mod" || dep_missing="${dep_missing} ${mod}"
+done
+if [ -n "$dep_missing" ]; then
+  echo "!! frontend/src が import しているのに package.json に無い:${dep_missing}" >&2
+  echo "   このままビルドすると vite が Rollup failed to resolve import で落ちます。" >&2
+  echo "   手元で 'cd frontend && pnpm add <パッケージ名>' し、" >&2
+  echo "   package.json と pnpm-lock.yaml を同じコミットに入れて push し直してください。" >&2
+  exit 1
+fi
+
+# (b) package.json → pnpm-lock.yaml
+lock_missing=""
+for dep in $fe_deps; do
+  grep -qE "^ +'?${dep}'?:" frontend/pnpm-lock.yaml || lock_missing="${lock_missing} ${dep}"
+done
+if [ -n "$lock_missing" ]; then
+  echo "!! package.json にあるのに pnpm-lock.yaml に無い依存:${lock_missing}" >&2
+  echo "   このままビルドすると ERR_PNPM_OUTDATED_LOCKFILE で落ちます。" >&2
+  echo "   手元で 'cd frontend && pnpm install' し、pnpm-lock.yaml を" >&2
+  echo "   package.json と同じコミットに入れて push し直してください。" >&2
+  exit 1
+fi
+echo "  OK"
+
 echo "=== ② ビルドして起動 ====================================="
 $COMPOSE up -d --build
 
@@ -112,10 +186,10 @@ docker image prune -f
 df -h /
 
 # 当日「何が動いているか」を即答できるようにディスクに残す
-git --no-pager log -1 --format="%H %s" > /opt/DEPLOYED_REF
-echo "REF=${REF}" >> /opt/DEPLOYED_REF
-echo "deployed_at=$(date '+%Y-%m-%d %H:%M:%S %Z')" >> /opt/DEPLOYED_REF
-echo "--- /opt/DEPLOYED_REF ---"; cat /opt/DEPLOYED_REF
+git --no-pager log -1 --format="%H %s" > "$STATE_FILE"
+echo "REF=${REF}" >> "$STATE_FILE"
+echo "deployed_at=$(date '+%Y-%m-%d %H:%M:%S %Z')" >> "$STATE_FILE"
+echo "--- ${STATE_FILE} ---"; cat "$STATE_FILE"
 
 cat <<'MSG'
 

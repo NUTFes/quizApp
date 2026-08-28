@@ -34,6 +34,15 @@ RUN pnpm build
 ARG VITE_SURVEY_URL
 ENV VITE_SURVEY_URL=$VITE_SURVEY_URL
 
+# ★ ビルドの前に型チェックを通す。
+#   pnpm build の実体は `vite build` で、型は一切見ない。
+#   このため MonitorPage が必須 props を渡し忘れていてもビルドは成功し、
+#   参加者のブラウザで初めて "Cannot read properties of undefined" になる
+#   (2026-08-28 に練習環境で実際に踏んだ)。
+#   CI(.github/workflows/ci.yml)も同じ tsc --noEmit を回しているが、
+#   検証用ブランチのマージ結果など CI を通らない経路でも本番に載るため、
+#   本番ビルドそのものにも同じ関門を置く。数秒で済む。
+RUN pnpm typecheck
 RUN pnpm build
 
 # ---- 配信用ステージ ------------------------------------------
