@@ -11,8 +11,8 @@ import (
 // registerEvents は SSE の疎通確認エンドポイント(既存実装の移植)。
 // 本実装は internal/sse に移す予定なので、標準ライブラリのハンドラを
 // gin.WrapF でそのまま包んで一時的にここに置いている。
-func RegisterRoutes() platform.RegisterFunc{
-	return func (r *gin.Engine) {
+func RegisterRoutes() platform.RegisterFunc {
+	return func(r *gin.Engine) {
 		r.GET("/api/events", handleEvents)
 	}
 }
@@ -31,7 +31,7 @@ func handleEvents(c *gin.Context) {
 	defer ticker.Stop() // この関数（handleEvents）が終わるとき必ず呼ばれ、ticker を開放しないとリークするため .Stop()
 
 	for {
-		select{	
+		select {
 		case <-c.Request.Context().Done(): // 切断したとき
 			return
 		case <-ticker.C:
