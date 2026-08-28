@@ -15,6 +15,7 @@ import (
 	"github.com/naoto-anzai/quizApp/backend/internal/admin"
 	"github.com/naoto-anzai/quizApp/backend/internal/event"
 	"github.com/naoto-anzai/quizApp/backend/internal/platform"
+	"github.com/naoto-anzai/quizApp/backend/internal/question"
 	"github.com/naoto-anzai/quizApp/backend/internal/sse"
 )
 
@@ -35,6 +36,7 @@ func main() {
 	if joinURL == "" {
 		log.Fatal("JOIN_URL が設定されていません")
 	}
+	importToken := os.Getenv("IMPORT_TOKEN") // 空なら ADMIN_TOKEN のみで投入可能
 
 	// ブロードキャストのためのハブの集合を作る
 	b := sse.NewBroadcaster()
@@ -42,8 +44,10 @@ func main() {
 	r := platform.NewRouter(
 		// 各機能の RegisterRoutes をここに1行ずつ足していく。
 		admin.RegisterRoutes(adminToken),
+		// ★ event は進行操作のたびに b(=Broadcaster)へ state を流すため b を受け取る(#77)
 		event.RegisterRoutes(db, adminToken, joinURL, b),
 		sse.RegisterRoutes(b, adminToken),
+		question.RegisterRoutes(db, adminToken, importToken),
 	)
 
 	addr := ":3000"
