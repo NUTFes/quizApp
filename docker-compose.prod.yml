@@ -49,6 +49,14 @@ services:
       - GOOGLE_CREDENTIALS_JSON=${GOOGLE_CREDENTIALS_JSON:-}
       - GIN_MODE=release       # 開発用のデバッグログを止める
       - TZ=Asia/Tokyo
+    volumes:
+      # 問題の画像。JSON の imageUrl に書いた /images/xxx.png がここから配信される
+      # (backend/internal/platform/router.go の r.Static)。
+      #
+      # ★ イメージに焼かずボリュームで渡す。COPY にすると画像を1枚足すたびに
+      #   backend の再ビルドが要るうえ、up --build のたびに手で置いた分が消える。
+      #   CT では /opt/quizApp/backend/static/images/ に scp で置く。
+      - ./backend/static:/app/static
     ulimits:
       nofile:
         soft: 65535

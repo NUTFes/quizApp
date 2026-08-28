@@ -17,3 +17,8 @@ backend/server
 # OS が作るゴミファイル
 .DS_Store
 Thumbs.db
+
+# 問題の画像。本番の画像はリポジトリに入れない(publicリポジトリのため)。
+# 置き場所だけ .gitkeep で残し、中身は各環境に scp で置く。
+backend/static/images/*
+!backend/static/images/.gitkeep
