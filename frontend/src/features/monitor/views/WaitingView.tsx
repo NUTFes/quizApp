@@ -17,8 +17,11 @@ export function WaitingView({ state }: Props) {
                 <br />
                 始まります
               </h2>
-              <span className="size-[260px] shrink-0 self-start rounded-full bg-info opacity-40" />
-              <span className="size-[110px] shrink-0 self-end rounded-[55px] bg-live" />
+              {/* 2つの円は重なりも含めて1つの飾り。相対位置を保つため箱にまとめる */}
+              <div className="relative size-[300px] shrink-0">
+                <span className="absolute top-0 left-0 size-[260px] rounded-full bg-info opacity-40" />
+                <span className="absolute top-[190px] left-[190px] size-[110px] rounded-[55px] bg-live" />
+              </div>
             </div>
             <p className="text-p-note text-info">第45回 技大祭 クイズ大会</p>
             <p className="text-p-message-m text-surface">会場中央へお集まりください</p>
