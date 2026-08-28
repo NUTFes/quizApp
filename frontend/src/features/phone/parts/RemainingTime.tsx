@@ -20,7 +20,8 @@ function TimeView({ seconds, max }: TimeViewProps) {
   const progress = maxTime > 0 ? Math.max(0, Math.min(1, time / maxTime)) : 0
 
   return (
-    <div className="mr-6 ml-5 h-[9px] w-full rounded-sm bg-surface">
+    // 左隣の 00:23 と同じ情報を目で見るためのバーなので、支援技術には二重に読ませない
+    <div aria-hidden="true" className="mr-6 ml-5 h-[9px] w-full rounded-sm bg-surface">
       <div className="h-full rounded-sm bg-accent" style={{ width: `${progress * 100}%` }} />
     </div>
   )
