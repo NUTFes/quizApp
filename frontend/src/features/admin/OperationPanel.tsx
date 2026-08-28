@@ -10,6 +10,7 @@ import {
   showQuestion,
 } from '../../lib/api'
 import { DEV_QUESTIONS } from './parts/__devFixtures'
+import { NETWORK_ERROR_MESSAGE, toMessage } from './errorMessages'
 import { ControlPanel } from './parts/ControlPanel'
 import { CurrentStatus } from './parts/CurrentStatus'
 import { QuestionList } from './parts/QuestionList'
@@ -23,7 +24,7 @@ export function OperationPanel() {
   const [questions, setQuestions] = useState<QuestionListItem[] | null>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
 
-  const run = async (progressFn: () => Promise<AdminState>) => {
+  const run = async (actionLabel: string, progressFn: () => Promise<AdminState>) => {
     setBusy(true)
     setError(null)
 
@@ -33,13 +34,12 @@ export function OperationPanel() {
       // 出題やリセットで asked が変わるので、一覧も取り直す
       await loadQuestions()
     } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        // エラーのタイプを判定し、
-        // アクセスが出来ないエラーじゃない事と、 401 エラーであることを確認
-        setError('トークンが失効しています')
+      // 何に失敗したかが分かるように、操作名とセットで出す。
+      // 当日は「赤い字が出た」だけでは何が起きたか分からないため
+      if (err instanceof ApiError) {
+        setError(`「${actionLabel}」に失敗しました: ${toMessage(err.code)}`)
       } else {
-        // 通信関係のエラーなどでアクセス自体が出来ない
-        setError('サーバーに接続できませんでした')
+        setError(`「${actionLabel}」に失敗しました: ${NETWORK_ERROR_MESSAGE}`)
       }
     } finally {
       setBusy(false)
@@ -108,16 +108,18 @@ export function OperationPanel() {
         )}
         <ShowQuestionForm
           selected={questions?.find((item) => item.id === selectedId) ?? null}
-          onSubmit={(id, timeLimitSec) => run(() => showQuestion(id, timeLimitSec))}
+          onSubmit={(id, timeLimitSec) => run('出題', () => showQuestion(id, timeLimitSec))}
           disabled={busy}
         />
       </section>
       <ControlPanel
         state={adminState}
         busy={busy}
-        onAdvanceText={() => run(advanceText)}
-        onShowAnswer={() => run(showAnswer)}
-        onReset={(to) => run(() => reset(to))}
+        onAdvanceText={() => run('問題文を進める', advanceText)}
+        onShowAnswer={() => run('正答を表示', showAnswer)}
+        onReset={(to) =>
+          run(to === 'finished' ? 'クイズを終了' : '待機画面に戻す', () => reset(to))
+        }
       />
       {error != null && <p>{error}</p>}
     </div>
