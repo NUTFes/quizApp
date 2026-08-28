@@ -59,18 +59,9 @@ func validateImport(qs []importQuestion) []RowIssue {
 	for _, q := range qs {
 		row := q.SourceRow
 
-		// --- type ---
-		if q.Type == "hayaoshi" {
-			// v1では未対応(フェーズ2で解放。解放後は textSegments 2要素以上を必須にする)
-			issues = append(issues, RowIssue{row, "type 'hayaoshi' はv1では未対応です(フェーズ2で解放予定)"})
-			continue // 型が確定しないと以降のチェックが意味を持たないため次の問題へ
-		}
-		wantChoices, ok := choiceCountByType[q.Type]
-		if !ok {
-			issues = append(issues, RowIssue{row,
-				fmt.Sprintf("type '%s' は不正です(four_choice / two_choice / arunashi のいずれか)", q.Type)})
-			continue
-		}
+		// --- type に依存しない項目を先に見る ---
+		// type が不正な行でも、同じ行の number 重複や difficulty の誤りを
+		// 一度に返せるようにするため、continue する前にここで済ませる(§3.5.3)。
 
 		// --- number ---
 		if q.Number < 1 {
@@ -98,6 +89,19 @@ func validateImport(qs []importQuestion) []RowIssue {
 					break
 				}
 			}
+		}
+
+		// --- type(ここから先は type が確定しないと判定できない) ---
+		if q.Type == "hayaoshi" {
+			// v1では未対応(フェーズ2で解放。解放後は textSegments 2要素以上を必須にする)
+			issues = append(issues, RowIssue{row, "type 'hayaoshi' はv1では未対応です(フェーズ2で解放予定)"})
+			continue // choices の件数・書式は型が決まらないと意味を持たないため次の問題へ
+		}
+		wantChoices, ok := choiceCountByType[q.Type]
+		if !ok {
+			issues = append(issues, RowIssue{row,
+				fmt.Sprintf("type '%s' は不正です(four_choice / two_choice / arunashi のいずれか)", q.Type)})
+			continue
 		}
 
 		// --- choices の件数と中身 ---
