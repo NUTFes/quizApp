@@ -28,7 +28,10 @@ func (h *Hub) Remove(ch chan []byte){
 func (h *Hub) Broadcast(msg []byte) {
 	h.mu.Lock()
 	for ch := range h.clients {
-		ch <- msg // メッセージを送る
+		select{
+		case ch <- msg: 
+		default: // 接続先（クライアント）がメッセージをためていたら、捨てる
+		}
 	}
 	defer h.mu.Unlock() // この関数の最後にロックを解除
 }
