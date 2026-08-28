@@ -19,3 +19,14 @@ func (b *Broadcaster) BroadcastAll(adminJSON, monitorJSON, phoneJSON []byte) {
 	b.monitor.Broadcast(monitorJSON)
 	b.phone.Broadcast(phoneJSON)
 }
+
+func (b *Broadcaster) hubFor(view string) *Hub{
+	switch view {
+	case "monitor":
+		return b.monitor
+	case "phone":
+		return b.phone
+	default:
+		return nil
+	}
+}

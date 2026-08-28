@@ -36,14 +36,14 @@ func main() {
 		log.Fatal("JOIN_URL が設定されていません")
 	}
 
-	// ブロードキャストのためのハブの元を作る
-	hub := sse.NewHub()
+	// ブロードキャストのためのハブの集合を作る
+	b := sse.NewBroadcaster()
 
 	r := platform.NewRouter(
 		// 各機能の RegisterRoutes をここに1行ずつ足していく。
 		admin.RegisterRoutes(adminToken),
 		event.RegisterRoutes(db, adminToken, joinURL),
-		sse.RegisterRoutes(hub),
+		sse.RegisterRoutes(b),
 	)
 
 	addr := ":3000"
