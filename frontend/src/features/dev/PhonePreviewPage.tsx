@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import testSquareA from '../../assets/dev/test-square-a.svg'
+import testSquareB from '../../assets/dev/test-square-b.svg'
 import type { ViewerState } from '../../types'
 import {
   phoneAnswerAri,
@@ -59,6 +61,22 @@ const phoneQuestionClosed: ViewerState = {
 // 問題番号が2桁になっても崩れないことを確認する。
 const phoneQuestionTwoDigits: ViewerState = { ...phoneQuestionFour, askedCount: 10 }
 
+// 2択の ○× は選択肢画像で差し替えられる（→ API仕様書 §1 choices[].imageUrl）。
+// 入稿画像の実体が無くても枠の検証ができるよう、正方形のテストチャートを充てる。
+const phoneQuestionTwoImages: ViewerState = {
+  ...phoneQuestionTwo,
+  question:
+    phoneQuestionTwo.question === null
+      ? null
+      : {
+          ...phoneQuestionTwo.question,
+          choices: [
+            { id: 'A', text: '選択肢A', imageUrl: testSquareA },
+            { id: 'B', text: '選択肢B', imageUrl: testSquareB },
+          ],
+        },
+}
+
 const CASES = [
   { title: '待機', note: 'waiting', node: <WaitingView /> },
   { title: '出題中 / 4択', note: 'question', node: <QuestionView state={phoneQuestionFour} /> },
@@ -72,6 +90,11 @@ const CASES = [
     title: '出題中 / 早押し',
     note: 'question・画面まるごと専用表示',
     node: <QuestionView state={phoneQuestionHayaoshi} />,
+  },
+  {
+    title: '出題中 / 2択・選択肢画像あり',
+    note: 'choices[].imageUrl',
+    node: <QuestionView state={phoneQuestionTwoImages} />,
   },
   {
     title: '締切',

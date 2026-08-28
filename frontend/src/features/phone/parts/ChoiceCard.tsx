@@ -36,14 +36,15 @@ export function ChoiceCard({ choice, isCorrect = false, type }: Props) {
   }
 
   if (type === 'two_choice') {
+    // 選択肢画像が入稿されていればそれを出し、無ければ ○× の既定画像にフォールバックする
     return (
       <div className={`${isCorrect ? correctStyle : normalStyle} ${isTwo}`}>
-        <p className={`mt-12 flex items-center justify-center px-10 pt-10 pb-16 `}>
-          {choice.id === 'A' ? (
-            <img src={maru} alt="" className="h-19 w-19" />
-          ) : (
-            <img src={batsu} alt="" className="h-20 w-20" />
-          )}
+        <p className="mt-12 flex items-center justify-center px-10 pt-10 pb-16">
+          <img
+            src={choice.imageUrl ?? (choice.id === 'A' ? maru : batsu)}
+            alt={choice.imageUrl !== null ? choice.text : ''}
+            className={`object-contain ${choice.imageUrl === null && choice.id === 'B' ? 'size-20' : 'size-19'}`}
+          />
         </p>
       </div>
     )
