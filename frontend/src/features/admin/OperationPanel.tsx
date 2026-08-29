@@ -13,6 +13,7 @@ import { DEV_QUESTIONS } from './parts/__devFixtures'
 import { NETWORK_ERROR_MESSAGE, toMessage } from './errorMessages'
 import { ControlPanel } from './parts/ControlPanel'
 import { CurrentStatus } from './parts/CurrentStatus'
+import { ImportPanel } from './parts/ImportPanel'
 import { QuestionList } from './parts/QuestionList'
 import { ShowQuestionForm } from './parts/ShowQuestionForm'
 
@@ -135,6 +136,8 @@ export function OperationPanel() {
           run(to === 'finished' ? 'クイズを終了' : '待機画面に戻す', () => reset(to))
         }
       />
+      {/* 投入は当日の進行操作ではなく準備作業なので、進行ボタンより下に置いて誤爆を避ける */}
+      <ImportPanel phase={adminState.phase} onImported={reload} />
       {error != null && <p>{error}</p>}
     </div>
   )

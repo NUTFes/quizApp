@@ -7,6 +7,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   QUESTION_NOT_FOUND: 'その問題は見つかりませんでした。一覧を更新してください。',
   INVALID_REQUEST: '入力内容が正しくありません。制限時間は5〜120秒です。',
   INVALID_PHASE: 'いまの進行状況ではこの操作はできません。',
+  // 投入APIのみ。どの行がどう悪いかは error.details に入っているので、画面ではそちらを並べる
+  SYNC_VALIDATION_ERROR: '問題データに不正な行があります。下の一覧を直して貼り直してください。',
   INTERNAL: 'サーバー側で問題が起きました。もう一度お試しください。',
   NOT_FOUND: 'その操作は見つかりませんでした(APIが未実装の可能性があります)。',
 }
