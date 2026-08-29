@@ -18,7 +18,6 @@ backend/server
 .DS_Store
 Thumbs.db
 
-# 問題の画像。本番の画像はリポジトリに入れない(publicリポジトリのため)。
-# 置き場所だけ .gitkeep で残し、中身は各環境に scp で置く。
-backend/static/images/*
-!backend/static/images/.gitkeep
+# 作業用の一時ファイル。問題データを置くことがあるため、公開リポジトリに
+# 巻き込まれないよう除外する(git add -A で拾われる位置にあるため)。
+tmp/

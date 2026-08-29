@@ -16,6 +16,13 @@ export default defineConfig({
         target: 'http://backend:3000',
         changeOrigin: true,
       },
+      // 問題の画像。backend の r.Static("/images", "./static/images") へ転送する。
+      // 本番の nginx にも同じ中継がある(frontend/nginx.conf)。これが無いと
+      // 開発でだけ画像が出ず、本番との差で原因を見失う。
+      '/images': {
+        target: 'http://backend:3000',
+        changeOrigin: true,
+      },
     },
   },
 })
