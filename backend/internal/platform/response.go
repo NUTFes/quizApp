@@ -21,7 +21,9 @@ type errorDetail struct {
 	Message string `json:"message"`
 	// details は §3.5(問題投入のバリデーション)でのみ使う任意項目。
 	// 無いときはキーごと出さない(omitempty)。
-	Details []string `json:"details,omitempty"`
+
+	// 形は §3.5.3 の {sourceRow, reason} の配列。無いときはキーごと出さない。
+	Details any `json:"details,omitempty"`
 }
 
 // RespondError は共通の形でエラーJSONを返す。
@@ -40,7 +42,7 @@ func RespondError(c *gin.Context, status int, code string, message string) {
 
 // RespondErrorWithDetails は details 配列付きのエラーを返す。
 // §3.5 の SYNC_VALIDATION_ERROR のように、複数件のエラーを同時に返すときだけ使う。
-func RespondErrorWithDetails(c *gin.Context, status int, code string, message string, details []string) {
+func RespondErrorWithDetails(c *gin.Context, status int, code string, message string, details any) {
 	c.AbortWithStatusJSON(status, errorBody{
 		Error: errorDetail{Code: code, Message: message, Details: details},
 	})
