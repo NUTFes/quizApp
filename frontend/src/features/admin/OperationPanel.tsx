@@ -1,0 +1,144 @@
+import { useEffect, useState } from 'react'
+import { AdminState, QuestionListItem } from '../../types'
+import {
+  advanceText,
+  ApiError,
+  getAdminState,
+  getQuestions,
+  reset,
+  showAnswer,
+  showQuestion,
+} from '../../lib/api'
+import { DEV_QUESTIONS } from './parts/__devFixtures'
+import { NETWORK_ERROR_MESSAGE, toMessage } from './errorMessages'
+import { ControlPanel } from './parts/ControlPanel'
+import { CurrentStatus } from './parts/CurrentStatus'
+import { ImportPanel } from './parts/ImportPanel'
+import { QuestionList } from './parts/QuestionList'
+import { ShowQuestionForm } from './parts/ShowQuestionForm'
+
+// 操作パネル
+export function OperationPanel() {
+  const [adminState, setAdminState] = useState<AdminState | null>(null)
+  const [busy, setBusy] = useState<boolean>(false)
+  const [error, setError] = useState<string | null>(null)
+  const [questions, setQuestions] = useState<QuestionListItem[] | null>(null)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
+
+  const run = async (actionLabel: string, progressFn: () => Promise<AdminState>) => {
+    setBusy(true)
+    setError(null)
+
+    try {
+      const nextState = await progressFn()
+      setAdminState(nextState)
+      // 出題やリセットで asked が変わるので、一覧も取り直す
+      await loadQuestions()
+    } catch (err) {
+      // 何に失敗したかが分かるように、操作名とセットで出す。
+      // 当日は「赤い字が出た」だけでは何が起きたか分からないため
+      if (err instanceof ApiError) {
+        setError(`「${actionLabel}」に失敗しました: ${toMessage(err.code)}`)
+      } else {
+        setError(`「${actionLabel}」に失敗しました: ${NETWORK_ERROR_MESSAGE}`)
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+  // 問題一覧の取得。
+  // 出題すると asked が変わるので、進行操作のたびに取り直す(→ run の中でも呼ぶ)。
+  const loadQuestions = () =>
+    getQuestions()
+      .then((res) => setQuestions(res.questions))
+      .catch((err) => {
+        // GET /api/admin/questions(#80)は未実装。それまでの間、開発中だけ仮データで画面を作る。
+        // import.meta.env.DEV は本番ビルドで false に置き換わるので、この分岐ごと成果物から消える。
+        // ★ #80 がマージされたら、この if と __devFixtures.ts を削除すること。
+        if (import.meta.env.DEV && err instanceof ApiError && err.status === 404) {
+          console.warn('問題一覧APIが未実装のため、開発用の仮データを表示しています')
+          setQuestions(DEV_QUESTIONS)
+          return
+        }
+        setQuestions(null)
+      })
+
+  useEffect(() => {
+    void loadQuestions()
+  }, [])
+
+  // 手動での取り込み直し。
+  //
+  // 管理者画面は自分の操作の戻り値で更新されるので普段は要らないが、
+  // リロード直後・別のタブや端末から操作した後・通信が切れた後は表示が古くなる。
+  // 管理者向けSSE(#77)が入るまでの繋ぎで、当日は「おかしいと思ったら押す」ボタン。
+  const reload = () =>
+    run('最新の状態を取り込む', async () => {
+      const state = await getAdminState()
+      return state
+    })
+
+  useEffect(() => {
+    let cancelled = false
+    getAdminState()
+      .then((state) => {
+        // getState を呼んだときと、返ってきたときで revision が変わっていたら、または、すでに接続を切っていたら、返ってきた state を捨てる
+        // これをしないと、ページ切り替えの度、アンマウントされる仕様により、エラー表示となり、デバッグがしずらくなる
+        if (cancelled) return
+        setAdminState(state)
+      })
+      .catch((e) => {
+        // 既に接続を切っていたら エラーが出ないようにする
+        if (cancelled) return
+        console.error('SSE 接続時に State が取得できませんでした', e)
+        return
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  if (adminState == null) return <p>接続中...</p>
+
+  const q = adminState.question
+  return (
+    <div>
+      <h1>操作画面</h1>
+      <button type="button" name="reload" onClick={reload} disabled={busy}>
+        最新の状態を取り込む
+      </button>
+      <CurrentStatus state={adminState} />
+      <section>
+        <h2>問題一覧</h2>
+        {questions === null ? (
+          <p>問題一覧を取得できませんでした。</p>
+        ) : (
+          <QuestionList
+            items={questions}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            currentQuestionId={q?.id ?? null}
+            disabled={busy}
+          />
+        )}
+        <ShowQuestionForm
+          selected={questions?.find((item) => item.id === selectedId) ?? null}
+          onSubmit={(id, timeLimitSec) => run('出題', () => showQuestion(id, timeLimitSec))}
+          disabled={busy}
+        />
+      </section>
+      <ControlPanel
+        state={adminState}
+        busy={busy}
+        onAdvanceText={() => run('問題文を進める', advanceText)}
+        onShowAnswer={() => run('正答を表示', showAnswer)}
+        onReset={(to) =>
+          run(to === 'finished' ? 'クイズを終了' : '待機画面に戻す', () => reset(to))
+        }
+      />
+      {/* 投入は当日の進行操作ではなく準備作業なので、進行ボタンより下に置いて誤爆を避ける */}
+      <ImportPanel phase={adminState.phase} onImported={reload} />
+      {error != null && <p>{error}</p>}
+    </div>
+  )
+}
