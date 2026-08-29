@@ -74,12 +74,52 @@ func TestValidateImport_正常系はエラーなし(t *testing.T) {
 	}
 }
 
-func TestValidateImport_hayaoshiはv1未対応(t *testing.T) {
-	q := validFourChoice(5, 1)
-	q.Type = "hayaoshi"
+// 早押しは選択肢なし・正答なし・問題文は / で2つ以上に区切る(§1 / §3.5.3)
+func validHayaoshi(sourceRow, number int) importQuestion {
+	expl := "架空の答え"
+	return importQuestion{
+		SourceRow:    sourceRow,
+		Number:       number,
+		Type:         "hayaoshi",
+		Difficulty:   "hard",
+		TextSegments: []string{"架空の国ゾルグの", "首都はどこ?"},
+		Choices:      []Choice{}, // 選択肢なし(判定は人力)
+		Explanation:  &expl,      // 答えはここに書くとモニタの正解欄に出る
+	}
+}
+
+func TestValidateImport_hayaoshiは通る(t *testing.T) {
+	issues := validateImport([]importQuestion{validHayaoshi(5, 1)})
+	if len(issues) != 0 {
+		t.Fatalf("エラーは0件のはずが %d 件: %+v", len(issues), issues)
+	}
+}
+
+// 早押しは「途中まで読んで押す」ので、区切りが無いと成立しない
+func TestValidateImport_hayaoshiの問題文に区切りが無い(t *testing.T) {
+	q := validHayaoshi(5, 1)
+	q.TextSegments = []string{"区切りのない問題文"}
 	issues := validateImport([]importQuestion{q})
-	if !hasIssue(issues, 5, "hayaoshi") {
-		t.Fatalf("hayaoshi のエラーが出ていない: %+v", issues)
+	if !hasIssue(issues, 5, "/ で2つ以上に区切って") {
+		t.Fatalf("区切り不足のエラーが出ていない: %+v", issues)
+	}
+}
+
+func TestValidateImport_hayaoshiに選択肢が書かれている(t *testing.T) {
+	q := validHayaoshi(5, 1)
+	q.Choices = []Choice{{ID: "A", Text: "あ"}, {ID: "B", Text: "い"}}
+	issues := validateImport([]importQuestion{q})
+	if !hasIssue(issues, 5, "早押しに選択肢は書けません") {
+		t.Fatalf("選択肢のエラーが出ていない: %+v", issues)
+	}
+}
+
+func TestValidateImport_hayaoshiにcorrectが書かれている(t *testing.T) {
+	q := validHayaoshi(5, 1)
+	q.CorrectChoiceID = "A"
+	issues := validateImport([]importQuestion{q})
+	if !hasIssue(issues, 5, "早押しに correct は書けません") {
+		t.Fatalf("correct のエラーが出ていない: %+v", issues)
 	}
 }
 
@@ -179,15 +219,15 @@ func TestValidateImport_typeが不正でも共通項目のエラーが同時に�
 	}
 }
 
-// hayaoshi の行でも同じ。v1未対応のエラーだけで打ち切らない。
+// hayaoshi の行でも同じ。型固有のエラーだけで打ち切らない。
 func TestValidateImport_hayaoshiでも共通項目のエラーが同時に出る(t *testing.T) {
-	q := validFourChoice(2, 5)
-	q.Type = "hayaoshi"
+	q := validHayaoshi(2, 5)
+	q.Choices = []Choice{{ID: "A", Text: "あ"}}
 	q.Difficulty = "むずかしい"
 
 	issues := validateImport([]importQuestion{q})
 
-	for _, want := range []string{"hayaoshi", "difficulty 'むずかしい' は不正です"} {
+	for _, want := range []string{"早押しに選択肢は書けません", "difficulty 'むずかしい' は不正です"} {
 		if !hasIssue(issues, 2, want) {
 			t.Errorf("2行目に %q が出ていない: %+v", want, issues)
 		}

@@ -86,7 +86,7 @@
 | --- | --- |
 | `id` | サーバー内部ID。API呼び出しで使うのはこちら |
 | `number` | 表示用のクイズ番号(司会者が口頭で指示する番号) |
-| `type` | `"four_choice"` \| `"two_choice"` \| `"arunashi"` \| `"hayaoshi"`(hayaoshiは**v1未実装**。投入時に弾く→§3.5.3) |
+| `type` | `"four_choice"` \| `"two_choice"` \| `"arunashi"` \| `"hayaoshi"` |
 | `difficulty` | `"easy"` \| `"normal"` \| `"hard"` |
 | `textSegments` | 問題文。スプシ入稿時に `/` で区切った配列。**全typeで配列に統一**(区切り不要な問題は要素1個)。形を揃えてフロントの分岐を減らす |
 | `imageUrl` | 問題画像。無ければ `null`。パスはサーバー上の静的ファイル |
@@ -377,7 +377,8 @@ GAS側でシートを読み、**この形に整形してから**送る。列→J
 | --- | --- | --- |
 | `Authorization` ヘッダが無い/トークン不一致 | 401 | `UNAUTHORIZED` |
 | 内容が不正(型違い・correctChoiceIdが選択肢に無い・choices数がtypeと不一致・numberの重複・arunashiの書式違反 等) | 400 | `SYNC_VALIDATION_ERROR` |
-| type が `hayaoshi`(**v1では未対応**。フェーズ2実装後に解放。解放後は `textSegments` 2要素以上=問題文に `/` 区切りがあることを必須とする) | 400 | `SYNC_VALIDATION_ERROR` |
+| type が `hayaoshi` なのに `textSegments` が2要素未満(問題文に `/` 区切りが無い) | 400 | `SYNC_VALIDATION_ERROR` |
+| type が `hayaoshi` なのに `choices` が空でない / `correctChoiceId` が空でない | 400 | `SYNC_VALIDATION_ERROR` |
 | `questions` が空配列 | 400 | `INVALID_REQUEST` |
 | phase が `question`/`answer`(本番進行中の置換は禁止) | 409 | `INVALID_PHASE` |
 
@@ -425,7 +426,7 @@ GAS側でシートを読み、**この形に整形してから**送る。列→J
 | 列 | 内容 | 例 |
 | --- | --- | --- |
 | number | 表示用クイズ番号 | 12 |
-| type | `four_choice` / `two_choice` / `arunashi`(`hayaoshi` はv1不可) | four_choice |
+| type | `four_choice` / `two_choice` / `arunashi` / `hayaoshi` | four_choice |
 | difficulty | `簡単` / `普通` / `難しい`(**日本語で書く**。GASが英語に変換して送る) | 難しい |
 | text | 問題文。区切りたい位置に `/` | 学園祭の来場者数は/およそ何人? |
 | choiceA〜choiceD | 選択肢文。2択はC/Dを空欄 | 1000人 |
@@ -573,6 +574,7 @@ GAS側でシートを読み、**この形に整形してから**送る。列→J
 
 ## 変更履歴(新しい順)
 
+- 2026-08-29 第12版。**`hayaoshi`(早押し)を投入可能にした**(それまでは投入時に弾いていた)。①フロントは既に実装済みだった(モニタの `HayaoshiView`、スマホの「会場モニターをご覧ください」、`assertStateContract` の phone向け textSegments 空チェック)ため、残っていたのはバックエンドとGASのみ ②入稿ルールは「選択肢なし・correct なし・問題文は `/` で2つ以上に区切る」。答えを画面に出したい場合は `explanation` 列に書く(モニタの正解欄に出る) ③`buildViewerState` に `view` を渡す形に変更。早押しでは `view=phone` にだけ `textSegments` を空で返す(原則4)。SSE配信も宛先ごとに作り分ける(1つ作って使い回すと SSE 経由でだけスマホに問題文が漏れるため)
 - 2026-08-17 第11版。**§4.1 問題一覧レスポンスに項目表を追加**した(仕様の抜けの補完。**API・サーバーの変更はゼロ**)。①`hasImage` が**何の画像を指すのか未定義だった**。`Question` には問題画像(`imageUrl`)と選択肢画像(`choices[].imageUrl`)の2種類があり、どちらを見るかでバックの実装が変わる。**「いずれか1つでも存在すれば `true`」で確定**(一覧のバッジは「この問題は画像を含む」ことが分かればよく、どちらの画像かを区別する意味が無いため) ②**なぜURLではなく boolean なのかを明記**。URLを返すとフロントが `<img>` を並べたくなり、数十件の一覧で画像を数十枚読み込む重い画面ができてしまう。**一覧は「有無・要約」、詳細(§4.2)は「実体」**という役割分担を文章として残した ③このレスポンスは §1 の `Question` とは形が違う(`textSegments`→`textPreview`、`imageUrl`→`hasImage`、`choices`・`correctChoiceId`・`explanation` は無い)のに**区別する名前が無かった**ため、フロントの型名を **`QuestionListItem`** として確定。第8版で `AdminState` / `ViewerState` を確定させたのと同じ趣旨
 - 2026-08-16 第10版。**`finished` フェーズの表示要素を確定**した(仕様の抜けの補完。**API・型の変更はゼロ**)。①`finished` は「終了メッセージ+アンケート誘導」としか決まっておらず、**参加用QR(`joinUrl`)を出し続けるのかが未定**だった。参加QRは「途中参加者向け」であり終わったクイズに参加する人はいないこと、`finished` ではアンケートQRを出すため**同じ画面にQRが2つ並ぶと85インチの遠くからどちらを読むか判別できない**ことから、**`finished` では参加QRを出さずアンケートQRに差し替える**と決定 ②ただし**APIは全フェーズで `joinUrl` を送る**(§0「キーは消さない」を維持)。**「送るか」ではなく「画面に出すか」の話**であり、出し分けはフロントの責務であることを §2.2.1 に明記 ③**`askedCount` は `waiting` / `finished` で必ず `0`** になる(`finished` へは `reset {"to":"finished"}` でしか入らず、`reset` が全問の `asked` を `false` に戻すため)。素直に表示すると「**第0問**」と出るため、**問題番号は `question` / `answer` でのみ表示する**と明記 ④**アンケートURLはstateに入らない**(フロントの環境変数 `VITE_SURVEY_URL`)。当日までURLが決まらず、決まってもアプリの再デプロイなしに差し替えたいため。`画面・要件.md` §4 に全フェーズ×表示要素の対応表を新設
 - 2026-08-16 第9版。**閲覧者向けの `explanation` を `question` から `answer` オブジェクトの中へ移した。** 第8版では `explanation` だけ phase でキーの有無が変わり、§0「キーは消さない」の唯一の例外として注記していたが、**例外にする必要が無かった**。①解説文は正答を含みうるため隠す理由は `correctChoiceId` と同一であり、公開されるタイミング(`answer` phase)も同一。**同じ理由・同じタイミングで出し入れするものを、別の仕組みで表現していた**のが誤り ②`answer` という入れ物は、§0を守りながら中身のキーを一度も露出させないための仕組み(原則2)。`explanation` も同じ入れ物に入れれば済む ③結果として**§0の例外がゼロになり**、`ViewerQuestion` から省略可能(`?`)フィールドが消え、**閲覧者向けJSON全体で「キーが生え消えするフィールド」が無くなった** ④隠すべき情報が `answer` の中1箇所に集約されるため、**バックの出し分けは「answer が null なら中身を作らない」の1判定で済む**(#11)。**`AdminState` 側は変更なし**(管理者には `question.explanation` として従来どおり届く)。`correctChoiceId` が既に `question`(管理者)→ `answer`(閲覧者)と移動しているため、新しい不揃いは生まれない

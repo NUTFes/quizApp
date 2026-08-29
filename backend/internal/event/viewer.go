@@ -21,16 +21,21 @@ func getViewerState(c *gin.Context, db *gorm.DB, joinURL string) {
 	}
 	switch view {
 	case "phone":
-		c.JSON(http.StatusOK, buildViewerState(snap.es, snap.q, snap.askedCount))
+		c.JSON(http.StatusOK, buildViewerState(snap.es, snap.q, snap.askedCount, view))
 	case "monitor":
-		c.JSON(http.StatusOK, MonitorState{ViewerState: buildViewerState(snap.es, snap.q, snap.askedCount), JoinURL: joinURL})
+		c.JSON(http.StatusOK, MonitorState{ViewerState: buildViewerState(snap.es, snap.q, snap.askedCount, view), JoinURL: joinURL})
 	default:
 		platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "view には正しいデバイス（phone, monitor）を指定してください")
 	}
 }
 
 // State を スマホやモニタ用へ変換
-func buildViewerState(es EventState, q *question.Question, askedCount int) ViewerState {
+//
+// view を受け取るのは早押しのため(§2.2 原則4)。
+// 早押しは「モニタを見て、途中で押す」ものなので、スマホに問題文を送ると
+// 手元で先に読めてしまい競技として成立しない。宛先によって中身が変わる
+// 唯一の箇所なので、呼び出し側が view を必ず渡す形にしている。
+func buildViewerState(es EventState, q *question.Question, askedCount int, view string) ViewerState {
 	vs := ViewerState{
 		Phase:      es.Phase,
 		ServerTime: time.Now(),
@@ -53,6 +58,14 @@ func buildViewerState(es EventState, q *question.Question, askedCount int) Viewe
 		revealed := min(max(0, es.RevealedSegments), len(q.TextSegments))
 		// そのままスライスを代入すると、 revealed が 0 のとき nil になる
 		vseg := append([]string{}, q.TextSegments[:revealed]...) // append で, revealed が 0　でも [] として扱える
+
+		// 早押しのスマホには問題文を一切送らない(§2.2 原則4)。
+		// スマホ側は type を見て「会場モニターをご覧ください」を出す
+		// (frontend/src/features/phone/parts/QuestionLayout.tsx)。
+		// フロントの assertStateContract は、ここが空でないと CRITICAL を出す。
+		if q.Type == "hayaoshi" && view == "phone" {
+			vseg = []string{}
+		}
 
 		// question から、 正答に関する項目を除く
 		vq := question.ViewerQuestion{

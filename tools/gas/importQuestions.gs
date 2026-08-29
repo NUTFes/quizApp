@@ -55,7 +55,7 @@ const HEADER_NAMES = [
 
 const DATA_START_ROW = 2;  // 1行目はヘッダ、データは2行目から(sourceRow は実際の行番号)
 
-const TYPE_OPTIONS = ['four_choice', 'two_choice', 'arunashi'];
+const TYPE_OPTIONS = ['four_choice', 'two_choice', 'arunashi', 'hayaoshi'];
 const DIFFICULTY_OPTIONS = ['簡単', '普通', '難しい'];
 
 // §3.5.6: 入稿は日本語、API以降は英語(入り口で正規化して中は1種類)
@@ -168,13 +168,9 @@ function convertRow(row, sourceRow) {
   ];
 
   // --- type チェック ---
-  if (type === 'hayaoshi') {
-    errors.push(`${sourceRow}行目: 早押し(hayaoshi)は現在使えません(フェーズ2で解放予定)`);
-    return { question: null, errors: errors };  // 以降のチェックは意味がないので早期return
-  }
   if (TYPE_OPTIONS.indexOf(type) === -1) {
-    errors.push(`${sourceRow}行目: type は four_choice / two_choice / arunashi のどれかにしてください(入力値: "${type}")`);
-    return { question: null, errors: errors };
+    errors.push(`${sourceRow}行目: type は ${TYPE_OPTIONS.join(' / ')} のどれかにしてください(入力値: "${type}")`);
+    return { question: null, errors: errors };  // 以降のチェックは意味がないので早期return
   }
 
   // --- number チェック(JSONには数値型で入れる必要があるためGAS側で確認) ---
@@ -196,6 +192,46 @@ function convertRow(row, sourceRow) {
                               .filter(function (s) { return s.length > 0; });
   if (textSegments.length === 0) {
     errors.push(`${sourceRow}行目: 問題文(text)が空です`);
+  } else if (type === 'hayaoshi' && textSegments.length < 2) {
+    // 早押しは「途中まで読んで押す」ものなので、区切りが無いと成立しない(§3.5.3)
+    errors.push(
+      `${sourceRow}行目: 早押しの問題文は / で2つ以上に区切ってください` +
+      `(途中で押せる場所が無くなるため)。入力値: "${textRaw}"`
+    );
+  }
+
+  // --- 早押しはここで確定。選択肢も正解も持たない(§1) ---
+  // 判定は人力なので choices は空配列、correctChoiceId は null。
+  // 答えをモニタに出したい場合は explanation 列に書く。
+  if (type === 'hayaoshi') {
+    for (let k = 0; k < 4; k++) {
+      if (choiceTexts[k] !== '') {
+        errors.push(`${sourceRow}行目: 早押しでは選択肢${CHOICE_IDS[k]}は空欄にしてください(判定は人力のため)`);
+      }
+    }
+    if (correctRaw !== '') {
+      errors.push(
+        `${sourceRow}行目: 早押しでは正解(correct)は空欄にしてください` +
+        `(答えは explanation 列に書くとモニタに表示されます)。入力値: "${correctRaw}"`
+      );
+    }
+    if (errors.length > 0) {
+      return { question: null, errors: errors };
+    }
+    return {
+      question: {
+        sourceRow:       sourceRow,
+        number:          number,
+        type:            type,
+        difficulty:      difficulty,
+        textSegments:    textSegments,
+        imageUrl:        imageUrlRaw !== '' ? imageUrlRaw : null,
+        choices:         [],
+        correctChoiceId: null,
+        explanation:     explanationRaw !== '' ? explanationRaw : null,
+      },
+      errors: [],
+    };
   }
 
   // --- 選択肢の構築 ---

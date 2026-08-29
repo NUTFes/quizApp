@@ -42,6 +42,7 @@ var choiceCountByType = map[string]int{
 	"four_choice": 4,
 	"two_choice":  2,
 	"arunashi":    2,
+	"hayaoshi":    0, // 選択肢なし・判定は人力(§1)
 }
 
 var validDifficulties = map[string]bool{
@@ -92,15 +93,32 @@ func validateImport(qs []importQuestion) []RowIssue {
 		}
 
 		// --- type(ここから先は type が確定しないと判定できない) ---
-		if q.Type == "hayaoshi" {
-			// v1では未対応(フェーズ2で解放。解放後は textSegments 2要素以上を必須にする)
-			issues = append(issues, RowIssue{row, "type 'hayaoshi' はv1では未対応です(フェーズ2で解放予定)"})
-			continue // choices の件数・書式は型が決まらないと意味を持たないため次の問題へ
-		}
 		wantChoices, ok := choiceCountByType[q.Type]
 		if !ok {
 			issues = append(issues, RowIssue{row,
-				fmt.Sprintf("type '%s' は不正です(four_choice / two_choice / arunashi のいずれか)", q.Type)})
+				fmt.Sprintf("type '%s' は不正です(four_choice / two_choice / arunashi / hayaoshi のいずれか)", q.Type)})
+			continue // choices の件数・書式は型が決まらないと意味を持たないため次の問題へ
+		}
+
+		// --- 早押しは他の型と形が違うので、専用に見る(§3.5.3) ---
+		// 選択肢なし・正答なし・問題文は必ず途中で区切る、の3点。
+		if q.Type == "hayaoshi" {
+			// 「途中まで読んで押す」ものなので、区切りが無いと早押しにならない。
+			// GASが / で split した結果が textSegments なので、2要素以上=区切りがある。
+			if len(q.TextSegments) > 0 && len(q.TextSegments) < 2 {
+				issues = append(issues, RowIssue{row,
+					"早押しの問題文は / で2つ以上に区切ってください(途中で押せる場所が無くなるため)"})
+			}
+			if len(q.Choices) != 0 {
+				issues = append(issues, RowIssue{row,
+					fmt.Sprintf("早押しに選択肢は書けません(choices が%d件あります。判定は人力のため空にしてください)", len(q.Choices))})
+			}
+			// 正解の選択肢が存在しないので correctChoiceId は持てない。
+			// 答えを画面に出したい場合は explanation に書く(モニタの正解欄に出る)。
+			if q.CorrectChoiceID != "" {
+				issues = append(issues, RowIssue{row,
+					fmt.Sprintf("早押しに correct は書けません('%s' が入っています。答えは explanation 列に書くとモニタに出ます)", q.CorrectChoiceID)})
+			}
 			continue
 		}
 

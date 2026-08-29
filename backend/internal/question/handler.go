@@ -105,7 +105,14 @@ func putQuestions(c *gin.Context, db *gorm.DB) {
 
 		rows := make([]Question, 0, len(req.Questions))
 		for _, q := range req.Questions {
-			correct := q.CorrectChoiceID
+			// 早押しは正解の選択肢を持たないので null で保存する(§1)。
+			// 空文字のポインタを入れると、フロントは「correctChoiceId がある」と
+			// 判断してしまい、正解欄に空白が出る。
+			var correct *string
+			if q.CorrectChoiceID != "" {
+				v := q.CorrectChoiceID
+				correct = &v
+			}
 			rows = append(rows, Question{
 				// ID はサーバーが採番する(§3.5.1)ためゼロ値のまま
 				Number:          q.Number,
@@ -114,7 +121,7 @@ func putQuestions(c *gin.Context, db *gorm.DB) {
 				TextSegments:    q.TextSegments,
 				ImageURL:        q.ImageURL,
 				Choices:         q.Choices,
-				CorrectChoiceID: &correct,
+				CorrectChoiceID: correct,
 				Explanation:     q.Explanation,
 				Asked:           false,
 			})
