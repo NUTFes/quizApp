@@ -34,6 +34,7 @@ func buildPayloads(snap snapshot, joinURL string) (adminJSON, monitorJSON, phone
 // 前にしたはずの操作が、後にした操作の直後に実行されて操作結果が巻き戻る可能性がある
 // mutex lock 機能を使って保護する
 var broadcastMu sync.Mutex
+
 func broadcastState(db *gorm.DB, joinURL string, b *sse.Broadcaster) {
 	broadcastMu.Lock()
 	defer broadcastMu.Unlock()
