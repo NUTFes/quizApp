@@ -10,11 +10,11 @@
 
 **MCP や REST API から Figma の Variables をノードにバインドすることはできない。**
 
-| 手段 | Variables 作成 | ノードへのバインド |
-| --- | :---: | :---: |
-| Dev Mode MCP サーバー | ❌ 読み取り専用 | ❌ |
-| Figma REST API | ⚠️ Enterprise プランのみ | ❌ 非対応 |
-| **Figma プラグイン API** | ✅ | ✅ `node.setBoundVariable()` |
+| 手段                     |      Variables 作成      |      ノードへのバインド      |
+| ------------------------ | :----------------------: | :--------------------------: |
+| Dev Mode MCP サーバー    |     ❌ 読み取り専用      |              ❌              |
+| Figma REST API           | ⚠️ Enterprise プランのみ |          ❌ 非対応           |
+| **Figma プラグイン API** |            ✅            | ✅ `node.setBoundVariable()` |
 
 したがって、**あなたのゴールは「Figma プラグインのコードをリポジトリに書くこと」**である。
 
@@ -41,11 +41,11 @@ figma-plugin/spacing-variables/
 
 対象フレーム:
 
-| 対象 | node ID |
-| --- | --- |
-| `Screens/Mobile` | `525:2371` |
+| 対象              | node ID    |
+| ----------------- | ---------- |
+| `Screens/Mobile`  | `525:2371` |
 | `Screens/Display` | `525:3394` |
-| `admin` | `525:5184` |
+| `admin`           | `525:5184` |
 
 ---
 
@@ -82,61 +82,61 @@ Variable 名は `space/N`。小数点は `.` ではなく **`-`** で書く。
 
 > **件数について。** プラグインはインスタンスから**メインコンポーネントまでたどって**バインドするため、実際の dry-run の件数はこの表より大きくなる。両者を直接比較しないこと。
 
-| px | Variable 名 | 対応する Tailwind |
-| ---: | --- | --- |
-| 2px | `space/0-5` | `p-0.5` |
-| 4px | `space/1` | `p-1` |
-| 8px | `space/2` | `p-2` |
-| 10px | `space/2-5` | `p-2.5` |
-| 12px | `space/3` | `p-3` |
-| 14px | `space/3-5` | `p-3.5` |
-| 16px | `space/4` | `p-4` |
-| 18px | `space/4-5` | `p-4.5` |
-| 20px | `space/5` | `p-5` |
-| 24px | `space/6` | `p-6` |
-| 26px | `space/6-5` | `p-6.5` |
-| 28px | `space/7` | `p-7` |
-| 30px | `space/7-5` | `p-7.5` |
-| 32px | `space/8` | `p-8` |
-| 36px | `space/9` | `p-9` |
-| 38px | `space/9-5` | `p-9.5` |
-| 40px | `space/10` | `p-10` |
-| 48px | `space/12` | `p-12` |
-| 52px | `space/13` | `p-13` |
-| 54px | `space/13-5` | `p-13.5` |
-| 60px | `space/15` | `p-15` |
-| 62px | `space/15-5` | `p-15.5` |
-| 64px | `space/16` | `p-16` |
-| 66px | `space/16-5` | `p-16.5` |
-| 68px | `space/17` | `p-17` |
-| 80px | `space/20` | `p-20` |
-| 92px | `space/23` | `p-23` |
-| 100px | `space/25` | `p-25` |
-| 120px | `space/30` | `p-30` |
-| 180px | `space/45` | `p-45` |
+|    px | Variable 名  | 対応する Tailwind |
+| ----: | ------------ | ----------------- |
+|   2px | `space/0-5`  | `p-0.5`           |
+|   4px | `space/1`    | `p-1`             |
+|   8px | `space/2`    | `p-2`             |
+|  10px | `space/2-5`  | `p-2.5`           |
+|  12px | `space/3`    | `p-3`             |
+|  14px | `space/3-5`  | `p-3.5`           |
+|  16px | `space/4`    | `p-4`             |
+|  18px | `space/4-5`  | `p-4.5`           |
+|  20px | `space/5`    | `p-5`             |
+|  24px | `space/6`    | `p-6`             |
+|  26px | `space/6-5`  | `p-6.5`           |
+|  28px | `space/7`    | `p-7`             |
+|  30px | `space/7-5`  | `p-7.5`           |
+|  32px | `space/8`    | `p-8`             |
+|  36px | `space/9`    | `p-9`             |
+|  38px | `space/9-5`  | `p-9.5`           |
+|  40px | `space/10`   | `p-10`            |
+|  48px | `space/12`   | `p-12`            |
+|  52px | `space/13`   | `p-13`            |
+|  54px | `space/13-5` | `p-13.5`          |
+|  60px | `space/15`   | `p-15`            |
+|  62px | `space/15-5` | `p-15.5`          |
+|  64px | `space/16`   | `p-16`            |
+|  66px | `space/16-5` | `p-16.5`          |
+|  68px | `space/17`   | `p-17`            |
+|  80px | `space/20`   | `p-20`            |
+|  92px | `space/23`   | `p-23`            |
+| 100px | `space/25`   | `p-25`            |
+| 120px | `space/30`   | `p-30`            |
+| 180px | `space/45`   | `p-45`            |
 
 `space/2-5` と `space/6` を含め、**30個すべてをローカルに新規作成する**（上記 §2.1 の訂正を参照）。同名のリモート Variable がライブラリ側に存在するが、**参照しない**。
 
 ### 2.4 バインドしないもの
 
-| 対象 | 理由 |
-| --- | --- |
+| 対象                                                                  | 理由                                                                                                                    |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | **§2.3 の表に無い px 値すべて**（`13` `17` `19` `23` `29` `33` など） | スケール外の値として意図的に残す（→ §2.2）。バインドせず、件数と node ID を報告する。**書き込みを止める理由にはしない** |
-| `Mobile/Screen/Repechage/*` `Display/Screen/Repechage/*` | 実装対象外（対応表 §4） |
-| `Mobile/System/Status Bar`（`475:8171`）配下 | 実装対象外（端末OS描画。対応表 §3） |
-| `Display/Screen/Buzzer/*` | フェーズ2用として保留（対応表 §6）。**削除はしない**が今回はバインドしない |
-| `160px` | 救済問題でのみ使用。除外により消滅 |
-| 表に無い px 値 | 想定外。**勝手にバインドせず報告する** |
+| `Mobile/Screen/Repechage/*` `Display/Screen/Repechage/*`              | 実装対象外（対応表 §4）                                                                                                 |
+| `Mobile/System/Status Bar`（`475:8171`）配下                          | 実装対象外（端末OS描画。対応表 §3）                                                                                     |
+| `Display/Screen/Buzzer/*`                                             | フェーズ2用として保留（対応表 §6）。**削除はしない**が今回はバインドしない                                              |
+| `160px`                                                               | 救済問題でのみ使用。除外により消滅                                                                                      |
+| 表に無い px 値                                                        | 想定外。**勝手にバインドせず報告する**                                                                                  |
 
 ### 2.5 対象のプロパティ
 
 Auto Layout の以下のみ。
 
-| Figma プロパティ | `setBoundVariable` のフィールド名 |
-| --- | --- |
-| 上下左右 padding | `paddingTop` / `paddingBottom` / `paddingLeft` / `paddingRight` |
-| Item spacing（主軸の gap） | `itemSpacing` |
-| 折り返し時の交差軸 gap | `counterAxisSpacing` |
+| Figma プロパティ           | `setBoundVariable` のフィールド名                               |
+| -------------------------- | --------------------------------------------------------------- |
+| 上下左右 padding           | `paddingTop` / `paddingBottom` / `paddingLeft` / `paddingRight` |
+| Item spacing（主軸の gap） | `itemSpacing`                                                   |
+| 折り返し時の交差軸 gap     | `counterAxisSpacing`                                            |
 
 **対象外**: width / height、font-size / line-height、border-radius、border-width、色、影、絶対配置の座標。
 
@@ -202,8 +202,8 @@ node.setBoundVariable('paddingLeft', variable)
 
 ### 6.1 dry-run の出力
 
-| 画面 | px | Variable | 対象件数 |
-| --- | ---: | --- | ---: |
+| 画面 |  px | Variable | 対象件数 |
+| ---- | --: | -------- | -------: |
 
 および:
 

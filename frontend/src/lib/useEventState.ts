@@ -57,7 +57,6 @@ function useEventState<Type extends EventState>({
         ts.push(setTimeout(() => updateState(mock), at))
       }
       return () => {
-        console.log('in useEffect.return() 接続解除のため通信切断')
         for (const t of ts) {
           clearTimeout(t)
         }

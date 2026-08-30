@@ -3,6 +3,7 @@ import AdminPage from './features/admin/AdminPage'
 import MonitorPage from './features/monitor/MonitorPage'
 import PhonePage from './features/phone/PhonePage'
 import DevIndexPage from './features/dev/DevIndexPage'
+import PhonePreviewPage from './features/dev/PhonePreviewPage'
 import MonitorPreviewPage from './features/dev/MonitorPreviewPage'
 import TokenPreviewPage from './features/dev/TokenPreviewPage'
 
@@ -20,6 +21,7 @@ function App() {
         <Route path="/backstage-0248" element={<AdminPage />} />
         {isDev && <Route path="/dev" element={<DevIndexPage />} />}
         {isDev && <Route path="/dev/tokens" element={<TokenPreviewPage />} />}
+        {isDev && <Route path="/dev/phone" element={<PhonePreviewPage />} />}
         {isDev && <Route path="/dev/monitor" element={<MonitorPreviewPage />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
