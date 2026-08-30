@@ -15,7 +15,7 @@ func NewHub() *Hub {
 
 // 接続する箱を make して、ハブに追加し、この箱を渡す
 func (h *Hub) Add() chan []byte {
-	ch := make(chan []byte, 8) // バッファ(キューの箱を作る)
+	ch := make(chan []byte, 1) // バッファ(最新の情報のみあればよいので、最新の情報意見のみ保持)
 	h.mu.Lock()
 	h.clients[ch] = struct{}{} // ハブに追加(値は使わずキーのみ使う)
 	h.mu.Unlock()
@@ -37,7 +37,15 @@ func (h *Hub) Broadcast(msg []byte) {
 	for ch := range h.clients {
 		select {
 		case ch <- msg:
-		default: // 接続先（クライアント）がメッセージをためていたら、捨てる
+		default: // 接続先（クライアント）がメッセージをためていたら、古い方を捨てる
+			select{
+			case <-ch:
+			default:
+			}
+			select{
+			case ch <- msg:
+			default:
+			}
 		}
 	}
 }
