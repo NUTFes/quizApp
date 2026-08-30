@@ -38,11 +38,11 @@ func (h *Hub) Broadcast(msg []byte) {
 		select {
 		case ch <- msg:
 		default: // 接続先（クライアント）がメッセージをためていたら、古い方を捨てる
-			select{
+			select {
 			case <-ch:
 			default:
 			}
-			select{
+			select {
 			case ch <- msg:
 			default:
 			}
