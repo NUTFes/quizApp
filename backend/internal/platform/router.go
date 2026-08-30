@@ -25,7 +25,14 @@ type RegisterFunc func(r *gin.Engine)
 // NewRouter は Gin エンジンを組み立てて返す。
 // 各機能のルート登録関数を可変長で受け取り、順に適用する。
 func NewRouter(registers ...RegisterFunc) *gin.Engine {
-	r := gin.Default()
+	// gin.Default() は使わない。既定の Logger はクエリ文字列をそのまま
+	// ログに書くため、SSE の管理者トークン(?token=)が平文で残る
+	// (→ Issue #64、API仕様書 §5)。
+	r := gin.New()
+	r.Use(gin.LoggerWithConfig(gin.LoggerConfig{SkipQueryString: true}))
+	// ★ gin.Default() に入っていたもの。消すと panic 1回でプロセスごと落ち、
+	//    会場全員のSSE接続が同時に切れる。
+	r.Use(gin.Recovery())
 
 	// 生存確認用。どの機能にも属さないのでここで直接定義する。
 	r.GET("/api/health", func(c *gin.Context) {
