@@ -46,6 +46,9 @@ func main() {
 		sse.RegisterRoutes(b, adminToken),
 	)
 
+	// #63 のタスク
+	// GASからの問題投入の時、questions テーブルのSS絵配信を行う
+
 	addr := ":3000"
 	log.Printf("backend listening on %s", addr)
 	if err := r.Run(addr); err != nil {
