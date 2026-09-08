@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import testSquareA from '../../assets/dev/test-square-a.svg'
+import testSquareB from '../../assets/dev/test-square-b.svg'
 import type { MonitorState } from '../../types'
 import {
   monitorAnswerAri,
@@ -38,6 +40,22 @@ const monitorQuestionClosed: MonitorState = {
 // 問題番号が2桁になっても崩れないことを確認する。
 const monitorQuestionTwoDigits: MonitorState = { ...monitorQuestionFour, askedCount: 10 }
 
+// 2択の ○× は選択肢画像で差し替えられる（→ API仕様書 §1 choices[].imageUrl）。
+// 入稿画像の実体が無くても枠の検証ができるよう、正方形のテストチャートを充てる。
+const monitorQuestionTwoImages: MonitorState = {
+  ...monitorQuestionTwo,
+  question:
+    monitorQuestionTwo.question === null
+      ? null
+      : {
+          ...monitorQuestionTwo.question,
+          choices: [
+            { id: 'A', text: '選択肢A', imageUrl: testSquareA },
+            { id: 'B', text: '選択肢B', imageUrl: testSquareB },
+          ],
+        },
+}
+
 const CASES = [
   { title: '待機', note: 'waiting', node: <WaitingView state={monitorWaiting} /> },
   { title: '出題中 / 4択', note: 'question', node: <QuestionView state={monitorQuestionFour} /> },
@@ -51,6 +69,11 @@ const CASES = [
     title: '出題中 / 早押し',
     note: 'question・読み上げ途中',
     node: <QuestionView state={monitorQuestionHayaoshi} />,
+  },
+  {
+    title: '出題中 / 2択・選択肢画像あり',
+    note: 'choices[].imageUrl',
+    node: <QuestionView state={monitorQuestionTwoImages} />,
   },
   {
     title: '締切',

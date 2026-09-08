@@ -36,12 +36,13 @@ export function ChoiceCard({ choice, isCorrect = false, type }: Props) {
   }
 
   if (type === 'two_choice') {
+    // 選択肢画像が入稿されていればそれを出し、無ければ ○× の既定画像にフォールバックする
     return (
       <div className={`${cardStyle} flex flex-col items-center px-10`}>
         <CorrectBadge isVisible={isCorrect} />
         <img
-          src={choice.id === 'A' ? maru : batsu}
-          alt={choice.id === 'A' ? '○' : '×'}
+          src={choice.imageUrl ?? (choice.id === 'A' ? maru : batsu)}
+          alt={choice.imageUrl !== null ? choice.text : choice.id === 'A' ? '○' : '×'}
           className="mt-36 size-[200px] object-contain"
         />
         <p className="mt-12 text-p-area-label">{choice.id === 'A' ? '左エリア' : '右エリア'}</p>
