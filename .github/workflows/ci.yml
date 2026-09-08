@@ -14,8 +14,10 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: jdx/mise-action@v2 # mise.toml を読んで Node/pnpm を入れる(手元と同じ版)
+      - uses: actions/checkout@v5
+      - uses: jdx/mise-action@v4 # Node 24対応。mise.toml を読んで Node/pnpm を入れる
+        with:
+          version: 2026.9.2 # 存在するmise本体の版に固定し、「最新版」取得時の404を防ぐ
       - run: pnpm install --frozen-lockfile
       - run: pnpm format:check # ① 書式(Prettier)。整形されていなければ失敗
       - run: pnpm lint # ② リンター(ESLint)。危ないコードの癖を検出
@@ -28,8 +30,10 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
-      - uses: jdx/mise-action@v2 # mise.toml を読んで Go を入れる
+      - uses: actions/checkout@v5
+      - uses: jdx/mise-action@v4 # Node 24対応。mise.toml を読んで Go を入れる
+        with:
+          version: 2026.9.2 # 存在するmise本体の版に固定し、「最新版」取得時の404を防ぐ
       - run: test -z "$(gofmt -l .)" # 整形されていない.goファイルがあれば失敗
       - run: go vet ./...
       - run: go build ./...
