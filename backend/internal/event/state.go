@@ -2,6 +2,7 @@ package event
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"time"
 
@@ -11,32 +12,57 @@ import (
 	"gorm.io/gorm"
 )
 
+// state を組み立てるのに必要な材料一式
+type snapshot struct {
+	es         EventState
+	q          *question.Question
+	askedCount int
+}
+
+// http なしで、DBから必要な情報を組み立てる関数
+func loadSnapshot(db *gorm.DB) (snapshot, error) {
+	var snap snapshot
+
+	if err := db.First(&snap.es, 1).Error; err != nil {
+		return snap, err
+	}
+
+	if snap.es.CurrentQuestionID != nil {
+		var found question.Question
+		if err := db.First(&found, *snap.es.CurrentQuestionID).Error; err != nil {
+			return snap, err
+		}
+		snap.q = &found
+	}
+
+	var askedCount int64
+	if err := db.Model(&question.Question{}).Where("asked = ?", true).Count(&askedCount).Error; err != nil {
+		return snap, err
+	}
+	snap.askedCount = int(askedCount)
+
+	return snap, nil
+}
+
 // State を返す関数
 func getState(c *gin.Context, db *gorm.DB) {
-	var es EventState
-	if ok := readEventState(c, db, &es); !ok {
+	snap, err := loadSnapshot(db)
+	if err != nil {
+		respondSnapshotError(c, err)
 		return
 	}
+	c.JSON(http.StatusOK, buildState(snap.es, snap.q, snap.askedCount))
+}
 
-	// 今表示する問題を取得する
-	var q *question.Question
-	if es.CurrentQuestionID != nil {
-		var found question.Question
-		if db.First(&found, *es.CurrentQuestionID).Error != nil {
-			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "指定された問題が読み込めませんでした")
-			return
-		}
-		q = &found
-	}
-
-	// 今何問目かを数える
-	var askedCount int64
-	if db.Model(&question.Question{}).Where("asked = ?", true).Count(&askedCount).Error != nil {
-		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "出題数を数えられませんでした")
+// loadSnapshot のエラーを HTTP レスポンスに変換する。
+func respondSnapshotError(c *gin.Context, err error) {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL",
+			"event_states(id=1)がありません。mise run db:reset を実行して下さい")
 		return
 	}
-
-	c.JSON(http.StatusOK, buildState(es, q, int(askedCount)))
+	log.Printf("loadSnapshot failed: %v", err)
+	platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "state を読み込めませんでした")
 }
 
 // DBにある、EventState の形のものをAPIで返すState型に直す
