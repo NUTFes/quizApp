@@ -14,6 +14,7 @@ import (
 
 	"github.com/naoto-anzai/quizApp/backend/internal/admin"
 	"github.com/naoto-anzai/quizApp/backend/internal/event"
+	"github.com/naoto-anzai/quizApp/backend/internal/image"
 	"github.com/naoto-anzai/quizApp/backend/internal/platform"
 	"github.com/naoto-anzai/quizApp/backend/internal/question"
 	"github.com/naoto-anzai/quizApp/backend/internal/sse"
@@ -38,6 +39,13 @@ func main() {
 	}
 	importToken := os.Getenv("IMPORT_TOKEN") // 空なら ADMIN_TOKEN のみで投入可能
 
+	// GET /images/... の配信元(§6)。画像の投入先と、問題投入時の存在チェック
+	// (question/handler.go)で同じ場所を指す必要があるので、既定値も揃える。
+	staticDir := os.Getenv("STATIC_DIR")
+	if staticDir == "" {
+		staticDir = "./static"
+	}
+
 	// ブロードキャストのためのハブの集合を作る
 	b := sse.NewBroadcaster()
 
@@ -47,6 +55,8 @@ func main() {
 		event.RegisterRoutes(db, adminToken, joinURL, b),
 		sse.RegisterRoutes(b, adminToken),
 		question.RegisterRoutes(db, adminToken, importToken),
+		// 画像の投入は ADMIN_TOKEN のみ(IMPORT_TOKEN は通さない。§3.6)
+		image.RegisterRoutes(adminToken, staticDir),
 	)
 
 	// #63 のタスク
