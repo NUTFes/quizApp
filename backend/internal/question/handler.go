@@ -23,8 +23,11 @@ import (
 // importToken が空(未設定)のときは RequireToken 側で除外され、ADMIN_TOKEN のみになる。
 func RegisterRoutes(db *gorm.DB, adminToken string, importToken string) platform.RegisterFunc {
 	return func(r *gin.Engine) {
-		g := r.Group("/api/admin", platform.RequireToken(adminToken, importToken))
-		g.PUT("/questions", func(c *gin.Context) { putQuestions(c, db) })
+		g := r.Group("/api/admin", platform.RequireToken(adminToken))
+		g.GET("/questions", func(c *gin.Context) { listQuestions(c, db) })
+
+		gImport := r.Group("/api/admin", platform.RequireToken(adminToken, importToken))
+		gImport.PUT("/questions", func(c *gin.Context) { putQuestions(c, db) })
 	}
 }
 
