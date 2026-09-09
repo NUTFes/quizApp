@@ -141,8 +141,22 @@ func putQuestions(c *gin.Context, db *gorm.DB) {
 	}
 	warnings := collectImageWarnings(req.Questions, staticDir)
 
-	// TODO(#SSE): 副作用として SSE で管理者画面に「問題一覧が変わった」ことを通知する。
-	// internal/sse のハブが未実装のため、実装され次第ここから配信する。
+	// 保留: 「問題一覧が変わった」ことを管理者画面へ通知する仕組み(API仕様書 §3.5.3)。
+	//
+	// 進行APIと同じ broadcastState を繋いでも意味がない。このAPIは phase が
+	// waiting / finished のときしか成功せず(上の FOR UPDATE の判定)、その2つの
+	// phase の AdminState は question:null / askedCount:0 / revealedSegments:0 で
+	// 固定なので、問題を全置換しても serverTime 以外1つも変わらないため。
+	//
+	// 伝えたい「問題一覧」は AdminState に含まれない(一覧は §4.1 の
+	// QuestionListItem という別レスポンス)ので、state イベントでは運べない。
+	// 通知するなら §5 にイベントを1本追加する必要がある(例: event: questions)。
+	//
+	// 実害はある。全置換は DELETE + INSERT なので questionId が振り直され、
+	// 一覧を開いたままの管理者画面が古いIDで show-question を叩くと 404 になる。
+	// ただし発生するのは進行開始前(waiting / finished)に限られる。
+	//
+	// 受け手である管理者画面(#20)がまだ無いため、イベントの追加は #20 / #63 で判断する。
 
 	c.JSON(http.StatusOK, importResult{
 		Imported:   len(req.Questions),
