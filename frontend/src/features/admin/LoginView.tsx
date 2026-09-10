@@ -42,7 +42,7 @@ export function LoginForm({ token, busy, error, onTokenChange, onSubmit }: Login
         >
           <div className="flex items-center gap-6">
             {/* 技大祭ロゴが完成したら、この要素を同じ54px角の画像へ置き換える */}
-            <div className="size-13.5 shrink-0 rounded-2.5 bg-[#09135c]" />
+            <div className="size-13.5 shrink-0 rounded-[10px] bg-[#09135c]" />
             <h1 className="text-2xl text-[#09135c] sm:text-admin-header-alt">管理者ログイン</h1>
           </div>
 
