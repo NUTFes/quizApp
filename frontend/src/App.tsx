@@ -6,6 +6,7 @@ import DevIndexPage from './features/dev/DevIndexPage'
 import PhonePreviewPage from './features/dev/PhonePreviewPage'
 import MonitorPreviewPage from './features/dev/MonitorPreviewPage'
 import TokenPreviewPage from './features/dev/TokenPreviewPage'
+import AdminPreviewPage from './features/dev/AdminPreviewPage'
 
 // 開発用ページ(/dev 以下)は開発時だけ出す。
 // import.meta.env.DEV は本番ビルドで false に置き換えられるので、
@@ -23,6 +24,7 @@ function App() {
         {isDev && <Route path="/dev/tokens" element={<TokenPreviewPage />} />}
         {isDev && <Route path="/dev/phone" element={<PhonePreviewPage />} />}
         {isDev && <Route path="/dev/monitor" element={<MonitorPreviewPage />} />}
+        {isDev && <Route path="/dev/admin" element={<AdminPreviewPage />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
