@@ -21,8 +21,10 @@ services:                            # ① 並べる箱の一覧。名前がそ�
       - ./frontend:/app              # ④(a) ソースを箱に直結(保存した瞬間ホットリロード)
       - /app/node_modules            #     箱の中のnode_modulesをホスト側と衝突させない
     environment:
-      # ⑤ フロントが叩くAPIの場所(開発用の値)。ブラウザから見た番号なのでPC側のポート
-      - VITE_API_URL=http://localhost:${BACKEND_PORT:-3000}
+      # ⑤ フロントが叩くAPIの場所。空 = 相対パスで、/api は Vite が backend へ転送する
+      #   (本番の nginx と同じ構造。ブラウザから見た通信相手が1つになりCORSが起きない)。
+      #   BACKEND_PORT をずらしてもフロントの設定を変えなくてよいのはこのため。
+      - VITE_API_URL=
       - VITE_USE_MOCK=${VITE_USE_MOCK:-false}
       - VITE_SURVEY_URL=${VITE_SURVEY_URL:-https://example.com/survey}   # 動作確認用の仮
 

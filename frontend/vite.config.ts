@@ -8,5 +8,14 @@ export default defineConfig({
   server: {
     host: true, // 箱(コンテナ)の外=あなたのブラウザから見えるようにする
     port: 5173, // docker-compose.yml で開けた窓(5173:5173)と合わせる
+
+    // /apiをbackendコンテナへ転送。ブラウザから見た通信相手が5173だけになり
+    // 別オリジンにならない=CORSが発生しない(本番のnginxと同じ構造)
+    proxy: {
+      '/api': {
+        target: 'http://backend:3000',
+        changeOrigin: true,
+      },
+    },
   },
 })
