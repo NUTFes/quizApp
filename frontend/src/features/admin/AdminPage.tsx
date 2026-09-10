@@ -1,11 +1,59 @@
 // 管理者用ページ
-function AdminPage() {
-  return (
-    <div className="bg-canvas min-h-screen p-4">
-      {/* 管理画面用トークンは接頭辞 admin-*/}
-      <h1 className="text-admin-header text-brand">管理者画面</h1>
-    </div>
-  )
-}
+// このページでは、認証状態によるコンポーネントの切り替えのみを行う
 
+import { useEffect, useState } from 'react'
+import { clearAdminToken, getAdminToken } from '../../lib/config'
+import { ApiError, verify } from '../../lib/api'
+import { LoginView } from './LoginView'
+import { OperationPanel } from './OperationPanel'
+
+// 認証状態
+type AuthStatus = 'ready' | 'needsLogin' | 'checking' | 'unreachable'
+
+function AdminPage() {
+  const [authStatus, setAuthStatus] = useState<AuthStatus>(
+    getAdminToken() === '' ? 'needsLogin' : 'checking',
+  ) // 初期値の設定の時点で、トークンがあるかどうかを確認する
+
+  // 認証判定は起動時に一度だけ（依存配列には [] を指定）
+  useEffect(() => {
+    // 応答のラグによって、変な読み込みが起きるのを防ぐためのフラグ
+    let cancelled = false
+    if (getAdminToken() === '') {
+      // もしトークンがないときは、何も通信せずログイン(トークン入力)へ
+      return
+    }
+    // もしある場合は認証
+    verify()
+      .then(() => {
+        if (!cancelled) setAuthStatus('ready')
+      })
+      .catch((e) => {
+        if (cancelled) return
+        if (e instanceof ApiError && e.status === 401) {
+          // エラーのタイプを判定し、
+          // アクセスが出来ないエラーじゃない事と、 401 エラーであることを確認
+          setAuthStatus('needsLogin')
+          clearAdminToken() // 分かり切った失敗認証を LoginView で繰り返さない
+          return
+        }
+        // 通信関係のエラーなどでアクセス自体が出来ない
+        setAuthStatus('unreachable')
+        return
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+  switch (authStatus) {
+    case 'checking':
+      return <p>トークンを確認中...</p>
+    case 'unreachable':
+      return <p>サーバーに接続できません</p>
+    case 'needsLogin':
+      return <LoginView onSuccess={() => setAuthStatus('ready')} />
+    default:
+      return <OperationPanel />
+  }
+}
 export default AdminPage
