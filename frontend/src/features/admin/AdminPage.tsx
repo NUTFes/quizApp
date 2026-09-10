@@ -10,6 +10,16 @@ import { OperationPanel } from './OperationPanel'
 // 認証状態
 type AuthStatus = 'ready' | 'needsLogin' | 'checking' | 'unreachable'
 
+// 認証を待っている間と、サーバーに届かないときの表示。
+// /dev/admin から見た目を確認できるよう、AdminPage の外に出して export する。
+export function CheckingView() {
+  return <p>トークンを確認中...</p>
+}
+
+export function UnreachableView() {
+  return <p>サーバーに接続できません</p>
+}
+
 function AdminPage() {
   const [authStatus, setAuthStatus] = useState<AuthStatus>(
     getAdminToken() === '' ? 'needsLogin' : 'checking',
@@ -47,9 +57,9 @@ function AdminPage() {
   }, [])
   switch (authStatus) {
     case 'checking':
-      return <p>トークンを確認中...</p>
+      return <CheckingView />
     case 'unreachable':
-      return <p>サーバーに接続できません</p>
+      return <UnreachableView />
     case 'needsLogin':
       return <LoginView onSuccess={() => setAuthStatus('ready')} />
     default:
