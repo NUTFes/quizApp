@@ -59,8 +59,8 @@ func main() {
 		image.RegisterRoutes(adminToken, staticDir),
 	)
 
-	// #63 のタスク
-	// GASからの問題投入の時、questions テーブルのSS絵配信を行う
+	// #63(GASからの問題投入)で SSE 配信を足すかどうかは保留。
+	// 判断の経緯は internal/question/handler.go の putQuestions 内のコメントを見ること。
 
 	addr := ":3000"
 	log.Printf("backend listening on %s", addr)
