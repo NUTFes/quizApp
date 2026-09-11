@@ -2,7 +2,7 @@
 // httptest でルータを直接叩くだけなので、DBもコンテナも要らない。
 //
 // Issueの受け入れ条件のうち、手元で確認できるもの(401 / ../ の拒否 /
-// 中身の判定 / 5MB / 上書き)をここで押さえる。
+// 中身の判定 / サイズの境界 / 上書き)をここで押さえる。
 // nginx を経由する 413 の確認は本番構成が要るのでここでは扱わない。
 package image
 
@@ -163,7 +163,7 @@ func TestPostImageRejects(t *testing.T) {
 			http.StatusBadRequest, "INVALID_FILE_NAME"},
 		{"拡張子はpngだが中身がHTML", "file", "evil.png", htmlBytes,
 			http.StatusBadRequest, "INVALID_FILE_TYPE"},
-		{"5MB超", "file", "big.png", oversizedPNG(),
+		{"画像が上限を1バイト超える", "file", "big.png", pngOfSize(MaxImageBytes + 1),
 			http.StatusRequestEntityTooLarge, "FILE_TOO_LARGE"},
 	}
 	for _, tt := range tests {
@@ -209,7 +209,104 @@ func TestPostImageTraversal(t *testing.T) {
 	}
 }
 
-// oversizedPNG は上限をわずかに超えるPNG(先頭だけ本物)を作る。
-func oversizedPNG() []byte {
-	return append(append([]byte{}, pngBytes...), []byte(strings.Repeat("a", MaxUploadBytes))...)
+// TestPostImageSizeBoundary は「画像は5MBまで」の境界を確認する(PR #113 のレビュー指摘)。
+//
+// 上限はリクエスト全体ではなく画像本体で数える。multipart の包み(区切り・ヘッダ・
+// ファイル名)が乗るので、画像がちょうど上限でもリクエスト全体は上限より大きい。
+// 以前はリクエスト全体を 5MB で切っていたため、ここで 200 になるべき画像が 413 になっていた。
+func TestPostImageSizeBoundary(t *testing.T) {
+	tests := []struct {
+		name       string
+		size       int
+		wantStatus int
+	}{
+		// レビューで 413 になると報告されたケース(上限より100バイト小さい)
+		{"上限より100バイト小さい", MaxImageBytes - 100, http.StatusOK},
+		{"上限ちょうど", MaxImageBytes, http.StatusOK},
+		{"上限を1バイト超える", MaxImageBytes + 1, http.StatusRequestEntityTooLarge},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r, imagesDir := newTestServer(t)
+			req := uploadRequest(t, testAdminToken, "file", "big.png", pngOfSize(tt.size))
+			// 前提: リクエスト全体は画像より大きい(包みのぶんがある)。
+			// これが崩れると、このテストは境界を確かめたことにならない。
+			if req.ContentLength <= int64(tt.size) {
+				t.Fatalf("前提が崩れている: リクエスト全体 %d バイト <= 画像 %d バイト", req.ContentLength, tt.size)
+			}
+
+			rec := httptest.NewRecorder()
+			r.ServeHTTP(rec, req)
+			if rec.Code != tt.wantStatus {
+				t.Fatalf("画像 %d バイト(リクエスト全体 %d バイト): status=%d, want %d (body=%s)",
+					tt.size, req.ContentLength, rec.Code, tt.wantStatus, rec.Body.String())
+			}
+
+			// 成功なら big.png だけ、拒否なら何も残っていない(途中まで書いた一時ファイルも無い)
+			var names []string
+			entries, _ := os.ReadDir(imagesDir)
+			for _, e := range entries {
+				names = append(names, e.Name())
+			}
+			if tt.wantStatus == http.StatusOK {
+				if len(names) != 1 || names[0] != "big.png" {
+					t.Errorf("保存先の中身=%v, want [big.png]", names)
+				}
+				return
+			}
+			if len(names) != 0 {
+				t.Errorf("拒否したのに保存先にファイルが残っている: %v", names)
+			}
+			if code := errorCode(t, rec.Body); code != "FILE_TOO_LARGE" {
+				t.Errorf("code=%q, want FILE_TOO_LARGE", code)
+			}
+		})
+	}
+}
+
+// TestPostImageRequestTooLarge は、画像が小さくてもリクエスト全体が MaxRequestBytes を
+// 超えたら 413 になることを確認する。画像の上限とは別に、全体の上限も効いていることの確認。
+func TestPostImageRequestTooLarge(t *testing.T) {
+	r, imagesDir := newTestServer(t)
+
+	var body bytes.Buffer
+	w := multipart.NewWriter(&body)
+	// file より前に大きなテキスト項目を置く。ハンドラは file 以外を読み飛ばすが、
+	// 読み飛ばすぶんもリクエスト全体の上限に数えられる。
+	if err := w.WriteField("padding", strings.Repeat("a", MaxRequestBytes)); err != nil {
+		t.Fatal(err)
+	}
+	part, err := w.CreateFormFile("file", "q5.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := part.Write(pngBytes); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/images", &body)
+	req.Header.Set("Content-Type", w.FormDataContentType())
+	req.Header.Set("Authorization", "Bearer "+testAdminToken)
+
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("status=%d, want 413 (body=%s)", rec.Code, rec.Body.String())
+	}
+	if code := errorCode(t, rec.Body); code != "FILE_TOO_LARGE" {
+		t.Errorf("code=%q, want FILE_TOO_LARGE", code)
+	}
+	if _, err := os.Stat(filepath.Join(imagesDir, "q5.png")); err == nil {
+		t.Error("リクエスト全体が上限を超えたのにファイルが作られている")
+	}
+}
+
+// pngOfSize は、先頭だけ本物のPNGで全体がちょうど size バイトのデータを作る。
+// 中身の判定は先頭しか見ないので、残りは埋め草でよい。
+func pngOfSize(size int) []byte {
+	b := make([]byte, size)
+	copy(b, pngBytes)
+	return b
 }

@@ -15,11 +15,22 @@ import (
 	"strings"
 )
 
-// MaxUploadBytes は1リクエストで受け取れる画像の上限(5MB)。
-// frontend/nginx.conf の client_max_body_size と同じ値にすること。
+// MaxImageBytes は画像1枚の上限(5MB)。仕様書 §3.6 の「画像は5MBまで」はこの値。
+// ちょうど 5MB の画像は受け付け、1バイトでも超えたら 413 にする。
+const MaxImageBytes = 5 << 20
+
+// MaxRequestBytes はリクエスト全体(multipart の区切り・ヘッダ・ファイル名を含む)の上限。
+//
+// ★ MaxImageBytes と分けている理由: http.MaxBytesReader が数えるのは画像だけでなく
+// multipart の包み全体。同じ 5MB にすると包みのぶん(数百バイト)だけ小さい画像しか
+// 通らず、5MB ちょうどに縮めた画像が 413 になる(PR #113 のレビューで判明)。
+// 包みは数百バイト(ファイル名は100バイトまで)なので、64KB の余裕で十分足りる。
+//
+// frontend/nginx.conf の client_max_body_size はこの値と同じにすること(5184k)。
+// nginx の上限もリクエスト全体にかかるので、画像の上限(5m)に合わせると同じ問題が起きる。
 // 本番は nginx が先に弾くが、開発ではバックエンドを直接叩く(nginxを経由しない)ため
 // Go側にも上限が要る。
-const MaxUploadBytes = 5 << 20
+const MaxRequestBytes = MaxImageBytes + 64<<10
 
 // sniffLen は http.DetectContentType が見る先頭バイト数(固定で512)。
 const sniffLen = 512
@@ -159,4 +170,40 @@ func Save(dir string, name string, src io.Reader) error {
 		return fmt.Errorf("保存できませんでした: %w", err)
 	}
 	return nil
+}
+
+// errImageTooLarge は画像本体が MaxImageBytes を超えたことを表す。
+var errImageTooLarge = errors.New("画像が上限を超えています")
+
+// imageLimitReader は画像本体のバイト数だけを数え、limit を1バイトでも超えたら
+// errImageTooLarge を返す Reader。
+//
+// io.LimitReader は使えない。上限に達すると黙って EOF を返すので、超えた画像が
+// 途中で切れた状態のまま「正常に」保存されてしまう。ここでは
+// 「ちょうど limit バイトなら成功、超えたら失敗」を区別する必要がある。
+type imageLimitReader struct {
+	r         io.Reader
+	remaining int64
+}
+
+func newImageLimitReader(r io.Reader, limit int64) *imageLimitReader {
+	return &imageLimitReader{r: r, remaining: limit}
+}
+
+func (l *imageLimitReader) Read(p []byte) (int, error) {
+	if l.remaining <= 0 {
+		// 上限ちょうどまで読み終えた。続きが1バイトでもあれば上限超え。
+		var probe [1]byte
+		n, err := l.r.Read(probe[:])
+		if n > 0 {
+			return 0, errImageTooLarge
+		}
+		return 0, err
+	}
+	if int64(len(p)) > l.remaining {
+		p = p[:l.remaining]
+	}
+	n, err := l.r.Read(p)
+	l.remaining -= int64(n)
+	return n, err
 }

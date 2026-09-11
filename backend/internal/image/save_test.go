@@ -7,6 +7,8 @@ package image
 
 import (
 	"bytes"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -154,6 +156,72 @@ func TestSaveOverwrites(t *testing.T) {
 	}
 
 	// 一時ファイルが残っていないこと(残ると /images/ 配下にゴミが溜まる)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 {
+		names := make([]string, 0, len(entries))
+		for _, e := range entries {
+			names = append(names, e.Name())
+		}
+		t.Errorf("保存先に余計なファイルが残っている: %v", names)
+	}
+}
+
+func TestImageLimitReader(t *testing.T) {
+	const limit = 1000
+	tests := []struct {
+		name    string
+		size    int
+		wantErr bool
+	}{
+		{"空", 0, false},
+		{"上限より小さい", limit - 1, false},
+		{"上限ちょうど", limit, false},
+		{"上限を1バイト超える", limit + 1, true},
+		{"上限を大きく超える", limit * 10, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			src := bytes.Repeat([]byte("a"), tt.size)
+			got, err := io.ReadAll(newImageLimitReader(bytes.NewReader(src), limit))
+			if tt.wantErr {
+				if !errors.Is(err, errImageTooLarge) {
+					t.Fatalf("err=%v, want errImageTooLarge", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("上限以内なのにエラーになった: %v", err)
+			}
+			if len(got) != tt.size {
+				t.Errorf("読めたバイト数=%d, want %d(途中で切れている)", len(got), tt.size)
+			}
+		})
+	}
+}
+
+func TestSaveTooLargeKeepsExisting(t *testing.T) {
+	// 上限超えで失敗したとき、①途中まで書いた一時ファイルが残らない
+	// ②同名の既存画像は元のまま、を確認する。
+	// 当日、差し替えに失敗しても直前の画像は表示され続けてほしい。
+	dir := t.TempDir()
+	if err := Save(dir, "q5.png", bytes.NewReader(pngBytes)); err != nil {
+		t.Fatalf("1回目の Save が失敗した: %v", err)
+	}
+	err := Save(dir, "q5.png", newImageLimitReader(bytes.NewReader(pngOfSize(2000)), 1000))
+	if !errors.Is(err, errImageTooLarge) {
+		t.Fatalf("err=%v, want errImageTooLarge", err)
+	}
+
+	got, err := os.ReadFile(filepath.Join(dir, "q5.png"))
+	if err != nil {
+		t.Fatalf("既存の画像が消えた: %v", err)
+	}
+	if !bytes.Equal(got, pngBytes) {
+		t.Error("失敗したアップロードで既存の画像が書き換わった")
+	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		t.Fatal(err)

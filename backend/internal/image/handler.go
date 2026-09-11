@@ -1,12 +1,11 @@
 // POST /api/admin/images(画像の投入)のハンドラ(§3.6)。
 //
 // ★ このAPIだけ multipart/form-data で受け取る。§0「リクエスト/レスポンスはすべて JSON」の
-//
-//	唯一の例外(仕様書にも例外として明記してある)。理由:
-//	  1. base64+JSON にすると転送量が1.33倍になり、サーバーのピークメモリも約2倍になる
-//	     (エンコード後の文字列とデコード後のバイト列が同時に載るため)
-//	  2. フロントは FormData に append するだけで済む
-//	  3. curl -F の1行でテストできる(当日サーバーに触らない以上これが効く)
+// 唯一の例外(仕様書にも例外として明記してある)。理由は3つ:
+// ①base64+JSON にすると転送量が1.33倍になり、サーバーのピークメモリも約2倍になる
+// (エンコード後の文字列とデコード後のバイト列が同時に載るため)。
+// ②フロントは FormData に append するだけで済む。
+// ③curl -F の1行でテストできる(当日サーバーに触らない以上これが効く)。
 //
 // 当日、運営はサーバー(Proxmox上の本番CT)に触らない。
 // このAPIが無いと当日は画像を1枚も追加できない(§6)。
@@ -35,9 +34,9 @@ const formFieldName = "file"
 // PUT /api/admin/questions は両方通るが、GASが送るのはシートの文字列だけで画像は送らない。
 // トークンの通用範囲は狭いほうがよい。
 //
-// staticDir は GET /images/... の配信元(§6)。
-// STATIC_DIR の解決は呼び出し側(cmd/server/main.go)が行う
-// (question/handler.go の画像存在チェックと同じ値を使うため)。
+// staticDir には platform.StaticDir を渡す。GET /images/... の配信元・問題投入時の
+// 存在チェックと必ず同じ場所を指すため。引数にしているのは、テストで一時ディレクトリへ
+// 差し替えるためだけ。
 func RegisterRoutes(adminToken string, staticDir string) platform.RegisterFunc {
 	imagesDir := filepath.Join(staticDir, "images")
 	return func(r *gin.Engine) {
@@ -53,14 +52,17 @@ type uploadResult struct {
 }
 
 func postImage(c *gin.Context, imagesDir string) {
-	// ★ サイズ上限は MaxBytesReader で掛ける。
+	// ★ 上限は2つある。ここで掛けるのは「リクエスト全体」の上限(MaxRequestBytes)で、
+	//   「画像1枚」の上限(MaxImageBytes)は saveUploadedPart で画像本体だけを数えて掛ける。
+	//   分けている理由は save.go の MaxRequestBytes のコメントを見ること。
+	//
 	//   gin.Engine.MaxMultipartMemory は上限ではない。あれは ParseMultipartForm に渡す
 	//   「何バイトまでメモリに載せるか」の閾値で、超えた分はエラーにならず
 	//   ディスクの一時ファイルへ書き出される(gin v1.12.0 context.go)。
 	//   MaxBytesReader なら上限を超えた時点で読むのをやめられる。
-	//   本番は nginx(client_max_body_size 5m)が先に弾くが、開発ではバックエンドを
+	//   本番は nginx(client_max_body_size)が先に弾くが、開発ではバックエンドを
 	//   直接叩く(nginxを経由しない)のでGo側にも要る。
-	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, MaxUploadBytes)
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, MaxRequestBytes)
 
 	// ★ c.FormFile は使わない。理由は2つ:
 	//  1. FormFile が返す FileHeader.Filename は、標準ライブラリが RFC 7578 に従って
@@ -108,9 +110,13 @@ func saveUploadedPart(c *gin.Context, imagesDir string, part *multipart.Part) {
 		return
 	}
 
+	// 画像本体の大きさはここで数える。先頭の判定で読むぶんも含めて数えるため、
+	// 以降は part を直接読まず、必ず body を通す。
+	body := newImageLimitReader(part, MaxImageBytes)
+
 	// 拡張子ではなく中身で種類を判定する。
 	head := make([]byte, sniffLen)
-	n, err := io.ReadFull(part, head)
+	n, err := io.ReadFull(body, head)
 	if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) {
 		respondReadError(c, err, "アップロードされたファイルを読めませんでした")
 		return
@@ -122,7 +128,7 @@ func saveUploadedPart(c *gin.Context, imagesDir string, part *multipart.Part) {
 	}
 
 	// 判定のために読んだ先頭を戻し、残りはそのまま流し込む。
-	if err := Save(imagesDir, name, io.MultiReader(bytes.NewReader(head), part)); err != nil {
+	if err := Save(imagesDir, name, io.MultiReader(bytes.NewReader(head), body)); err != nil {
 		respondReadError(c, err, "画像を保存できませんでした")
 		return
 	}
@@ -145,12 +151,14 @@ func rawFileName(part *multipart.Part) string {
 }
 
 // respondReadError はボディ読み取り中のエラーを返す。
-// MaxBytesReader が上限で打ち切った場合だけ 413 にし、それ以外は 500 にする。
+// 上限を超えた場合だけ 413 にし、それ以外は 500 にする。上限は次の2つで、どちらも 413:
+//   - 画像本体が MaxImageBytes を超えた(errImageTooLarge)
+//   - リクエスト全体が MaxRequestBytes を超えた(http.MaxBytesError)
 func respondReadError(c *gin.Context, err error, message string) {
 	var tooLarge *http.MaxBytesError
-	if errors.As(err, &tooLarge) {
+	if errors.Is(err, errImageTooLarge) || errors.As(err, &tooLarge) {
 		platform.RespondError(c, http.StatusRequestEntityTooLarge, "FILE_TOO_LARGE",
-			fmt.Sprintf("画像は %dMB までです", MaxUploadBytes>>20))
+			fmt.Sprintf("画像は %dMB までです", MaxImageBytes>>20))
 		return
 	}
 	platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", message+": "+err.Error())
