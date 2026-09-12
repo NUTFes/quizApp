@@ -14,7 +14,7 @@ const DIFFICULTY_LABEL: Record<Difficulty, string> = {
 const QUESTION_TYPE_LABEL: Record<QuestionType, string> = {
   four_choice: '4択',
   two_choice: '2択',
-  arunashi: 'あるなし',
+  arunashi: '有無',
   hayaoshi: '早押し',
 }
 
