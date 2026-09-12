@@ -14,6 +14,7 @@ import (
 
 	"github.com/naoto-anzai/quizApp/backend/internal/admin"
 	"github.com/naoto-anzai/quizApp/backend/internal/event"
+	"github.com/naoto-anzai/quizApp/backend/internal/image"
 	"github.com/naoto-anzai/quizApp/backend/internal/platform"
 	"github.com/naoto-anzai/quizApp/backend/internal/question"
 	"github.com/naoto-anzai/quizApp/backend/internal/sse"
@@ -47,6 +48,8 @@ func main() {
 		event.RegisterRoutes(db, adminToken, joinURL, b),
 		sse.RegisterRoutes(b, adminToken),
 		question.RegisterRoutes(db, adminToken, importToken),
+		// 画像の投入は ADMIN_TOKEN のみ(IMPORT_TOKEN は通さない。§3.6)
+		image.RegisterRoutes(adminToken, platform.StaticDir),
 	)
 
 	// #63(GASからの問題投入)で SSE 配信を足すかどうかは保留。

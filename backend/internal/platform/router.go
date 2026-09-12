@@ -15,9 +15,22 @@ package platform
 
 import (
 	"net/http"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 )
+
+// StaticDir は画像などの静的ファイルの置き場所。
+//
+// ★ 環境変数で変えられるようにはしない。画像の「配信」(このファイル)・
+// 「投入」(internal/image)・「問題投入時の存在チェック」(internal/question)の
+// 3箇所が必ず同じ場所を指す必要があり、1箇所だけ別の値を読むと
+// 「アップロードは 200 なのに /images/... が 404」になる(PR #113 のレビューで判明)。
+// 仕様書にも別の場所を使う要件は無い。
+//
+// 作業ディレクトリからの相対パス。本番は docker-compose.prod.yml で
+// ./backend/static をコンテナの /app/static にマウントしている。
+const StaticDir = "./static"
 
 // RegisterFunc は各機能が生やすルート登録関数の形。
 type RegisterFunc func(r *gin.Engine)
@@ -40,7 +53,7 @@ func NewRouter(registers ...RegisterFunc) *gin.Engine {
 	})
 
 	// 問題・選択肢の画像を配信する(認証なし)。仕様書 §6。
-	r.Static("/images", "./static/images")
+	r.Static("/images", filepath.Join(StaticDir, "images"))
 
 	// 存在しないパスでも §0 の形でエラーを返す。
 	// これが無いと Gin 標準の 404(text/plain)が返ってしまい、

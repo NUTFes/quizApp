@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -138,11 +137,9 @@ func putQuestions(c *gin.Context, db *gorm.DB) {
 	}
 
 	// --- 画像の実体チェック(§6)。取り込みは止めず warnings で知らせる ---
-	staticDir := os.Getenv("STATIC_DIR")
-	if staticDir == "" {
-		staticDir = "./static" // GET /images/... の配信元(§6)。静的配信の実装時に揃える
-	}
-	warnings := collectImageWarnings(req.Questions, staticDir)
+	// 配信元(platform.StaticDir)と同じ場所を見る。別の場所を見ると、配信できている
+	// 画像を「存在しない」と警告してしまう。
+	warnings := collectImageWarnings(req.Questions, platform.StaticDir)
 
 	// 保留: 「問題一覧が変わった」ことを管理者画面へ通知する仕組み(API仕様書 §3.5.3)。
 	//
