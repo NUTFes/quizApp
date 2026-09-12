@@ -518,11 +518,43 @@ curl -F "file=@q5.png" -H "Authorization: Bearer $ADMIN_TOKEN" \
 - **全体の上限は nginx と Go の両方に同じ値で設定する**(nginx `client_max_body_size 5184k` / Go `MaxRequestBytes`)。本番は nginx が先に弾くが、**開発環境ではバックエンドを直接叩く(nginxを経由しない)ため Go 側にも上限が要る**。
 - ⚠️ **nginx が弾いた 413 は nginx の HTMLページで、§0 のJSONエラー形式ではない。** `frontend/src/lib/api.ts` の `request` は `res.json().catch(() => null)` があるのでクラッシュはしないが `code` が `'UNKNOWN'` になる。**413 は `code` ではなく `ApiError.status` で分岐すること。**
 
-#### 3.6.5 この文書で決めないこと
+### 3.6.5 この文書で決めないこと
 
-- **一覧API `GET /api/admin/images`** — 別Issue。ただし画像投入UIより前には必要(当日サーバーに触らない以上、UIから見えないものは誰にも見えない)
 - **削除API** — 上書きできるので当日の要件にならない
 - **クラウドストレージ・署名付きURL** — スコープ外
+
+### 3.7 GET /api/admin/images
+
+**サーバー上の問題・選択肢画像の一覧取得API。** 管理者画面がサーバーに存在する画像を確認し、アップロード時の同名上書き事故を防ぐために使用する。
+
+| 項目 | 内容 |
+| --- | --- |
+| 認証 | `Authorization: Bearer <ADMIN_TOKEN>` |
+| 対象 | `STATIC_DIR/images/`（`STATIC_DIR` のデフォルトは `./static`） |
+| 対象拡張子 | `.png` / `.jpg` / `.jpeg`（大文字小文字を問わない） |
+| 並び順 | `imageUrl` の昇順 |
+
+**認証は `ADMIN_TOKEN` のみ。`IMPORT_TOKEN` では 401 になる。**
+
+#### 3.7.1 成功レスポンス `200 OK`
+
+{
+  "images": [
+    {
+      "imageUrl": "/images/q5.png",
+      "size": 123456,
+      "updatedAt": "2026-09-13T12:30:00+09:00"
+    }
+  ]
+}
+
+- `imageUrl`: `/images/` から始まり、そのままスプレッドシートの `imageUrl` 列に書ける。
+- `size`: ファイルサイズ（バイト）。
+- `updatedAt`: ISO 8601形式の更新日時（タイムゾーン付き）。
+- 画像がない場合は `{"images":[]}`。`null` にはしない。
+- ディレクトリおよび `.gitkeep` は返さない。
+- DBは使用しない。
+- SSE、削除、ページング、サムネイルは行わない。
 
 ---
 
