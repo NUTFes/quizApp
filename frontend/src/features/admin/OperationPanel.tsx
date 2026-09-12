@@ -5,6 +5,7 @@
 
 import { useAdminState } from '../../lib/useEventState'
 import { useRemainingTime } from '../../lib/useRemainingTime'
+import { CurrentStatus } from './parts/CurrentStatus'
 
 // できない(型検査もビルドも通らない)。props は取らない形を保つこと。
 export function OperationPanel() {
@@ -15,5 +16,13 @@ export function OperationPanel() {
     timeLimitSec: state?.timeLimitSec ?? null,
     questionStartedAt: state?.questionStartedAt ?? null,
   })
-  return <p>ログイン済み（操作盤は #107 以降で作る）</p>
+
+  if (state === null) return <p> 接続中...</p>
+
+  return (
+    <div>
+      <CurrentStatus state={state} status={toStatus(state, remaingTime)}></CurrentStatus>
+      {/*ここからは、以降のイシューで足していく */}
+    </div>
+  )
 }
