@@ -63,7 +63,16 @@ function AdminPage() {
     case 'needsLogin':
       return <LoginView onSuccess={() => setAuthStatus('ready')} />
     default:
-      return <OperationPanel />
+      // SSE や API が 401 を返したら、起動時と同じようにトークンを消してログイン画面へ戻す
+      // (→ docs/実装要件/フロントエンド実装要件.md §4)
+      return (
+        <OperationPanel
+          onAuthExpired={() => {
+            clearAdminToken()
+            setAuthStatus('needsLogin')
+          }}
+        />
+      )
   }
 }
 export default AdminPage
