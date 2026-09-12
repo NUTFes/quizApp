@@ -1,7 +1,7 @@
-import { ReactNode } from 'react'
-import { AdminState } from '../../../types'
+import type { ReactNode } from 'react'
+import type { AdminState } from '../../../types'
 import { difficultyLabel, phaseLabel, questionTypeLabel } from '../labels'
-import { AdminStatus, StatusBadge } from './StatusBadge'
+import { StatusBadge, type AdminStatus } from './StatusBadge'
 
 type Props = {
   state: AdminState
@@ -21,7 +21,7 @@ export function CurrentStatus({ state, status }: Props) {
 
   const correct = question.choices.find((choice) => choice.id === question.correctChoiceId)
   return (
-    <div>
+    <section>
       <header>
         <h2>出題中の問題</h2>
         {status !== null && <StatusBadge status={status} />}
@@ -53,7 +53,7 @@ export function CurrentStatus({ state, status }: Props) {
         ))}
       </Row>
       <Row label="正答">{correct === undefined ? '未設定' : `${correct.id}: ${correct.text}`}</Row>
-    </div>
+    </section>
   )
 }
 
