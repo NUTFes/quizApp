@@ -20,3 +20,12 @@ export function CurrentStatus({ state, remainingTime }: Props) {
   const correct = question.choices.find((choice) => choice.id === question.correctChoiceId)
   return <div></div>
 }
+
+function Row({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex gap-10">
+      <p className="w-24 font-bold">{label}</p>
+      <div>{children}</div>
+    </div>
+  )
+}
