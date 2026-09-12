@@ -104,7 +104,9 @@ pnpm = "latest"
 
 ## 5. 仕組みの話: 「直接 pnpm と打ってるのにバージョンが揃う」のはなぜ?
 
-`mise run lint` の中身は `pnpm --dir frontend lint` で、一見「そのPCに入っているpnpm」が動きそうに見える。それでもバージョンが揃うのは、**`pnpm` と打ったときにどの実体が起動するかをmiseがすり替えている**から。
+手元で直接 `pnpm` と打つ場面(`pnpm install`、エディタが裏で走らせる ESLint / Prettier など)では、一見「そのPCに入っているpnpm」が動きそうに見える。それでもバージョンが揃うのは、**`pnpm` と打ったときにどの実体が起動するかをmiseがすり替えている**から。
+
+(`mise run lint` のようなタスクは箱(コンテナ)の中でチェックを実行するので、そちらはDockerイメージ側でバージョンが揃っている。ここで説明するのは**箱の外**で打つコマンドの話。)
 
 ### 前提: コマンド名は「住所帳(PATH)」で解決される
 
@@ -172,9 +174,9 @@ PATH = [ 自分で入れたpnpm 9.x, ... ]  ←元通り
 | `mise run logs` | `docker compose logs -f` | 3つの箱のログをまとめて流し見る(`-f`=流れ続けるのを追いかける)。「なんか動かない」時に最初に打つコマンド |
 | `mise run db:migrate` | `docker compose exec backend migrate -path /app/migrations -database $DATABASE_URL up` | 動いているbackendの箱**の中で** golang-migrate を実行し、`migrations/` のSQLを未適用分だけ順にDBへ適用 |
 | `mise run db:seed` | `docker compose exec backend go run ./cmd/seed` | backendの箱の中でサンプル問題投入プログラムを実行(スプシ同期なしで画面開発できるように) |
-| `mise run db:reset` | `docker compose down -v db && up -d db && migrate && seed` | dbの箱を**ボリューム(保存データ)ごと削除**して作り直し→migrate→seed。**唯一データが消えるタスク**なので「DBをまっさらにしたい」時専用 |
-| `mise run lint` | `docker compose exec backend go vet ./...` + `pnpm --dir frontend lint` | Go側は箱の中で、フロント側は手元のpnpm(miseが固定したバージョン)でチェック |
-| `mise run test` | `docker compose exec backend go test ./...` + `pnpm --dir frontend test` | 同上の構図でテスト実行 |
+| `mise run db:reset` | `docker compose down -v && up -d --build && migrate && seed` | 3つの箱を**ボリューム(保存データ)ごと削除**して作り直し→migrate→seed。**唯一データが消えるタスク**なので「DBをまっさらにしたい」時専用 |
+| `mise run lint` | backendの箱で `gofmt` チェック → `go vet ./...` → `go build ./...` → `go test ./...`、frontendの箱で `pnpm lint` → `pnpm format:check` → `pnpm typecheck` → `pnpm build` | **CIと同じ内容**を手元で先に回す。PRを出す前にこれを通す。上から順に実行し、1つでも落ちたらそこで止まる |
+| `mise run fix` | backendの箱で `gofmt -w .`、frontendの箱で `pnpm format` → `pnpm lint:fix` | 自動で直せる書式・コードの問題を直す。`mise run lint` が書式で落ちたらまずこれ |
 
 `docker compose exec backend <コマンド>` は「**動いているbackendの箱の中に入ってコマンドを実行する**」という意味。migrateなどの道具は箱の中に入っているので、各自のPCにインストールする必要がない。
 

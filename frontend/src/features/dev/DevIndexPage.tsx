@@ -12,6 +12,7 @@ const PAGES = [
   { to: '/dev/tokens', title: 'デザイントークン', note: '@theme の色・書体が当たるかの確認' },
   { to: '/dev/phone', title: 'スマホ画面プレビュー', note: '4形式 × フェーズを並べて確認' },
   { to: '/dev/monitor', title: 'モニタ画面プレビュー', note: '4形式 × フェーズを並べて確認' },
+  { to: '/dev/admin', title: '管理者画面プレビュー', note: '各パーツの状態を並べて確認' },
 ] as const
 
 function DevIndexPage() {

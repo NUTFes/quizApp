@@ -2,7 +2,7 @@
 //
 // 未設定なら空文字 = 相対パスにする。本番はフロント(nginx)とAPIが同一サブドメイン
 // (quiz.○○○.jp)に同居し、パスで振り分ける構成なので、'/api/state' で正しく届く。
-// 開発では docker-compose.yml の VITE_API_URL=http://localhost:3000 が入る。
+// 開発では docker-compose.yml の VITE_API_URL=空、相対パス が入る。
 //
 // ここで throw してはいけない。Vite の環境変数は「ビルドした瞬間の値」がJSに
 // 焼き込まれ、実行時に読み直されない。本番ビルドで渡し忘れると localhost:3000 が
@@ -22,3 +22,7 @@ export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 // 「現在のページ」を指すので、押すとリロードされてしまう)。
 // 毎回呼び出す度に実行されてほしいから、定数としては扱えないため、関数オブジェクトで定義
 export const getAdminToken = () => localStorage.getItem('adminToken') ?? ''
+// ローカルストレージにトークンを保存する関数
+export const setAdminToken = (token: string) => localStorage.setItem('adminToken', token)
+// ローカルストレージに保存されているトークンを削除する（実質的なログアウト）関数
+export const clearAdminToken = () => localStorage.removeItem('adminToken')
