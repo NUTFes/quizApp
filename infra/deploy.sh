@@ -14,7 +14,11 @@
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/opt/quizApp}"
-COMPOSE="docker compose -f docker-compose.prod.yml --env-file .env.prod"
+
+# compose に渡すファイル。中身は下の「② 構成の確定」で組み立てる。
+# .env.prod に STG_CF_TUNNEL_TOKEN があれば docker-compose.stg-tunnel.yml を重ね、
+# 自分たちの Cloudflare トンネル(cloudflared)も一緒に起動する。
+COMPOSE=""
 
 # デプロイする対象。ブランチ名でもタグ名でもよい。
 #   通常          : bash infra/deploy.sh                      (= main)
@@ -30,6 +34,15 @@ COMPOSE="docker compose -f docker-compose.prod.yml --env-file .env.prod"
 #   (2026-08-25 に実際に踏んだ)。既定値は cd したあとで決める。
 REF="${REF:-}"
 
+# .env.prod から値を1つ読む。見つからなければ空文字を返す。
+# ★ grep で書くと「行が無い」ときに終了コード1が返り、冒頭の set -euo pipefail で
+#   デプロイ全体がその場で止まる。STG_CF_TUNNEL_TOKEN のような任意項目は
+#   行が無いのが正常(既存CTの .env.prod には無い)なので、no-match でも
+#   成功扱いになる awk で読む。
+env_value() {
+  awk -F= -v key="$1" '$0 ~ "^" key "=" { sub(/^[^=]*=/, ""); print; exit }' .env.prod
+}
+
 cd "$APP_DIR"
 
 if [ ! -f .env.prod ]; then
@@ -43,7 +56,7 @@ fi
 # ここで止めれば「どの値が空か」がその場で分かる。
 missing=""
 for key in POSTGRES_PASSWORD ADMIN_TOKEN IMPORT_TOKEN; do
-  value="$(grep -E "^${key}=" .env.prod | head -1 | cut -d= -f2-)"
+  value="$(env_value "$key")"
   [ -z "$value" ] && missing="${missing} ${key}"
 done
 if [ -n "$missing" ]; then
@@ -89,25 +102,58 @@ if [ ! -f docker-compose.prod.yml ]; then
   exit 1
 fi
 
-echo "=== ② ビルドして起動 ====================================="
-$COMPOSE up -d --build
+echo "=== ② 構成の確定 ========================================="
+# ★ トンネルを使うかどうかは .env.prod の STG_CF_TUNNEL_TOKEN の有無だけで決める。
+#   起動オプションを手で覚える形にすると、練習環境で書き忘れた時に
+#   「デプロイは成功したのに外から繋がらない」という分かりにくい形で出る。
+COMPOSE="docker compose -f docker-compose.prod.yml"
+tunnel_token="$(env_value STG_CF_TUNNEL_TOKEN)"
+if [ -n "$tunnel_token" ]; then
+  if [ ! -f docker-compose.stg-tunnel.yml ]; then
+    echo "!! STG_CF_TUNNEL_TOKEN があるのに docker-compose.stg-tunnel.yml がありません。" >&2
+    echo "   REF がトンネル対応より前のタグ/ブランチを指している可能性があります。" >&2
+    exit 1
+  fi
+  COMPOSE="$COMPOSE -f docker-compose.stg-tunnel.yml"
+  echo "cloudflared あり(STG_CF_TUNNEL_TOKEN が設定されています)"
+else
+  echo "cloudflared なし(STG_CF_TUNNEL_TOKEN が空。外部公開は組織の Cloudflare 側に任せます)"
+fi
+COMPOSE="$COMPOSE --env-file .env.prod"
+unset tunnel_token        # 値をこのあとのログに出さない
 
-echo "=== ③ マイグレーション ==================================="
+echo "=== ③ ビルドして起動 ====================================="
+# ★ --remove-orphans が必須。これが無いと、トンネルを使うのをやめて
+#   STG_CF_TUNNEL_TOKEN を空にして再デプロイしても、起動済みの cloudflared は
+#   今の構成に含まれない「orphan」として残り続ける。restart: always なので
+#   CT を再起動しても生き返り、個人のドメイン経由での公開が意図せず続く。
+$COMPOSE up -d --build --remove-orphans
+
+echo "=== ④ マイグレーション ==================================="
 # ★ 順序が重要。アプリより先にスキーマを作る。
 #   backend の起動を待ってから実行する(コンテナが上がりきる前だと失敗する)。
 sleep 5
 $COMPOSE exec -T backend sh -c 'migrate -path /app/migrations -database "$DATABASE_URL" up'
 
-echo "=== ④ 疎通確認 ==========================================="
+echo "=== ⑤ 疎通確認 ==========================================="
 $COMPOSE ps
 echo "--- フロント ---"
 curl -sf -o /dev/null -w "  GET /            -> %{http_code}\n" http://localhost:8080/
 echo "--- API ---"
 curl -sf -w "\n" http://localhost:8080/api/health
 echo "--- SSE(接続できたら5秒で切る。hello イベントが出れば成功) ---"
-curl -sN --max-time 5 http://localhost:8080/api/events || true
+# ★ view は必須。付け忘れると 400 の JSON が返るだけで、SSE の確認にならない
+#   (backend/internal/sse/handler.go)。
+curl -sN --max-time 5 "http://localhost:8080/api/events?view=monitor" || true
 
-echo "=== ⑤ 後始末(ディスクが12GBしかないため必須) ============="
+if [ -f docker-compose.stg-tunnel.yml ] && echo "$COMPOSE" | grep -q docker-compose.stg-tunnel.yml; then
+  echo "--- トンネル(Registered tunnel connection が出ていれば接続済み) ---"
+  $COMPOSE logs --tail 20 cloudflared
+  echo "  ※ 外からの疎通は https://<設定したホスト名>/api/events?view=monitor で確認する。"
+  echo "    Cloudflare のダッシュボードで Routes を設定するまでは 404 や 530 になる。"
+fi
+
+echo "=== ⑥ 後始末(ディスクが12GBしかないため必須) ============="
 docker image prune -f
 df -h /
 
@@ -124,7 +170,7 @@ cat <<'MSG'
   pct fstrim <VMID>    # 消したイメージの分をthin poolに返す
   lvs                  # data 行の Data% が 85% 未満か確認
 
-ログを見る:
+ログを見る(トンネルを使っている場合は -f docker-compose.stg-tunnel.yml も足す):
   docker compose -f docker-compose.prod.yml --env-file .env.prod logs -f
 ============================================================
 MSG
