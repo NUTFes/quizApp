@@ -42,6 +42,7 @@ func RegisterRoutes(adminToken string, staticDir string) platform.RegisterFunc {
 	return func(r *gin.Engine) {
 		g := r.Group("/api/admin", platform.RequireToken(adminToken))
 		g.POST("/images", func(c *gin.Context) { postImage(c, imagesDir) })
+		g.GET("/images", func(c *gin.Context) { getImages(c, imagesDir) })
 	}
 }
 
