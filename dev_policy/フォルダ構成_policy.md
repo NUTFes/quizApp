@@ -69,7 +69,7 @@ quizApp/
         ├── question/         #   問題データのモデル(一覧・詳細APIは未実装)
         ├── event/            #   進行状態管理(EventState)と進行制御API
         ├── admin/            #   管理者操作(verify)
-        ├── image/            #   画像の投入(POST /api/admin/images)
+        ├── image/            #   画像の投入・一覧(POST / GET /api/admin/images)
         ├── sheetsync/        #   スプシ→DB同期(バリデーション含む)
         ├── sse/              #   SSEブロードキャスタ(接続管理・配信) (未)
         └── platform/         #   共通基盤: DB接続、ルータ登録、認証ミドルウェア、エラー応答

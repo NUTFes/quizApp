@@ -518,7 +518,7 @@ curl -F "file=@q5.png" -H "Authorization: Bearer $ADMIN_TOKEN" \
 - **全体の上限は nginx と Go の両方に同じ値で設定する**(nginx `client_max_body_size 5184k` / Go `MaxRequestBytes`)。本番は nginx が先に弾くが、**開発環境ではバックエンドを直接叩く(nginxを経由しない)ため Go 側にも上限が要る**。
 - ⚠️ **nginx が弾いた 413 は nginx の HTMLページで、§0 のJSONエラー形式ではない。** `frontend/src/lib/api.ts` の `request` は `res.json().catch(() => null)` があるのでクラッシュはしないが `code` が `'UNKNOWN'` になる。**413 は `code` ではなく `ApiError.status` で分岐すること。**
 
-### 3.6.5 この文書で決めないこと
+#### 3.6.5 この文書で決めないこと
 
 - **削除API** — 上書きできるので当日の要件にならない
 - **クラウドストレージ・署名付きURL** — スコープ外
@@ -538,6 +538,7 @@ curl -F "file=@q5.png" -H "Authorization: Bearer $ADMIN_TOKEN" \
 
 #### 3.7.1 成功レスポンス `200 OK`
 
+```json
 {
   "images": [
     {
@@ -547,6 +548,7 @@ curl -F "file=@q5.png" -H "Authorization: Bearer $ADMIN_TOKEN" \
     }
   ]
 }
+```
 
 - `imageUrl`: `/images/` から始まり、そのままスプレッドシートの `imageUrl` 列に書ける。
 - `size`: ファイルサイズ（バイト）。
