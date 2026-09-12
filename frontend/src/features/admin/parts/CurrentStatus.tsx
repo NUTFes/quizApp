@@ -1,12 +1,13 @@
 import { AdminState } from '../../../types'
 import { phaseLabel } from '../labels'
+import { AdminStatus } from './StatusBadge'
 
 type Props = {
   state: AdminState
-  remainingTime: number
+  status: AdminStatus | null
 }
 
-export function CurrentStatus({ state, remainingTime }: Props) {
+export function CurrentStatus({ state, status }: Props) {
   const question = state.question
   if (question === null) {
     return (
@@ -18,7 +19,14 @@ export function CurrentStatus({ state, remainingTime }: Props) {
   }
 
   const correct = question.choices.find((choice) => choice.id === question.correctChoiceId)
-  return <div></div>
+  return (
+    <div>
+      <header>
+        <h2>出題中の問題</h2>
+        {status !== null && <StatusBadge status={status} />}
+      </header>
+    </div>
+  )
 }
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
