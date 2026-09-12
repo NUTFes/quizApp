@@ -17,3 +17,18 @@ type Question struct {
 	Explanation     *string  `json:"explanation"`
 	Asked           bool     `json:"asked"`
 }
+
+// モニタ・スマホ用 Question
+type ViewerQuestion struct {
+	Number       int      `json:"number"`
+	Type         string   `json:"type"`
+	TextSegments []string `json:"textSegments"`
+	ImageURL     *string  `json:"imageUrl"`
+	Choices      []Choice `json:"choices"`
+}
+
+// モニタ・スマホ用 Answer
+type Answer struct {
+	CorrectChoiceID *string `json:"correctChoiceId"`
+	Explanation     *string `json:"explanation"`
+}

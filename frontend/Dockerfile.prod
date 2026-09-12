@@ -19,8 +19,21 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
+# サーベイ用URLは渡す
+ARG VITE_SURVEY_URL
+ENV VITE_SURVEY_URL=$VITE_SURVEY_URL
+RUN pnpm build
+
 # VITE_API_URL は意図的に渡さない。
 # 未設定なら相対パスになる(src/lib/config.ts)ので、ビルド時に本番URLを知る必要がない。
+#
+# VITE_SURVEY_URL は逆に、ここで渡さないと本番に届かない。
+# Vite の環境変数は「ビルドした瞬間の値」がJSに焼き込まれるので、
+# compose の environment(= nginx が動く実行時)に書いても効かない。
+# 渡し忘れても落ちないよう、未設定ならアンケート導線を出さない実装にしてある。
+ARG VITE_SURVEY_URL
+ENV VITE_SURVEY_URL=$VITE_SURVEY_URL
+
 RUN pnpm build
 
 # ---- 配信用ステージ ------------------------------------------

@@ -15,9 +15,22 @@ package platform
 
 import (
 	"net/http"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 )
+
+// StaticDir は画像などの静的ファイルの置き場所。
+//
+// ★ 環境変数で変えられるようにはしない。画像の「配信」(このファイル)・
+// 「投入」(internal/image)・「問題投入時の存在チェック」(internal/question)の
+// 3箇所が必ず同じ場所を指す必要があり、1箇所だけ別の値を読むと
+// 「アップロードは 200 なのに /images/... が 404」になる(PR #113 のレビューで判明)。
+// 仕様書にも別の場所を使う要件は無い。
+//
+// 作業ディレクトリからの相対パス。本番は docker-compose.prod.yml で
+// ./backend/static をコンテナの /app/static にマウントしている。
+const StaticDir = "./static"
 
 // RegisterFunc は各機能が生やすルート登録関数の形。
 type RegisterFunc func(r *gin.Engine)
@@ -25,12 +38,22 @@ type RegisterFunc func(r *gin.Engine)
 // NewRouter は Gin エンジンを組み立てて返す。
 // 各機能のルート登録関数を可変長で受け取り、順に適用する。
 func NewRouter(registers ...RegisterFunc) *gin.Engine {
-	r := gin.Default()
+	// gin.Default() は使わない。既定の Logger はクエリ文字列をそのまま
+	// ログに書くため、SSE の管理者トークン(?token=)が平文で残る
+	// (→ Issue #64、API仕様書 §5)。
+	r := gin.New()
+	r.Use(gin.LoggerWithConfig(gin.LoggerConfig{SkipQueryString: true}))
+	// ★ gin.Default() に入っていたもの。消すと panic 1回でプロセスごと落ち、
+	//    会場全員のSSE接続が同時に切れる。
+	r.Use(gin.Recovery())
 
 	// 生存確認用。どの機能にも属さないのでここで直接定義する。
 	r.GET("/api/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
+
+	// 問題・選択肢の画像を配信する(認証なし)。仕様書 §6。
+	r.Static("/images", filepath.Join(StaticDir, "images"))
 
 	// 存在しないパスでも §0 の形でエラーを返す。
 	// これが無いと Gin 標準の 404(text/plain)が返ってしまい、

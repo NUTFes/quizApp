@@ -26,6 +26,37 @@ run = "docker compose down"
 description = "3コンテナのログを流し見る(「なんか動かない」時はまずこれ)"
 run = "docker compose logs -f"
 
+[tasks.ports]
+description = "このフォルダで使うPC側のポート番号を表示する(ワークツリーを分けて同時起動するとき用)"
+run = """
+[ -f .env ] && . ./.env
+echo "compose プロジェクト名 : $(basename "$PWD" | tr '[:upper:]' '[:lower:]')"
+echo "フロント (PC側)        : ${FRONTEND_PORT:-5173}"
+echo "バックエンド (PC側)    : ${BACKEND_PORT:-3000}"
+echo "DB (PC側)              : ${DB_PORT:-5432}"
+echo
+echo "ずらすには: mise run ports:shift 10  (.env に書き込む)"
+"""
+
+[tasks."ports:shift"]
+description = "PC側のポートを指定ぶんずらして .env に書く(例: mise run ports:shift 10 → 5183/3010/5442)"
+usage = 'arg "<offset>" help="ずらす数(0以上の整数)"'
+run = """
+offset="$usage_offset"
+case "$offset" in ''|*[!0-9]*) echo "使い方: mise run ports:shift <ずらす数(0以上の整数)>" >&2; exit 1;; esac
+touch .env
+# 既存の3行を消してから書き直す(重複防止)
+grep -v -E '^(FRONTEND_PORT|BACKEND_PORT|DB_PORT)=' .env > .env.tmp && mv .env.tmp .env
+{
+  echo "# このワークツリー専用のポート(他のワークツリーと衝突しないようにずらしている)"
+  echo "FRONTEND_PORT=$((5173 + offset))"
+  echo "BACKEND_PORT=$((3000 + offset))"
+  echo "DB_PORT=$((5432 + offset))"
+} >> .env
+echo ".env に書きました。反映するには mise run down && mise run up"
+mise run ports
+"""
+
 # ---- データベース ------------------------------------------
 
 [tasks."db:migrate"]

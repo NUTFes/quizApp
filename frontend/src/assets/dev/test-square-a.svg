@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600" role="img" aria-label="テスト用正方形画像 A">
+  <rect width="600" height="600" fill="#f6f8ff"/>
+  <path d="M0 0 600 600M600 0 0 600" stroke="#42d7f5" stroke-width="8"/>
+  <circle cx="300" cy="300" r="230" fill="none" stroke="#192085" stroke-width="10"/>
+  <rect x="5" y="5" width="590" height="590" fill="none" stroke="#192085" stroke-width="10"/>
+  <g fill="#42d7f5">
+    <rect x="5" y="5" width="90" height="90"/><rect x="505" y="5" width="90" height="90"/>
+    <rect x="5" y="505" width="90" height="90"/><rect x="505" y="505" width="90" height="90"/>
+  </g>
+  <circle cx="300" cy="300" r="150" fill="#ffffff" stroke="#192085" stroke-width="6"/>
+  <text x="300" y="300" font-family="sans-serif" font-size="150" font-weight="900" fill="#192085" text-anchor="middle" dominant-baseline="central">A</text>
+  <text x="300" y="512" font-family="sans-serif" font-size="44" font-weight="700" fill="#192085" text-anchor="middle">600 × 600</text>
+</svg>
