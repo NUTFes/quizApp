@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { AdminState, MonitorState, ViewerState } from '../types'
 import { assertStateContract } from './assertStateContract'
 import {
@@ -26,7 +26,7 @@ import {
   phoneFinished,
 } from './mock/phone/index'
 import { BASE, getAdminToken, USE_MOCK } from './config'
-import { getAdminState, getMonitorState, getViewerState } from './api'
+import { ApiError, getAdminState, getMonitorState, getViewerState } from './api'
 
 type EventState = AdminState | MonitorState | ViewerState
 
@@ -35,6 +35,10 @@ type Opts<Type extends EventState> = {
   getState: () => Promise<Type>
   testSteps: { at: number; mock: Type }[]
   view?: 'phone' | 'monitor' | 'admin'
+  // 認証が切れていることが分かったときに呼ぶ(管理者画面だけが渡す)。
+  // EventSource は失敗理由(ステータスコード)を教えてくれないので、
+  // つながらなくなったら getState を1回叩いて 401 かどうかを確かめる
+  onUnauthorized?: () => void
 }
 
 function useEventState<Type extends EventState>({
@@ -42,8 +46,16 @@ function useEventState<Type extends EventState>({
   getState,
   testSteps,
   view,
+  onUnauthorized,
 }: Opts<Type>): Type | null {
   const [state, setState] = useState<Type | null>(null)
+
+  // 呼び出し側がその場で作った関数を渡しても、依存配列に入れずに済むようにする。
+  // 依存に入れると、レンダーのたびに接続を張り直してしまう
+  const onUnauthorizedRef = useRef(onUnauthorized)
+  useEffect(() => {
+    onUnauthorizedRef.current = onUnauthorized
+  })
 
   useEffect(() => {
     const updateState = (nextState: Type) => {
@@ -80,7 +92,31 @@ function useEventState<Type extends EventState>({
         .catch((e) => {
           // 既に接続を切っていたら エラーが出ないようにする
           if (closed) return
+          if (e instanceof ApiError && e.status === 401) {
+            onUnauthorizedRef.current?.()
+            return
+          }
           console.error('SSE 接続時に State が取得できませんでした', e)
+        })
+    }
+
+    // 接続が失敗・切断したとき。EventSource は自動で再接続を繰り返すので、
+    // トークンが無効になった場合は「つながらないまま」になり画面が固まる。
+    // 401 かどうかだけを確かめて、そうならログイン画面へ戻してもらう
+    // (→ docs/実装要件/フロントエンド実装要件.md §4)。
+    // 通信できないだけのときは何もしない(EventSource の再接続に任せる)。
+    let probing = false
+    es.onerror = () => {
+      if (onUnauthorizedRef.current === undefined || closed || probing) return
+      probing = true
+      getState()
+        .then(() => {
+          probing = false
+        })
+        .catch((e) => {
+          probing = false
+          if (closed) return
+          if (e instanceof ApiError && e.status === 401) onUnauthorizedRef.current?.()
         })
     }
 
@@ -109,12 +145,13 @@ const ADMIN_STEPS = [
   { at: 14000, mock: adminFinished },
 ]
 
-export const useAdminState = () =>
+export const useAdminState = (onUnauthorized?: () => void) =>
   useEventState<AdminState>({
     path: `/api/admin/events?token=${encodeURIComponent(getAdminToken())}`,
     getState: getAdminState,
     testSteps: ADMIN_STEPS,
     view: 'admin',
+    onUnauthorized,
   })
 
 const MONITOR_STEPS = [

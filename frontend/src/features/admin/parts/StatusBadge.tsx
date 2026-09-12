@@ -15,7 +15,9 @@ export function StatusBadge({ status }: { status: AdminStatus }) {
   // 文字サイズは管理者画面用のトークンを使う。
   // モニタ側の text-p-status-answer は 85インチ用の 36px で、手元の操作盤には大きすぎる
   return (
-    <p className={`rounded-full px-6 py-2 text-admin-func-label ${STATUS[status].color}`}>
+    <p
+      className={`w-[166px] shrink-0 rounded-full px-3 py-1 text-center font-zen-kaku-gothic-new text-admin-func-label leading-[normal] whitespace-nowrap text-black ${STATUS[status].color}`}
+    >
       {STATUS[status].label}
     </p>
   )
