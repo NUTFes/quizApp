@@ -106,6 +106,7 @@ quizApp/
 - backend最小サーバー: `GET /api/health` + SSE `GET /api/events`(接続挨拶 + 15秒ハートビート)
 - **`mise run up` で3コンテナが起動し、検収済み**(5173でフロント / 3000でhealth / SSEもhello受信)
 - **ESLint + Prettier + tsc を導入し、CIで回る状態**(PR #3)
+- **CIとローカルの `mise run lint` で `go test ./...` が回る状態**(PR #119 / Issue #117)。フロントのテスト(vitest)は未導入
 - **GitHub設定完了**: main保護(approve1・CI必須・**管理者にも適用**)、squash merge固定、ラベル8個
 
 ### ⚠️ リポジトリは public
