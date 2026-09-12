@@ -1,8 +1,15 @@
-import { useState } from 'react'
+import { ReactNode, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CheckingView, UnreachableView } from '../admin/AdminPage'
 import { LoginForm } from '../admin/LoginView'
 import { NETWORK_ERROR_MESSAGE, toMessage } from '../admin/errorMessages'
+import { CurrentStatus } from '../admin/parts/CurrentStatus'
+import {
+  adminAnswerAri,
+  adminFinished,
+  adminQuestionFour,
+  adminWaiting,
+} from '../../lib/mock/admin/index'
 
 // 管理者画面の全パターン確認用ページ（開発時のみ / パス: /dev/admin）
 //
@@ -115,6 +122,59 @@ const CASES = [
   },
 ] as const
 
+// 「出題中の問題」パネル(#107)の取りうる状態。
+//
+// パネルは props だけで描ける部品なので、通信もトークンも無いこの場所で全状態を並べられる。
+// 実物の画面で待機中や締切を見るには、その都度サーバーを操作しないといけない。
+//
+// 🔒 使っているのは lib/mock/admin の架空データ。本番の問題文・正答は絶対に置かない。
+//    lib/mock/ は別イシューの担当領域なので、読むだけで編集しない
+//    (この場所で必要な差分は、下のようにスプレッドで作る)。
+const PANEL_CASES = [
+  {
+    title: '待機中',
+    note: 'waiting・出している問題が無い。バッジも出さない',
+    node: <CurrentStatus state={adminWaiting} status={null} />,
+  },
+  {
+    title: '出題中 / 回答受付中',
+    note: 'question・締切前。3区切りのうち1つがまだ未公開',
+    node: <CurrentStatus state={adminQuestionFour} status="accepting" />,
+  },
+  {
+    title: '出題中 / 回答締切',
+    note: 'question・残り0秒。phase は question のまま動かない',
+    node: <CurrentStatus state={adminQuestionFour} status="closed" />,
+  },
+  {
+    title: '出題中 / 制限時間なし',
+    note: 'timeLimitSec が null。「なし」と出て、締切にはならない',
+    node: (
+      <CurrentStatus
+        state={{ ...adminQuestionFour, timeLimitSec: null, questionStartedAt: null }}
+        status="accepting"
+      />
+    ),
+  },
+  {
+    title: '出題中 / まだ1区切りも公開していない',
+    note: 'revealedSegments が 0。全部に（未公開）が付く',
+    node: (
+      <CurrentStatus state={{ ...adminQuestionFour, revealedSegments: 0 }} status="accepting" />
+    ),
+  },
+  {
+    title: '正解発表',
+    note: 'answer・全区切りが公開済み',
+    node: <CurrentStatus state={adminAnswerAri} status="answer" />,
+  },
+  {
+    title: '終了',
+    note: 'finished・「第0問」と出ていないことを確認する',
+    node: <CurrentStatus state={adminFinished} status={null} />,
+  },
+] as const
+
 function AdminPreviewPage() {
   const [width, setWidth] = useState<(typeof WIDTHS)[number]>(WIDTHS[0])
 
@@ -149,27 +209,67 @@ function AdminPreviewPage() {
         </p>
       </header>
 
+      <h2 className="mb-4 text-xl font-bold">画面全体</h2>
       <div className="flex flex-col gap-10">
         {CASES.map((c) => (
-          <section key={c.title} className="flex flex-col gap-2">
-            <div className="flex items-baseline gap-3">
-              <h2 className="text-lg font-bold text-neutral-800">{c.title}</h2>
-              <span className="text-xs text-neutral-500">
-                {width.width}×{HEIGHT} / {c.note}
-              </span>
-            </div>
-            <div className="max-w-full overflow-x-auto">
-              <div
-                className="admin-preview-canvas overflow-hidden rounded-lg border border-neutral-300 bg-white"
-                style={{ width: width.width, height: HEIGHT }}
-              >
-                {c.node}
-              </div>
-            </div>
-          </section>
+          <PreviewCase key={c.title} title={c.title} note={c.note} width={width.width} fill>
+            {c.node}
+          </PreviewCase>
+        ))}
+      </div>
+
+      <h2 className="mt-14 mb-2 text-xl font-bold">パネル単体</h2>
+      <p className="mb-4 text-sm text-neutral-600">
+        通信していない。props で状態を渡して描いているだけなので、取りうる状態をそのまま並べられる。
+      </p>
+      <div className="flex flex-col gap-10">
+        {PANEL_CASES.map((c) => (
+          <PreviewCase key={c.title} title={c.title} note={c.note} width={width.width}>
+            {c.node}
+          </PreviewCase>
         ))}
       </div>
     </div>
+  )
+}
+
+// 1件分の枠。
+//
+// fill を付けたときだけ、画面まるごとの高さ(HEIGHT)に合わせる。
+// パネル単体は中身の高さのまま置く。720px の枠に入れると余白だらけになり、
+// Figma と見比べるときに縦の間隔を誤解する。
+function PreviewCase({
+  title,
+  note,
+  width,
+  fill = false,
+  children,
+}: {
+  title: string
+  note: string
+  width: number
+  fill?: boolean
+  children: ReactNode
+}) {
+  return (
+    <section className="flex flex-col gap-2">
+      <div className="flex items-baseline gap-3">
+        <h3 className="text-lg font-bold text-neutral-800">{title}</h3>
+        <span className="text-xs text-neutral-500">
+          {width}px{fill && ` × ${HEIGHT}`} / {note}
+        </span>
+      </div>
+      <div className="max-w-full overflow-x-auto">
+        <div
+          className={`overflow-hidden rounded-lg border border-neutral-300 bg-white ${
+            fill ? 'admin-preview-canvas' : 'p-6'
+          }`}
+          style={fill ? { width, height: HEIGHT } : { width }}
+        >
+          {children}
+        </div>
+      </div>
+    </section>
   )
 }
 
