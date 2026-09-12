@@ -5,3 +5,7 @@ const STATUS = {
   closed: { label: '回答締切', color: 'bg-closed-answer' },
   answer: { label: '正解発表', color: 'bg-live' },
 } as const satisfies Record<AdminStatus, { label: string; color: string }>
+
+export function StatusBadge({ status }: { status: AdminStatus }) {
+  return <p className="text-p-status-answer">{STATUS[status].label}</p>
+}
