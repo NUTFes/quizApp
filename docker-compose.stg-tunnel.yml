@@ -32,8 +32,12 @@
 services:
 
   cloudflared:
-    image: cloudflare/cloudflared:latest
-    # --no-autoupdate: 勝手に自己更新して当日に挙動が変わるのを防ぐ
+    # ★ latest にしない。compose は latest を pull しに行くので、当日に
+    #   イメージが入れ替わりうる。検証したバージョンに固定する。
+    #   更新するときは手元で動作を見てから、このタグを書き換える。
+    image: cloudflare/cloudflared:2026.9.1
+    # --no-autoupdate: コンテナの中での自己更新を止める。
+    #   上のタグ固定と合わせて初めて「当日の挙動が動かない」が成立する。
     command: tunnel --no-autoupdate run
     environment:
       # ★ 左辺の TUNNEL_TOKEN は cloudflared が読む固定の名前。変えられない。

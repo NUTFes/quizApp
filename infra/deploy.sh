@@ -34,6 +34,15 @@ COMPOSE=""
 #   (2026-08-25 に実際に踏んだ)。既定値は cd したあとで決める。
 REF="${REF:-}"
 
+# .env.prod から値を1つ読む。見つからなければ空文字を返す。
+# ★ grep で書くと「行が無い」ときに終了コード1が返り、冒頭の set -euo pipefail で
+#   デプロイ全体がその場で止まる。STG_CF_TUNNEL_TOKEN のような任意項目は
+#   行が無いのが正常(既存CTの .env.prod には無い)なので、no-match でも
+#   成功扱いになる awk で読む。
+env_value() {
+  awk -F= -v key="$1" '$0 ~ "^" key "=" { sub(/^[^=]*=/, ""); print; exit }' .env.prod
+}
+
 cd "$APP_DIR"
 
 if [ ! -f .env.prod ]; then
@@ -47,7 +56,7 @@ fi
 # ここで止めれば「どの値が空か」がその場で分かる。
 missing=""
 for key in POSTGRES_PASSWORD ADMIN_TOKEN IMPORT_TOKEN; do
-  value="$(grep -E "^${key}=" .env.prod | head -1 | cut -d= -f2-)"
+  value="$(env_value "$key")"
   [ -z "$value" ] && missing="${missing} ${key}"
 done
 if [ -n "$missing" ]; then
@@ -98,7 +107,7 @@ echo "=== ② 構成の確定 ========================================="
 #   起動オプションを手で覚える形にすると、練習環境で書き忘れた時に
 #   「デプロイは成功したのに外から繋がらない」という分かりにくい形で出る。
 COMPOSE="docker compose -f docker-compose.prod.yml"
-tunnel_token="$(grep -E '^STG_CF_TUNNEL_TOKEN=' .env.prod | head -1 | cut -d= -f2-)"
+tunnel_token="$(env_value STG_CF_TUNNEL_TOKEN)"
 if [ -n "$tunnel_token" ]; then
   if [ ! -f docker-compose.stg-tunnel.yml ]; then
     echo "!! STG_CF_TUNNEL_TOKEN があるのに docker-compose.stg-tunnel.yml がありません。" >&2
@@ -114,7 +123,11 @@ COMPOSE="$COMPOSE --env-file .env.prod"
 unset tunnel_token        # 値をこのあとのログに出さない
 
 echo "=== ③ ビルドして起動 ====================================="
-$COMPOSE up -d --build
+# ★ --remove-orphans が必須。これが無いと、トンネルを使うのをやめて
+#   STG_CF_TUNNEL_TOKEN を空にして再デプロイしても、起動済みの cloudflared は
+#   今の構成に含まれない「orphan」として残り続ける。restart: always なので
+#   CT を再起動しても生き返り、個人のドメイン経由での公開が意図せず続く。
+$COMPOSE up -d --build --remove-orphans
 
 echo "=== ④ マイグレーション ==================================="
 # ★ 順序が重要。アプリより先にスキーマを作る。
