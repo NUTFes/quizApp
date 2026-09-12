@@ -23,6 +23,7 @@ quizApp/
 ├── mise.toml                 # ツールバージョン + タスク定義(up/down等)
 ├── docker-compose.yml        # 開発用(frontend / backend / db)
 ├── docker-compose.prod.yml   # 本番用の差分
+├── docker-compose.stg-tunnel.yml # 練習環境用の追加分(cloudflared)。prod に重ねて使う
 ├── README.md                 # 環境構築と開発ルール(新メンバーの入口)
 ├── AGENTS.md                 # AIエージェント向けのリポジトリ説明
 ├── .github/

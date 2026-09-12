@@ -1,0 +1,47 @@
+# ============================================================
+# docker-compose.stg-tunnel.yml — 自分たちの Cloudflare トンネルで外部公開する
+#
+# docker-compose.prod.yml に「重ねて」使う追加分。単体では起動しない。
+#   docker compose -f docker-compose.prod.yml -f docker-compose.stg-tunnel.yml \
+#     --env-file .env.prod up -d
+# → infra/deploy.sh は .env.prod に STG_CF_TUNNEL_TOKEN があれば自動で重ねる。
+#
+# 【何のためのファイルか】
+#   練習環境を学内ネットワークの外から触れるようにするため。CT は外から
+#   受信できない(policy Q6)が、外への送信は通る。cloudflared は
+#   「中から外へ繋ぎに行って、その通り道で受け取る」ので、ポート開放も
+#   証明書も要らない。
+#
+# 【本番では使わない想定】
+#   本番は組織の Cloudflare に合流する(policy Q2)。STG_CF_TUNNEL_TOKEN を
+#   .env.prod に書かなければ、このファイルは読み込まれない。
+#
+# ★ ファイル名と環境変数に STG_ を付けているのは、本番側が別途トンネルの設定を
+#   持つことになっても名前がぶつからないようにするため。本番が「各環境で
+#   cloudflared を動かす」流儀だと分かった場合も、練習環境の設定を
+#   使い回すのではなく、本番用の値を別の名前で足すこと。
+#   1つの名前を両方で使い回すと、練習環境の .env.prod を本番CTにコピーした瞬間に
+#   本番が個人のドメイン経由で公開される事故になる。
+#
+# ★ trycloudflare の使い捨てURL(quick tunnel)ではこのアプリは動かない。
+#   quick tunnel は SSE 非対応で、同時リクエストも 200 で頭打ちになる。
+#   SSE は1接続がリクエストを開きっぱなしにするため、参加者200人の想定が
+#   そのまま上限にぶつかる。必ず「名前付きトンネル」を使うこと。
+# ============================================================
+
+services:
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    # --no-autoupdate: 勝手に自己更新して当日に挙動が変わるのを防ぐ
+    command: tunnel --no-autoupdate run
+    environment:
+      # ★ 左辺の TUNNEL_TOKEN は cloudflared が読む固定の名前。変えられない。
+      #   右辺が .env.prod 側の名前で、こちらは自由に決められる。
+      # ★ command に --token で直書きしないこと。プロセス一覧に平文で出る。
+      - TUNNEL_TOKEN=${STG_CF_TUNNEL_TOKEN}
+      - TZ=Asia/Tokyo
+    # ports は開けない。外向きの接続だけで成立する。
+    depends_on:
+      - frontend
+    restart: always
