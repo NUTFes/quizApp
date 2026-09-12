@@ -79,6 +79,7 @@ run = [
   "docker compose exec backend sh -c 'test -z \"$(gofmt -l .)\"'",
   "docker compose exec backend go vet ./...",
   "docker compose exec backend go build ./...",
+  "docker compose exec backend go test ./...",
   "docker compose exec frontend pnpm lint",
   "docker compose exec frontend pnpm format:check",
   "docker compose exec frontend pnpm typecheck",
@@ -93,4 +94,4 @@ run = [
   "docker compose exec frontend pnpm lint:fix",
 ]
 
-# テスト(vitest / go test)は未導入。導入時にここへ [tasks.test] を追加する。
+# フロントのテスト(vitest)は未導入。書き始めるときに lint と CI の両方へ追加する。
