@@ -61,6 +61,7 @@ export function ShowQuestionForm({
             disabled={busy}
             onChange={(e) => onTimeLimitInputChange(e.target.value)}
           />
+          <p>{inputError}</p>
         </div>
         <button type="submit" disabled={!canSubmit}>
           {ACTION_LABEL.showQuestion}
