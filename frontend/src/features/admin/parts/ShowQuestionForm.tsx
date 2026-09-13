@@ -1,6 +1,7 @@
 import { useId } from 'react'
 import { QuestionListItem } from '../../../types'
-import { ACTION_LABEL } from '../labels'
+import { ACTION_LABEL, difficultyLabel, questionTypeLabel } from '../labels'
+import { UNSAFE_getTurboStreamSingleFetchDataStrategy } from 'react-router-dom'
 
 const MIN_SEC = 5
 const MAX_SEC = 120
@@ -40,7 +41,23 @@ export function ShowQuestionForm({
   return (
     <section>
       <h2>選択中の問題</h2>
-      <p>問題一覧から１問選んでください</p>
+
+      {selected === null ? (
+        <p>問題一覧から１問選んでください</p>
+      ) : (
+        <div>
+          <p>
+            ID {selected.id} ? {questionTypeLabel(selected.type)} /{' '}
+            {difficultyLabel(selected.difficulty)}
+          </p>
+          <p>{selected.textPreview}</p>
+          {selected.id === currentQuestionId ? (
+            <p>出題中の問題を最初からやり直します(タイマーも戻ります)</p>
+          ) : (
+            selected.asked && <p>出題済みの問題です</p>
+          )}
+        </div>
+      )}
       <form
         onSubmit={(e) => {
           e.preventDefault() //  何もせず送信したときの強制再リロードを防ぐ
