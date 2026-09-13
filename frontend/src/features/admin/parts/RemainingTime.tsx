@@ -1,4 +1,7 @@
+import { Phase } from '../../../types'
+
 type Props = {
+  phase: Phase
   remainingTime: number
 }
 
