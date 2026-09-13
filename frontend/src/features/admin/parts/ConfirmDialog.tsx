@@ -56,3 +56,12 @@ export function ConfirmDialogCard({ title, message, confirmLabel, onConfirm, onC
     </div>
   )
 }
+
+// ポップアップの範囲外は押せなくする
+export function ConfirmDialog(props: Props) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <ConfirmDialogCard {...props} />
+    </div>
+  )
+}
