@@ -8,7 +8,8 @@ import type { AdminState } from '../../types'
 import { CurrentStatus } from './parts/CurrentStatus'
 import type { AdminStatus } from './parts/StatusBadge'
 import { useRemainingTime } from '../../lib/useRemainingTime'
-import { OperationFailure } from './parts/ErrorBanner'
+import { ErrorBanner, OperationFailure } from './parts/ErrorBanner'
+import { useState } from 'react'
 
 type Props = {
   // トークンが無効になったことが分かったときに呼ぶ。AdminPage がログイン画面へ戻す
@@ -35,6 +36,7 @@ export function OperationPanel({ onAuthExpired }: Props) {
   return (
     <div>
       <CurrentStatus state={state} status={toStatus(state, remainingSec)} />
+      <ErrorBanner failure={failure} onDismiss={() => setFailure(null)} />
       {/*ここからは、以降のイシューで足していく */}
     </div>
   )
