@@ -34,7 +34,17 @@ export function OperationPanel({ onAuthExpired }: Props) {
   if (state === null) return <p>接続中...</p>
 
   const run = async (action: ActionLabel, request: () => Promise<unknown>) => {
-    return
+    if (inFlight.current) return
+    inFlight.current = true
+    setBusy(true)
+    setFailure(null)
+    try {
+      await request()
+    } catch {
+    } finally {
+      inFlight.current = false
+      setBusy(false)
+    }
   }
   const remainingSec =
     state.phase === 'question' && state.timeLimitSec !== null ? remainingTime : null
