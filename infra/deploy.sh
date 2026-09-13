@@ -3,6 +3,8 @@
 # deploy.sh — アプリを本番CTにデプロイする
 #
 # 【どこで実行するか】CT の中(PVEホストで pct enter <VMID> して入る)
+#   または GitHub Actions の CD(.github/workflows/cd.yml)が、CT 上の
+#   セルフホストランナーから承認後に実行する
 # 【前提】infra/create-ct.sh でCTが作られ、Docker が動いていること
 #         /opt/quizApp に clone 済みで、.env.prod が置いてあること
 #
@@ -20,9 +22,14 @@ APP_DIR="${APP_DIR:-/opt/quizApp}"
 # 自分たちの Cloudflare トンネル(cloudflared)も一緒に起動する。
 COMPOSE=""
 
-# デプロイする対象。ブランチ名でもタグ名でもよい。
+# デプロイする対象。ブランチ名・タグ名・コミットSHA(40桁)のどれでもよい。
 #   通常          : bash infra/deploy.sh                      (= main)
 #   本番/リハーサル: REF=rehearsal-2026-09-01 bash infra/deploy.sh
+#   CD            : REF=<40桁のSHA> bash infra/deploy.sh      (cd.yml が渡す)
+#
+# ★ CD が SHA で渡すのは、練習環境で確かめたものと同じコミットを本番に入れるため。
+#   REF=main だと「承認した時点の最新 main」を取りに行くので、練習環境の承認後に
+#   別の PR がマージされると、確かめていないコミットが本番に入ってしまう。
 #
 # ★ 本番はタグを使うこと。ブランチはポインタが動くので「当日動いていたもの」を
 #   後から特定できない。タグは動かないので特定でき、戻すのも REF を変えるだけ。
@@ -84,6 +91,14 @@ if [ -n "$REF" ]; then
   if git rev-parse -q --verify "refs/tags/${REF}" >/dev/null; then
     # タグ: detached HEAD で固定する(動かない = 何が動いているか特定できる)
     git checkout -q --detach "refs/tags/${REF}"
+  elif [[ "$REF" =~ ^[0-9a-f]{40}$ ]]; then
+    # コミットSHA: タグと同じく detached HEAD で固定する。
+    # ★ 短縮SHAは受け付けない。ブランチ名と見分けられず、衝突もしうるため。
+    if ! git cat-file -e "${REF}^{commit}" 2>/dev/null; then
+      echo "!! コミット ${REF} が origin から取得できません。push 済みか確認してください。" >&2
+      exit 1
+    fi
+    git checkout -q --detach "${REF}"
   else
     # ブランチ: 追従する。--ff-only なので、勝手なマージコミットは作られない
     git checkout -q "${REF}"
@@ -160,6 +175,8 @@ df -h /
 # 当日「何が動いているか」を即答できるようにディスクに残す
 git --no-pager log -1 --format="%H %s" > /opt/DEPLOYED_REF
 echo "REF=${REF}" >> /opt/DEPLOYED_REF
+# CD は SHA で渡すので REF= だけではタグ名が分からない。付いていれば併記する。
+echo "tags=$(git tag --points-at HEAD | paste -sd, -)" >> /opt/DEPLOYED_REF
 echo "deployed_at=$(date '+%Y-%m-%d %H:%M:%S %Z')" >> /opt/DEPLOYED_REF
 echo "--- /opt/DEPLOYED_REF ---"; cat /opt/DEPLOYED_REF
 
