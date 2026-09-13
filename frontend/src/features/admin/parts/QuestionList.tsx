@@ -12,5 +12,11 @@ export function QuestionList({ items, selectedId, onSelect, currentQuestionId }:
     return <p>問題がまだ投入されていません</p>
   }
 
-  return <table></table>
+  return (
+    <table>
+      <thread>
+        <tr></tr>
+      </thread>
+    </table>
+  )
 }
