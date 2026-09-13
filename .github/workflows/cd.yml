@@ -87,13 +87,24 @@ jobs:
           #   deploy.sh が本番で動きうる(マイグレーション手順などアプリのSHAだけでは
           #   固定できない部分がある)。resolve が一度だけ main を固定し、両方に配って揃える。
           #   ★ `git rev-parse origin/main` ではなく `github.workflow_sha` を使うこと。
-          #   前者は「この checkout ステップが origin/main を fetch した時点」の値になるが、
-          #   CI 完了(workflow_run のトリガー)からこのステップが動くまでの短い間に
-          #   別のコミットが main に入ると、sha(CIが通ったコミット)より先の版になりうる
-          #   (レビュー指摘)。github.workflow_sha は「この run がどの main の版の cd.yml で
-          #   動くか」として GitHub がワークフロー開始時に決める値で、ジョブの実行タイミングに
-          #   左右されない。
-          echo "script_sha=${WORKFLOW_SHA}" >> "$GITHUB_OUTPUT"
+          #   前者は「この checkout ステップが origin/main を fetch した時点」の値になるため、
+          #   resolve のキュー待ち・実行タイミングによって値が揺れうる。github.workflow_sha は
+          #   「この run がどの main の版の cd.yml で動くか」として GitHub が run 作成時点で
+          #   一度だけ決める値なので、resolve がいつ実行されても同じ値になる。
+          #   (この値は sha(CIが通ったコミット)より新しい main を指すこともあり、それ自体は
+          #   問題ない。「同じ run の中で一度だけ確定し、揺れない」ことが目的であって、
+          #   sha 以前の版であることは保証しない)
+          script_sha="$WORKFLOW_SHA"
+          # ★ workflow_dispatch は main 以外のブランチ/タグからも起動できてしまう(Actions の
+          #   仕様上、UI や API で ref を選べる)。その場合 github.workflow_sha は main に
+          #   含まれない値になりうるため、sha と同じく main の祖先であることを確かめる。
+          #   Environment のブランチ制限(main のみ)とランナーのガードでも二重に防いでいるが、
+          #   ここでも落として多層防御を保つ。
+          if ! git merge-base --is-ancestor "$script_sha" origin/main; then
+            echo "::error::デプロイに使うスクリプトの版(${script_sha})が main に含まれていません。workflow_dispatch は main から起動してください。"
+            exit 1
+          fi
+          echo "script_sha=${script_sha}" >> "$GITHUB_OUTPUT"
 
           # ★ 本番は「タグを指定した手動起動」の時だけ対象にする。main への push(マージ)からは
           #   練習環境までしか進まない(理由はファイル冒頭のコメントを参照)。
@@ -155,9 +166,10 @@ jobs:
           #   「最新 main を追従」に落ちないよう、ここで多層防御として止める。
           #   SCRIPT_SHA が空だと checkout が既定のコミット(ワークフローの ref)を取りに行くので
           #   同じく止める。
-          for v in "$REF" "$SCRIPT_SHA"; do
+          for pair in "REF=$REF" "SCRIPT_SHA=$SCRIPT_SHA"; do
+            v="${pair#*=}"
             if ! [[ "$v" =~ ^[0-9a-f]{40}$ ]]; then
-              echo "::error::デプロイ対象のコミットが確定していません(resolve の出力を確認してください)。"
+              echo "::error::デプロイ対象のコミットが確定していません(${pair%%=*} の値: '${v}'。resolve の出力を確認してください)。"
               exit 1
             fi
           done
@@ -236,9 +248,10 @@ jobs:
           REF: ${{ needs.resolve.outputs.sha }}
           SCRIPT_SHA: ${{ needs.resolve.outputs.script_sha }}
         run: |
-          for v in "$REF" "$SCRIPT_SHA"; do
+          for pair in "REF=$REF" "SCRIPT_SHA=$SCRIPT_SHA"; do
+            v="${pair#*=}"
             if ! [[ "$v" =~ ^[0-9a-f]{40}$ ]]; then
-              echo "::error::デプロイ対象のコミットが確定していません(resolve の出力を確認してください)。"
+              echo "::error::デプロイ対象のコミットが確定していません(${pair%%=*} の値: '${v}'。resolve の出力を確認してください)。"
               exit 1
             fi
           done

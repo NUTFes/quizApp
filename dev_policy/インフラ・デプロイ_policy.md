@@ -490,7 +490,8 @@ CTスナップショットが「設定ごと戻す」手段なのに対し、タ
 - [ ] CD の GitHub 側設定(Environments `stg`/`prod`・承認者・main 限定・外部PRの承認制)→ 練習CTへのランナーとガードの登録 → `STG_CD_ENABLED=true`。**この順番を守る**(デプロイ手順 3.5)
 - [ ] Environments `stg`/`prod` の Deployment branches が **Protected branches only** になっている(2026-09-14 時点)。**Selected branches and tags → `main`** に直す
 - [ ] `prod` の Required reviewers を2人以上にする(当日に承認者が不在だと CD で入れられない)
-- [ ] **CT 201 を壊す前に、「本番だけ動かすモード」を CT 201 でリハーサルする**(デプロイ手順 3.5「本番だけ動かすモードをリハーサルする」)
+- [ ] **CT 201 を壊す前に、「本番だけ動かすモード」を CT 201 でリハーサルする**(デプロイ手順 3.5「本番だけ動かすモードをリハーサルする」)。
+      `PROD_CD_ENABLED=true` が前提なので、上の「本番CTへの CD を許してよいか」の許可が出た後
 - [ ] 本番CTを作ったら、練習CTのランナーを削除して `quiz-prod` のランナーを登録する
 - [ ] 本番経路での200接続テスト(段取り④)
 - [ ] 本番1ヶ月前リハーサル(Phase 2完了時)を予定に入れる
