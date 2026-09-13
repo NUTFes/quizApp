@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { QuestionListItem } from '../../../types'
 
 const MIN_SEC = 5
@@ -30,5 +31,10 @@ export function ShowQuestionForm({
   onTimeLimitInputChange,
   onSubmit,
 }: Props) {
+  const inputId = useId()
+  const errorId = useId()
+  const inputError = checkTimeLimit(timeLimitInput)
+  const canSubmit = !busy && selected !== null && inputError === null
+
   return <div></div>
 }
