@@ -355,7 +355,7 @@ Run workflow でタグ指定 → [stg] 承認 → 練習CTにデプロイ → [p
 | 決めたこと | 理由 |
 |---|---|
 | **経路は CT 上のセルフホストランナー** | CT は受信できない(Q6)が送信は通る。ランナーは GitHub に繋ぎに行ってジョブを受け取るので、SSH もポート開放も要らない。cloudflared と同じ形 |
-| **承認は GitHub の Environments(`stg` / `prod`)の Required reviewers** | 承認されるまでジョブが CT に届かない。承認の記録と実行ログが Actions に残る |
+| **承認は GitHub の Environments(`stg` / `prod`)の Required reviewers** | 承認されるまでジョブが CT に届かない。承認の記録と実行ログが Actions に残る。**現状は `naoto-anzai` 1人だけ**(2026-09-14 時点の運用体制がPM1人のため)。当日その人が不在だと CD で何も入れられないが、この体制でチームを回している以上は承認以外の作業も同様に集中しており、CDだけ複数人にしても解消しない。人が増えたら見直す |
 | **本番はタグを指定した手動起動の時だけ動く。main へのマージからは練習環境までしか進まない** | 検証用CTと本番CTは並存させない運用(下記)のため、本番期は練習環境が無く、この仕組みが無いとマージのたびに本番の承認依頼が直接来てしまう。本番はタグで入れる方針(デプロイ手順3・`deploy.sh`)にも揃えている。タグの指す先が対象コミットと一致することも確認する(同名ブランチによる取り違え対策) |
 | **練習環境 → 本番の順に、別々に承認する**(両方のCTがある間) | 練習環境で外から確かめてから本番を判断できる。練習環境で失敗したら本番には進めない |
 | **本番には練習環境と同じコミット(SHA)を入れる**(両方のCTがある間) | `REF=main` だと承認時点の最新 main が入り、練習環境の承認後にマージされたものが確かめられないまま本番に入る。`deploy.sh` は SHA も受け取れるようにした |
@@ -488,8 +488,7 @@ CTスナップショットが「設定ごと戻す」手段なのに対し、タ
       **破棄と同時に Variables の `STG_CD_ENABLED` を `false` に戻すこと**(ランナーだけ消して
       スイッチを true のままにすると、`deploy-stg` がランナー待ちのまま終わらず `deploy-prod` も進めなくなる)
 - [ ] CD の GitHub 側設定(Environments `stg`/`prod`・承認者・main 限定・外部PRの承認制)→ 練習CTへのランナーとガードの登録 → `STG_CD_ENABLED=true`。**この順番を守る**(デプロイ手順 3.5)
-- [ ] Environments `stg`/`prod` の Deployment branches が **Protected branches only** になっている(2026-09-14 時点)。**Selected branches and tags → `main`** に直す
-- [ ] `prod` の Required reviewers を2人以上にする(当日に承認者が不在だと CD で入れられない)
+- [x] ~~Environments `stg`/`prod` の Deployment branches~~ → **Selected branches and tags → `main`** に変更済み(2026-09-14)
 - [ ] **CT 201 を壊す前に、「本番だけ動かすモード」を CT 201 でリハーサルする**(デプロイ手順 3.5「本番だけ動かすモードをリハーサルする」)。
       `PROD_CD_ENABLED=true` が前提なので、上の「本番CTへの CD を許してよいか」の許可が出た後
 - [ ] 本番CTを作ったら、練習CTのランナーを削除して `quiz-prod` のランナーを登録する
