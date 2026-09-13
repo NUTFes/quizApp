@@ -19,6 +19,11 @@ func getQuestion(c *gin.Context, db *gorm.DB) {
 		platform.RespondError(c, http.StatusNotFound, "QUESTION_NOT_FOUND", "questionId="+raw+" は存在しません")
 		return
 	}
+
 	var q Question
+	// エラー内容で切り分ける
+	if( err := db.First(&q, uint(id)).Error; err != nil) {
+		
+	}
 	c.JSON(http.StatusOK, q)
 }
