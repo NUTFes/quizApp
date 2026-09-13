@@ -265,6 +265,13 @@ function AdminPreviewPage() {
           </PreviewCase>
         ))}
       </div>
+      <div className="flex flex-col gap-10">
+        {QUESTION_LIST_CASES.map((c) => (
+          <PreviewCase key={c.title} title={c.title} note={c.note} width={width.width}>
+            {c.node}
+          </PreviewCase>
+        ))}
+      </div>
     </div>
   )
 }
