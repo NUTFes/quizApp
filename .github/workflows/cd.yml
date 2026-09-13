@@ -1,0 +1,265 @@
+name: CD
+
+# main に入った変更を、承認してから CT にデプロイする。
+#   main にマージ            → CI が通る → [練習環境] 承認待ち → デプロイ(STG_CD_ENABLED が true の時だけ)
+#   Run workflow でタグを指定 → [練習環境] 承認待ち → デプロイ(同上)
+#                             → [本番]     承認待ち → デプロイ(PROD_CD_ENABLED が true の時だけ)
+#
+# ★ 本番(deploy-prod)が動くのは「タグを指定した手動起動」の時だけ。main への push(マージ)からは
+#   練習環境までしか進まない。検証用CTと本番CTは並存させない運用(dev_policy 参照)なので、本番の
+#   時期は練習環境が無く、マージのたびに本番の承認依頼が直接来てしまうのを防ぐため。本番はタグで
+#   入れる方針(infra/deploy.sh)にも揃えている。詳しくは resolve の prod_ok と deploy-prod の if を参照。
+# ★ 勝手にはデプロイしない。各段で GitHub の Environments(stg / prod)の
+#   「承認者必須」で止まり、承認されるまでジョブは CT に届かない。
+# ★ CT には外から入れない(policy Q6)ので、CT 上のセルフホストランナーが
+#   GitHub に繋ぎに行ってジョブを受け取る。cloudflared と同じ「中から外へ」の形。
+# ★ ランナーは他のワークフローからも指定できてしまうので、CT 側のガード
+#   (infra/runner-job-guard.sh)で「main の cd.yml のこのジョブ」以外を拒否している。
+# 設定と操作の手順 → docs/ガイドライン/デプロイ手順.md 「3.5 GitHub Actions から承認してデプロイする」
+on:
+  # CI の完了を待つ。push で直接起動すると、CI が落ちたコミットも承認待ちに並ぶ
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  # 手動起動。タグ(当日の event-YYYY-MM-DD など)を指定してデプロイする用
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: >-
+          デプロイする対象(タグ名・ブランチ名・コミットSHA)。main に含まれるものに限る。
+          本番(prod)に入れる時はタグ名を指定すること(ブランチ名・SHA では本番はスキップされる)
+        required: true
+        default: main
+
+# 承認画面で「何を入れようとしているか」が分かるように、対象を名前に出す
+run-name: >-
+  CD ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.event.workflow_run.head_sha }}
+
+permissions:
+  contents: read
+
+jobs:
+  # デプロイ対象をコミットSHAに固定する。練習環境と本番に同じものを入れるため。
+  resolve:
+    # workflow_run は「CI が完了した」だけで起動するので、成功と main への push に絞る。
+    # ★ event == 'push' を外さないこと。fork の PR でもブランチ名が main なら branches に一致する。
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
+      script_sha: ${{ steps.sha.outputs.script_sha }}
+      # ★ 本番(deploy-prod)を動かしてよいかどうか。「タグを指定した手動起動」の時だけ true になる。
+      #   判定内容は下の sha ステップを参照。
+      prod_ok: ${{ steps.sha.outputs.prod_ok }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.event.workflow_run.head_sha }}
+          fetch-depth: 0 # main に含まれるかの判定に履歴が要る
+          persist-credentials: false
+      - id: sha
+        # ★ inputs.ref は env 経由で渡す(run: 内に ${{ }} を直接展開すると、タグ名にシェルの
+        #   特殊文字を仕込まれた時にスクリプトインジェクションになりうる)。
+        env:
+          INPUT_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || '' }}
+          STG_CD_ENABLED: ${{ vars.STG_CD_ENABLED }}
+          PROD_CD_ENABLED: ${{ vars.PROD_CD_ENABLED }}
+          # ★ 「デプロイに使うスクリプトの版」は github.workflow_sha を使う(この run がどの
+          #   cd.yml の版で動いているかとして GitHub がジョブ開始時に決めた値。後述の理由でこれが必要)。
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+        run: |
+          sha="$(git rev-parse HEAD)"
+          # ★ main に入っていないもの(レビュー前の作業ブランチ等)は入れない。
+          #   承認者が run 名の ref を見落としても、ここで止まる。
+          if ! git merge-base --is-ancestor "$sha" origin/main; then
+            echo "::error::${sha} は main に含まれていません。マージ済みのものだけをデプロイできます。"
+            exit 1
+          fi
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+          # ★ 「デプロイに使うスクリプトの版」もここで一度だけ確定させる。
+          #   deploy-stg と deploy-prod がそれぞれ実行時に ref: main をチェックアウトすると、
+          #   承認待ちで日をまたぐ間に main が進み、練習環境で検証したのと違う版の
+          #   deploy.sh が本番で動きうる(マイグレーション手順などアプリのSHAだけでは
+          #   固定できない部分がある)。resolve が一度だけ main を固定し、両方に配って揃える。
+          #   ★ `git rev-parse origin/main` ではなく `github.workflow_sha` を使うこと。
+          #   前者は「この checkout ステップが origin/main を fetch した時点」の値になるため、
+          #   resolve のキュー待ち・実行タイミングによって値が揺れうる。github.workflow_sha は
+          #   「この run がどの main の版の cd.yml で動くか」として GitHub が run 作成時点で
+          #   一度だけ決める値なので、resolve がいつ実行されても同じ値になる。
+          #   (この値は sha(CIが通ったコミット)より新しい main を指すこともあり、それ自体は
+          #   問題ない。「同じ run の中で一度だけ確定し、揺れない」ことが目的であって、
+          #   sha 以前の版であることは保証しない)
+          script_sha="$WORKFLOW_SHA"
+          # ★ workflow_dispatch は main 以外のブランチ/タグからも起動できてしまう(Actions の
+          #   仕様上、UI や API で ref を選べる)。その場合 github.workflow_sha は main に
+          #   含まれない値になりうるため、sha と同じく main の祖先であることを確かめる。
+          #   Environment のブランチ制限(main のみ)とランナーのガードでも二重に防いでいるが、
+          #   ここでも落として多層防御を保つ。
+          if ! git merge-base --is-ancestor "$script_sha" origin/main; then
+            echo "::error::デプロイに使うスクリプトの版(${script_sha})が main に含まれていません。workflow_dispatch は main から起動してください。"
+            exit 1
+          fi
+          echo "script_sha=${script_sha}" >> "$GITHUB_OUTPUT"
+
+          # ★ 本番は「タグを指定した手動起動」の時だけ対象にする。main への push(マージ)からは
+          #   練習環境までしか進まない(理由はファイル冒頭のコメントを参照)。
+          #   タグの指す先が対象コミット(sha)と一致することも確かめる。actions/checkout は
+          #   ブランチとタグが同名だとブランチ側を解決しうるため、名前が存在するだけでは足りない。
+          #   この一致チェックにより、40桁hex名のタグ(git 自身が既定で無視する紛らわしい名前)も
+          #   狙って別コミットに向けられていれば弾ける。
+          prod_ok=false
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] &&
+             tag_sha="$(git rev-parse -q --verify "refs/tags/${INPUT_REF}^{commit}")" &&
+             [ "$tag_sha" = "$sha" ]; then
+            prod_ok=true
+          fi
+          echo "prod_ok=${prod_ok}" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "デプロイ対象: $(git --no-pager log -1 --format='%h %s')"
+            echo "- 練習環境のスイッチ(STG_CD_ENABLED): ${STG_CD_ENABLED:-(未設定)}"
+            echo "- 本番のスイッチ(PROD_CD_ENABLED): ${PROD_CD_ENABLED:-(未設定)}"
+            if [ "$prod_ok" = true ]; then
+              echo "- 本番: 対象(タグ ${INPUT_REF})"
+            else
+              echo "- 本番: 対象外(本番はタグを指定した手動起動の時だけ)"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-stg:
+    needs: resolve
+    # ★ 練習環境へのCDも、準備が終わるまで止めておくスイッチ(既定 OFF)。
+    #   Environment `stg` の承認者設定・ランナーとガードの登録を済ませてから true にする。
+    #   先に動くと、存在しない Environment が「保護ルールなし」で自動作成され、
+    #   承認なしで通過したジョブがランナー登録を待つ状態になりうる。
+    if: vars.STG_CD_ENABLED == 'true'
+    runs-on: [self-hosted, quiz-stg]
+    environment: stg # ★ ここで承認待ちになる
+    # 同じ CT へのデプロイを同時に走らせない。途中で止めるとマイグレーションが
+    # 半端になりうるので、実行中のものは取り消さない。
+    concurrency:
+      group: deploy-stg
+      cancel-in-progress: false
+    timeout-minutes: 30
+    steps:
+      # ★ ランナーのジョブ開始前ガード(infra/runner-job-guard.sh)を通ってきたか確かめる。
+      #   ガードが無いランナーは、他のワークフローからも CT 上でコードを実行できてしまう。
+      #   入れ忘れたまま使い続けないように、ここで CD 自体を失敗させる。
+      - name: ランナーのガードを確認
+        run: |
+          if [ "${QUIZ_RUNNER_GUARD:-}" != passed ]; then
+            echo "::error::ランナーにジョブ開始前ガードが設定されていません。デプロイ手順 3.5 ② を確認してください。"
+            exit 1
+          fi
+      - name: デプロイ対象の形式を確認
+        env:
+          REF: ${{ needs.resolve.outputs.sha }}
+          SCRIPT_SHA: ${{ needs.resolve.outputs.script_sha }}
+        run: |
+          # ★ deploy.sh は REF が空だと「いまチェックアウト中のブランチ」を使う(手動デプロイ用の
+          #   既定)。CD では必ず resolve が固定した40桁SHAを渡すこと。空や別の形式のまま
+          #   「最新 main を追従」に落ちないよう、ここで多層防御として止める。
+          #   SCRIPT_SHA が空だと checkout が既定のコミット(ワークフローの ref)を取りに行くので
+          #   同じく止める。
+          for pair in "REF=$REF" "SCRIPT_SHA=$SCRIPT_SHA"; do
+            v="${pair#*=}"
+            if ! [[ "$v" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "::error::デプロイ対象のコミットが確定していません(${pair%%=*} の値: '${v}'。resolve の出力を確認してください)。"
+              exit 1
+            fi
+          done
+      # ★ 実行するスクリプトは、対象コミット(needs.resolve.outputs.sha)の deploy.sh を
+      #   チェックアウトしないこと。この PR より前のコミット/タグへロールバックする時、
+      #   対象コミットの deploy.sh が SHA 指定(40桁)を理解できず、
+      #   タグ以外を全部ブランチとして git merge しようとして失敗する(旧版には無い機能のため)。
+      #   「デプロイするアプリの版」(REF)と「デプロイに使うスクリプトの版」(script_sha)を
+      #   分けることで、スクリプト側の対応状況に関わらずどのコミットへもロールバックできる。
+      #   ★ ref は resolve が一度だけ確定させた script_sha を使うこと(ここで main を
+      #   直接指定しない)。deploy-stg と deploy-prod が別々に「実行時点の main」を
+      #   引くと、承認待ちで main が進んだ時に練習環境で検証していない版が本番で動く。
+      #   なお、deploy.sh 自身が実行中に git checkout して書き換わる問題は、
+      #   /opt/quizApp とは別のこの作業フォルダで実行することで避けている。
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.resolve.outputs.script_sha }}
+          persist-credentials: false
+      - run: bash infra/deploy.sh
+        env:
+          APP_DIR: /opt/quizApp
+          REF: ${{ needs.resolve.outputs.sha }}
+
+  deploy-prod:
+    needs: [resolve, deploy-stg]
+    # ★ 本番へのCDをしてよいと決まるまで止めておくスイッチ。
+    #   Settings → Secrets and variables → Actions → Variables の PROD_CD_ENABLED を true にすると有効になる。
+    #   Environment `prod` の承認者設定と、本番CTへのランナー(quiz-prod)・ガードの登録を
+    #   済ませてから true にすること(理由は deploy-stg の STG_CD_ENABLED と同じ)。
+    #
+    # ★ resolve.outputs.prod_ok が true(= タグを指定した手動起動で、そのタグが対象コミットを
+    #   指している)の時しか動かない。main への push(マージ)由来の run では、いつも false になり
+    #   本番はスキップされる。理由: policy で検証用CTと本番CTは並存させないため、本番運用の時期は
+    #   練習環境が無く(下の deploy-stg は skipped)、この条件が無いとマージのたびに本番の承認依頼が
+    #   直接来てしまう。本番はタグで入れる方針(infra/deploy.sh)にも揃えている。
+    #
+    # ★ needs に挙げた deploy-stg が skipped(= STG_CD_ENABLED が true でない)で終わると、
+    #   既定では success() が false になり、このジョブも自動で skipped になってしまう
+    #   (needs のジョブが1つでも「成功」以外だと連鎖して止まる GitHub Actions の仕様)。
+    #   policy(検証用CTと本番CTは並存させない)により、将来 quiz-stg を廃止して
+    #   STG_CD_ENABLED を false に戻す運用が想定されるため、"false" と明示された時だけ
+    #   skipped でも通す。未設定や打ち間違い(空・"yes" 等)では通さない(練習環境がある
+    #   つもりで本番だけ承認してしまい、確かめていない版が入るのを防ぐ fail-closed)。
+    #   deploy-stg が実際に failure/cancelled だった時も素通りしない(その2値は含めていない)。
+    #
+    # ★ status check 関数(success()/failure()/cancelled()/always())を1つも使わない
+    #   if には、GitHub が暗黙で `success() &&` を先頭に足す。上の意図(skipped でも
+    #   通す)がその暗黙の success() に打ち消されてしまうため、!cancelled() を使って
+    #   暗黙の付与を止め、必要な条件(resolve の成功・スイッチ・deploy-stg の結果)を
+    #   全部自分で書く。always() ではなく !cancelled() にしているのは、always() だと
+    #   「ワークフローが取り消された後でも実行する」効果まで付いてしまうため。
+    #   承認待ちの本番デプロイを実行直前に取り消せることは承認制CDの安全性そのものなので、
+    #   取り消されたら他の条件を満たしていても動かないようにする。
+    if: >-
+      !cancelled() &&
+      needs.resolve.result == 'success' &&
+      vars.PROD_CD_ENABLED == 'true' &&
+      needs.resolve.outputs.prod_ok == 'true' &&
+      (needs.deploy-stg.result == 'success' ||
+       (needs.deploy-stg.result == 'skipped' && vars.STG_CD_ENABLED == 'false'))
+    runs-on: [self-hosted, quiz-prod]
+    environment: prod
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: false
+    timeout-minutes: 30
+    steps:
+      - name: ランナーのガードを確認
+        run: |
+          if [ "${QUIZ_RUNNER_GUARD:-}" != passed ]; then
+            echo "::error::ランナーにジョブ開始前ガードが設定されていません。デプロイ手順 3.5 ② を確認してください。"
+            exit 1
+          fi
+      - name: デプロイ対象の形式を確認 # ★ 理由は deploy-stg の同じステップのコメントを参照
+        env:
+          REF: ${{ needs.resolve.outputs.sha }}
+          SCRIPT_SHA: ${{ needs.resolve.outputs.script_sha }}
+        run: |
+          for pair in "REF=$REF" "SCRIPT_SHA=$SCRIPT_SHA"; do
+            v="${pair#*=}"
+            if ! [[ "$v" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "::error::デプロイ対象のコミットが確定していません(${pair%%=*} の値: '${v}'。resolve の出力を確認してください)。"
+              exit 1
+            fi
+          done
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.resolve.outputs.script_sha }} # ★ 理由は deploy-stg の同じコメントを参照
+          persist-credentials: false
+      - run: bash infra/deploy.sh
+        env:
+          APP_DIR: /opt/quizApp
+          REF: ${{ needs.resolve.outputs.sha }}
