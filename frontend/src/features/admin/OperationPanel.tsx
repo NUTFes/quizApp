@@ -9,7 +9,7 @@ import { CurrentStatus } from './parts/CurrentStatus'
 import type { AdminStatus } from './parts/StatusBadge'
 import { useRemainingTime } from '../../lib/useRemainingTime'
 import { ErrorBanner, OperationFailure } from './parts/ErrorBanner'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 type Props = {
   // トークンが無効になったことが分かったときに呼ぶ。AdminPage がログイン画面へ戻す
@@ -27,6 +27,8 @@ export function OperationPanel({ onAuthExpired }: Props) {
   })
 
   const [failure, setFailure] = useState<OperationFailure | null>(null)
+  const [busy, setBusy] = useState(false) // 連続で操作できないようにするための排他処理のためのロック
+  const inFlight = useRef(false)
 
   if (state === null) return <p>接続中...</p>
 
