@@ -2,6 +2,7 @@
 package question
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -16,14 +17,20 @@ func getQuestion(c *gin.Context, db *gorm.DB) {
 	
 	id, err := strconv.ParseUint(raw, 10, 64) // 文字列を数値（idようにuint）に変換
 	if( err != nil) {
+		// 数値以外がもともと来ていても、id に対する問題ｇ存在しないというエラーにする
 		platform.RespondError(c, http.StatusNotFound, "QUESTION_NOT_FOUND", "questionId="+raw+" は存在しません")
 		return
 	}
 
 	var q Question
 	// エラー内容で切り分ける
-	if( err := db.First(&q, uint(id)).Error; err != nil) {
-		
+	if err := db.First(&q, uint(id)).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound){
+			platform.RespondError(c, http.StatusNotFound, "QUESTION_NOT_FOUND", "questionId="+raw+"は存在しません")
+			return
+		}
+		platform.RespondError(c,http.StatusInternalServerError, "INTERNAL", "問題データを読み込めませんでした")
+		return
 	}
 	c.JSON(http.StatusOK, q)
 }
