@@ -24,6 +24,7 @@ func RegisterRoutes(db *gorm.DB, adminToken string, importToken string) platform
 	return func(r *gin.Engine) {
 		g := r.Group("/api/admin", platform.RequireToken(adminToken))
 		g.GET("/questions", func(c *gin.Context) { listQuestions(c, db) })
+		g.GET("/questions/:id", func(c *gin.Context) { getQuestion(c, db) })
 
 		gImport := r.Group("/api/admin", platform.RequireToken(adminToken, importToken))
 		gImport.PUT("/questions", func(c *gin.Context) { putQuestions(c, db) })
