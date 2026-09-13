@@ -69,6 +69,9 @@ jobs:
           INPUT_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || '' }}
           STG_CD_ENABLED: ${{ vars.STG_CD_ENABLED }}
           PROD_CD_ENABLED: ${{ vars.PROD_CD_ENABLED }}
+          # ★ 「デプロイに使うスクリプトの版」は github.workflow_sha を使う(この run がどの
+          #   cd.yml の版で動いているかとして GitHub がジョブ開始時に決めた値。後述の理由でこれが必要)。
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
         run: |
           sha="$(git rev-parse HEAD)"
           # ★ main に入っていないもの(レビュー前の作業ブランチ等)は入れない。
@@ -82,8 +85,15 @@ jobs:
           #   deploy-stg と deploy-prod がそれぞれ実行時に ref: main をチェックアウトすると、
           #   承認待ちで日をまたぐ間に main が進み、練習環境で検証したのと違う版の
           #   deploy.sh が本番で動きうる(マイグレーション手順などアプリのSHAだけでは
-          #   固定できない部分がある)。resolve の時点の main を両方に配って揃える。
-          echo "script_sha=$(git rev-parse origin/main)" >> "$GITHUB_OUTPUT"
+          #   固定できない部分がある)。resolve が一度だけ main を固定し、両方に配って揃える。
+          #   ★ `git rev-parse origin/main` ではなく `github.workflow_sha` を使うこと。
+          #   前者は「この checkout ステップが origin/main を fetch した時点」の値になるが、
+          #   CI 完了(workflow_run のトリガー)からこのステップが動くまでの短い間に
+          #   別のコミットが main に入ると、sha(CIが通ったコミット)より先の版になりうる
+          #   (レビュー指摘)。github.workflow_sha は「この run がどの main の版の cd.yml で
+          #   動くか」として GitHub がワークフロー開始時に決める値で、ジョブの実行タイミングに
+          #   左右されない。
+          echo "script_sha=${WORKFLOW_SHA}" >> "$GITHUB_OUTPUT"
 
           # ★ 本番は「タグを指定した手動起動」の時だけ対象にする。main への push(マージ)からは
           #   練習環境までしか進まない(理由はファイル冒頭のコメントを参照)。
