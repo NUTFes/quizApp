@@ -45,6 +45,8 @@ export function QuestionList({ items, selectedId, onSelect, currentQuestionId }:
             <td>{item.textPreview}</td>
             <td>{questionTypeLabel(item.type)}</td>
             <td>{difficultyLabel(item.difficulty)}</td>
+            <td>{item.id === currentQuestionId ? <p>表示中</p> : item.asked && <p>出題済み</p>}</td>
+            <td>{item.hasImage && <p>画像あり</p>}</td>
           </tr>
         ))}
       </tbody>
