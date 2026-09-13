@@ -36,5 +36,17 @@ export function ShowQuestionForm({
   const inputError = checkTimeLimit(timeLimitInput)
   const canSubmit = !busy && selected !== null && inputError === null
 
-  return <div></div>
+  return (
+    <section>
+      <h2>選択中の問題</h2>
+      <p>問題一覧から１問選んでください</p>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault() //  何もせず送信したときの強制再リロードを防ぐ
+          if (!canSubmit || selected === null) return // これ以降の行で、selected が nullでないことを見持して、TS の型チェックでのエラーを防ぐ
+          onSubmit(selected.id, Number(timeLimitInput))
+        }}
+      ></form>
+    </section>
+  )
 }
