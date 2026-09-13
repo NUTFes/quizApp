@@ -3,7 +3,6 @@
 // この画面で唯一、サーバーと通信する場所。状態の受け取りと計算をここに寄せ、
 // 各パネルには props で配る。パネル側が通信すると、/dev/admin で描画できなくなる
 // (トークンも fetch も無い場所で全状態を並べたいため)。
-import { useEffect, useState } from 'react'
 import { useAdminState } from '../../lib/useEventState'
 import type { AdminState } from '../../types'
 import { CurrentStatus } from './parts/CurrentStatus'
@@ -19,13 +18,16 @@ type Props = {
 export function OperationPanel({ onAuthExpired }: Props) {
   // SSE でつなぎっぱなしにする。状態が変わるたびに新しい state が届く
   const state = useAdminState(onAuthExpired)
-  const remainingSec = useRemainingTime({
+  const remainingTime = useRemainingTime({
     serverTime: state?.serverTime ?? '',
     timeLimitSec: state?.timeLimitSec ?? null,
     questionStartedAt: state?.questionStartedAt ?? null,
   })
 
   if (state === null) return <p>接続中...</p>
+
+  const remainingSec =
+    state.phase === 'question' && state.timeLimitSec !== null ? remainingTime : null
 
   return (
     <div>
