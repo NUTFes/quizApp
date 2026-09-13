@@ -88,12 +88,17 @@ jobs:
             echo "::error::ランナーにジョブ開始前ガードが設定されていません。デプロイ手順 3.5 ② を確認してください。"
             exit 1
           fi
-      # ★ /opt/quizApp の deploy.sh を直接実行しない。deploy.sh は途中で git checkout して
-      #   自分自身を書き換えるため、deploy.sh を変更した回だけ挙動がおかしくなりうる。
-      #   作業フォルダに取り出した同じコミットの deploy.sh を、APP_DIR を指定して使う。
+      # ★ 実行するスクリプトは常に main の最新版を使う。対象コミット(needs.resolve.outputs.sha)の
+      #   deploy.sh をチェックアウトしないこと。この PR より前のコミット/タグへロールバックする時、
+      #   対象コミットの deploy.sh が SHA 指定(40桁)を理解できず、
+      #   タグ以外を全部ブランチとして git merge しようとして失敗する(旧版には無い機能のため)。
+      #   「デプロイするアプリの版」(REF)と「デプロイに使うスクリプトの版」(main)を分けることで、
+      #   スクリプト側の対応状況に関わらずどのコミットへもロールバックできるようにしている。
+      #   なお、deploy.sh 自身が実行中に git checkout して書き換わる問題は、
+      #   /opt/quizApp とは別のこの作業フォルダで実行することで避けている(main 分でも同じ)。
       - uses: actions/checkout@v5
         with:
-          ref: ${{ needs.resolve.outputs.sha }}
+          ref: main
           persist-credentials: false
       - run: bash infra/deploy.sh
         env:
@@ -101,12 +106,21 @@ jobs:
           REF: ${{ needs.resolve.outputs.sha }}
 
   deploy-prod:
-    needs: [resolve, deploy-stg] # 練習環境で成功したものだけが本番に進む
+    needs: [resolve, deploy-stg]
     # ★ 本番へのCDをしてよいと決まるまで止めておくスイッチ。
     #   Settings → Secrets and variables → Actions → Variables の PROD_CD_ENABLED を true にすると有効になる。
     #   Environment `prod` の承認者設定と、本番CTへのランナー(quiz-prod)・ガードの登録を
     #   済ませてから true にすること(理由は deploy-stg の STG_CD_ENABLED と同じ)。
-    if: vars.PROD_CD_ENABLED == 'true'
+    #
+    # ★ needs に挙げた deploy-stg が skipped(= STG_CD_ENABLED が false)で終わると、
+    #   既定では success() が false になり、このジョブも自動で skipped になってしまう
+    #   (needs のジョブが1つでも「成功」以外だと連鎖して止まる GitHub Actions の仕様)。
+    #   policy(検証用CTと本番CTは並存させない)により、将来 quiz-stg を廃止して
+    #   STG_CD_ENABLED を false に戻す運用が想定されるため、skipped の時は通す。
+    #   deploy-stg が実際に failure/cancelled だった時は素通りしない(その2値は含めていない)。
+    if: >-
+      vars.PROD_CD_ENABLED == 'true' &&
+      (needs.deploy-stg.result == 'success' || needs.deploy-stg.result == 'skipped')
     runs-on: [self-hosted, quiz-prod]
     environment: prod
     concurrency:
@@ -122,7 +136,7 @@ jobs:
           fi
       - uses: actions/checkout@v5
         with:
-          ref: ${{ needs.resolve.outputs.sha }}
+          ref: main # ★ 理由は deploy-stg の同じコメントを参照
           persist-credentials: false
       - run: bash infra/deploy.sh
         env:
