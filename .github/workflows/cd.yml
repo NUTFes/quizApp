@@ -1,0 +1,108 @@
+name: CD
+
+# main に入った変更を、承認してから CT にデプロイする。
+#   main にマージ → CI が通る → [練習環境] 承認待ち → デプロイ
+#                                → [本番]     承認待ち → デプロイ(PROD_CD_ENABLED が true の時だけ)
+#
+# ★ 勝手にはデプロイしない。各段で GitHub の Environments(stg / prod)の
+#   「承認者必須」で止まり、承認されるまでジョブは CT に届かない。
+# ★ CT には外から入れない(policy Q6)ので、CT 上のセルフホストランナーが
+#   GitHub に繋ぎに行ってジョブを受け取る。cloudflared と同じ「中から外へ」の形。
+# 設定と操作の手順 → docs/ガイドライン/デプロイ手順.md 「3.5 GitHub Actions から承認してデプロイする」
+on:
+  # CI の完了を待つ。push で直接起動すると、CI が落ちたコミットも承認待ちに並ぶ
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  # 手動起動。タグ(当日の event-YYYY-MM-DD など)を指定してデプロイする用
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: デプロイする対象(タグ名・ブランチ名・コミットSHA)。main に含まれるものに限る
+        required: true
+        default: main
+
+# 承認画面で「何を入れようとしているか」が分かるように、対象を名前に出す
+run-name: >-
+  CD ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.event.workflow_run.head_sha }}
+
+permissions:
+  contents: read
+
+jobs:
+  # デプロイ対象をコミットSHAに固定する。練習環境と本番に同じものを入れるため。
+  resolve:
+    # workflow_run は「CI が完了した」だけで起動するので、成功と main への push に絞る。
+    # ★ event == 'push' を外さないこと。fork の PR でもブランチ名が main なら branches に一致する。
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.event.workflow_run.head_sha }}
+          fetch-depth: 0 # main に含まれるかの判定に履歴が要る
+          persist-credentials: false
+      - id: sha
+        run: |
+          sha="$(git rev-parse HEAD)"
+          # ★ main に入っていないもの(レビュー前の作業ブランチ等)は入れない。
+          #   承認者が run 名の ref を見落としても、ここで止まる。
+          if ! git merge-base --is-ancestor "$sha" origin/main; then
+            echo "::error::${sha} は main に含まれていません。マージ済みのものだけをデプロイできます。"
+            exit 1
+          fi
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+          echo "デプロイ対象: $(git --no-pager log -1 --format='%h %s')" >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-stg:
+    needs: resolve
+    runs-on: [self-hosted, quiz-stg]
+    environment: stg # ★ ここで承認待ちになる
+    # 同じ CT へのデプロイを同時に走らせない。途中で止めるとマイグレーションが
+    # 半端になりうるので、実行中のものは取り消さない。
+    concurrency:
+      group: deploy-stg
+      cancel-in-progress: false
+    timeout-minutes: 30
+    steps:
+      # ★ /opt/quizApp の deploy.sh を直接実行しない。deploy.sh は途中で git checkout して
+      #   自分自身を書き換えるため、deploy.sh を変更した回だけ挙動がおかしくなりうる。
+      #   作業フォルダに取り出した同じコミットの deploy.sh を、APP_DIR を指定して使う。
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          persist-credentials: false
+      - run: bash infra/deploy.sh
+        env:
+          APP_DIR: /opt/quizApp
+          REF: ${{ needs.resolve.outputs.sha }}
+
+  deploy-prod:
+    needs: [resolve, deploy-stg] # 練習環境で成功したものだけが本番に進む
+    # ★ 本番へのCDをしてよいと決まるまで止めておくスイッチ。
+    #   Settings → Secrets and variables → Actions → Variables の PROD_CD_ENABLED を true にすると有効になる。
+    #   本番CTにランナー(quiz-prod)を登録してから true にすること。先に true にすると、
+    #   承認しても受け取るランナーがおらず待ち続ける。
+    if: vars.PROD_CD_ENABLED == 'true'
+    runs-on: [self-hosted, quiz-prod]
+    environment: prod
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: false
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          persist-credentials: false
+      - run: bash infra/deploy.sh
+        env:
+          APP_DIR: /opt/quizApp
+          REF: ${{ needs.resolve.outputs.sha }}
