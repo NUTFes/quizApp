@@ -5,9 +5,12 @@
 // (トークンも fetch も無い場所で全状態を並べたいため)。
 import { useEffect, useState } from 'react'
 import { useAdminState } from '../../lib/useEventState'
-import type { AdminState } from '../../types'
+import { QuestionListItem, type AdminState } from '../../types'
 import { CurrentStatus } from './parts/CurrentStatus'
 import type { AdminStatus } from './parts/StatusBadge'
+import { ApiError, getQuestions } from '../../lib/api'
+import { NETWORK_ERROR_MESSAGE, toMessage } from './errorMessages'
+import { QuestionList } from './parts/QuestionList'
 
 type Props = {
   // トークンが無効になったことが分かったときに呼ぶ。AdminPage がログイン画面へ戻す
@@ -20,11 +23,43 @@ export function OperationPanel({ onAuthExpired }: Props) {
   const state = useAdminState(onAuthExpired)
   const deadlinePassed = useDeadlinePassed(state)
 
+  const [questions, setQuestions] = useState<QuestionListItem[] | null>(null)
+  const [questionListError, setQuestionListError] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    getQuestions()
+      .then(({ questions }) => {
+        if (!cancelled) setQuestions(questions)
+      })
+      .catch((e) => {
+        if (cancelled) return
+        if (e instanceof ApiError && e.status === 401) {
+          onAuthExpired()
+          return
+        }
+        setQuestionListError(e instanceof ApiError ? toMessage(e.code) : NETWORK_ERROR_MESSAGE)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   if (state === null) return <p>接続中...</p>
 
   return (
     <div>
       <CurrentStatus state={state} status={toStatus(state, deadlinePassed)} />
+      {questionListError !== null && <p>{questionListError}</p>}
+      {questions !== null && (
+        <QuestionList
+          items={questions}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          currentQuestionId={state.question?.id ?? null}
+        />
+      )}
       {/*ここからは、以降のイシューで足していく */}
     </div>
   )
