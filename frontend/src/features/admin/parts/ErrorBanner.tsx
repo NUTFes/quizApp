@@ -4,7 +4,7 @@ export type OperationFailure = {
   // ボタン操作で失敗したとき、どのボタンが失敗したかの形式
   action: ActionLabel
   message: string
-  occurreAt: Date
+  occurredAt: Date
 }
 
 type Props = {
@@ -17,7 +17,7 @@ export function ErrorBanner({ failure, onDismiss }: Props) {
   // あらかじめ、エラー出力をする枠をおいておく
   if (failure == null) return <div className="min-h-16" />
 
-  const time = failure.occurreAt.toLocaleTimeString('ja-JP', { hour12: false })
+  const time = failure.occurredAt.toLocaleTimeString('ja-JP', { hour12: false })
 
   return (
     <div

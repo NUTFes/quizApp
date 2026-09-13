@@ -11,6 +11,8 @@ import { useRemainingTime } from '../../lib/useRemainingTime'
 import { ErrorBanner, OperationFailure } from './parts/ErrorBanner'
 import { useRef, useState } from 'react'
 import { ActionLabel } from './labels'
+import { ApiError } from '../../lib/api'
+import { NETWORK_ERROR_MESSAGE, toMessage } from './errorMessages'
 
 type Props = {
   // トークンが無効になったことが分かったときに呼ぶ。AdminPage がログイン画面へ戻す
@@ -40,7 +42,16 @@ export function OperationPanel({ onAuthExpired }: Props) {
     setFailure(null)
     try {
       await request()
-    } catch {
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onAuthExpired()
+        return
+      }
+      setFailure({
+        action,
+        message: err instanceof ApiError ? toMessage(err.code) : NETWORK_ERROR_MESSAGE,
+        occurredAt: new Date(),
+      })
     } finally {
       inFlight.current = false
       setBusy(false)
