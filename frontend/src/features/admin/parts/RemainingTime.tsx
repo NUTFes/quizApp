@@ -14,11 +14,14 @@ function formatTime(seconds: number): string {
 
 export function RemainingTime({ phase, remainingSec }: Props) {
   return (
-    <div className="flex items-baseline gap-4 font-zen-kaku-gothic-new">
-      <p className="text-admin-pre-timelimit text-brand">残り時間</p>
+    <div className="relative flex justify-center pt-8 font-zen-kaku-gothic-new">
+      {/* 数字の幅に左右されず、常に中央上に固定する */}
+      <p className="absolute inset-x-0 top-0 text-center text-admin-pre-timelimit text-brand">
+        残り時間
+      </p>
       {/* 締切の瞬間に文字数が変わってもボタンが動かないよう、幅を固定する */}
       <p
-        className="min-w-[4.5em] text-admin-timelimit leading-none tabular-nums"
+        className="min-w-[4.5em] text-center text-admin-timelimit leading-none tabular-nums"
         aria-live="polite"
       >
         {phase !== 'question' ? (

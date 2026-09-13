@@ -38,15 +38,15 @@ export function ShowQuestionForm({
   const canSubmit = !busy && selected !== null && inputError === null
 
   return (
-    <section className="w-full max-w-[440px] rounded-3xl border border-border-soft bg-surface px-6 py-4 font-zen-kaku-gothic-new">
+    <section className="flex w-full max-w-[440px] flex-col gap-4 rounded-3xl border border-border-soft bg-surface px-6 py-4 font-zen-kaku-gothic-new">
       <h2 className="text-admin-header text-brand">選択中の問題</h2>
 
       {selected === null ? (
-        <p className="mt-2 text-admin-func-label text-neutral-500">
+        <p className="flex justify-center text-admin-func-label text-neutral-500">
           問題一覧から１問選んでください
         </p>
       ) : (
-        <div className="mt-2 text-admin-func-label">
+        <div className="text-admin-func-label">
           <p>
             ID {selected.id} / {questionTypeLabel(selected.type)} /{' '}
             {difficultyLabel(selected.difficulty)}
@@ -62,44 +62,53 @@ export function ShowQuestionForm({
         </div>
       )}
 
+      {/* 入力フォームとボタンに、それぞれ1:1の領域を配って、その中で中央に置く */}
       <form
-        className="mt-4 flex flex-wrap items-start gap-4"
+        className="grid grid-cols-2 items-center px-5 py-5"
         onSubmit={(e) => {
           e.preventDefault() //  何もせず送信したときの強制再リロードを防ぐ
           if (!canSubmit || selected === null) return // これ以降の行で、selected が nullでないことを保証して、TS の型チェックでのエラーを防ぐ
           onSubmit(selected.id, Number(timeLimitInput))
         }}
       >
-        <div>
-          <label htmlFor={inputId} className="block text-sm">
-            制限時間(秒)
-          </label>
-          <input
-            id={inputId}
-            type="number"
-            inputMode="numeric"
-            min={MIN_SEC}
-            max={MAX_SEC}
-            step={1}
-            value={timeLimitInput}
-            disabled={busy}
-            aria-invalid={inputError !== null}
-            aria-describedby={inputError === null ? undefined : errorId}
-            onChange={(e) => onTimeLimitInputChange(e.target.value)}
-            className={`w-24 rounded-lg border px-3 py-2 ${inputError === null ? 'border-border-soft' : 'border-red-700'}`}
-          />
-          {/* 出ていないときも高さを取っておき、ボタンが上下に動かないようにする */}
-          <p id={errorId} className="min-h-5 text-sm text-red-700">
-            {inputError}
-          </p>
+        <div className="flex justify-center">
+          <div className="relative flex w-40 justify-center pt-6 pb-8">
+            {/* 入力欄の幅に左右されず、常に中央上に固定する */}
+            <label htmlFor={inputId} className="absolute inset-x-0 top-0 text-center text-sm">
+              制限時間(秒)
+            </label>
+            <input
+              id={inputId}
+              type="number"
+              inputMode="numeric"
+              min={MIN_SEC}
+              max={MAX_SEC}
+              step={1}
+              value={timeLimitInput}
+              disabled={busy}
+              aria-invalid={inputError !== null}
+              aria-describedby={inputError === null ? undefined : errorId}
+              onChange={(e) => onTimeLimitInputChange(e.target.value)}
+              className={`w-24 rounded-lg border px-3 py-2 text-center ${inputError === null ? 'border-border-soft' : 'border-red-700'}`}
+            />
+            {/* absolute なので、エラー文の有無・行数でボタンの位置が動かない */}
+            <p
+              id={errorId}
+              className="absolute inset-x-0 top-[calc(100%+4px)] text-center text-sm text-red-700"
+            >
+              {inputError}
+            </p>
+          </div>
         </div>
-        <button
-          type="submit"
-          disabled={!canSubmit}
-          className="mt-5 rounded-xl bg-brand px-6 py-3 text-admin-func-label text-white disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {ACTION_LABEL.showQuestion}
-        </button>
+        <div className="flex justify-center">
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="rounded-xl bg-brand px-6 py-3 text-admin-func-label text-white disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {ACTION_LABEL.showQuestion}
+          </button>
+        </div>
       </form>
     </section>
   )

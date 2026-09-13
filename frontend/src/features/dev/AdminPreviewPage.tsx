@@ -3,11 +3,19 @@ import { Link } from 'react-router-dom'
 import { CheckingView, UnreachableView } from '../admin/AdminPage'
 import { LoginForm } from '../admin/LoginView'
 import { NETWORK_ERROR_MESSAGE, toMessage } from '../admin/errorMessages'
+import { ACTION_LABEL } from '../admin/labels'
+import { ConfirmDialogCard } from '../admin/parts/ConfirmDialog'
+import { ControlPanel } from '../admin/parts/ControlPanel'
 import { CurrentStatus } from '../admin/parts/CurrentStatus'
+import { ErrorBanner } from '../admin/parts/ErrorBanner'
+import { RemainingTime } from '../admin/parts/RemainingTime'
+import { ShowQuestionForm } from '../admin/parts/ShowQuestionForm'
+import type { QuestionListItem } from '../../types'
 import {
   adminAnswerAri,
   adminFinished,
   adminQuestionFour,
+  adminQuestionTwo,
   adminWaiting,
 } from '../../lib/mock/admin/index'
 
@@ -175,6 +183,275 @@ const PANEL_CASES = [
   },
 ] as const
 
+// 「選択中の問題」に渡す架空の1件。
+// 🔒 架空の問題文だけを書く。本番の問題文・正答は絶対に書かない。
+// 問題一覧のプレビューデータは #109 の __devPreviewData.ts が担当なので、ここでは1件だけ持つ
+const PREVIEW_SELECTED: QuestionListItem = {
+  id: 5,
+  number: 12,
+  type: 'four_choice',
+  difficulty: 'hard',
+  textPreview: 'この問題文は スラッシュ区切りで 少しずつ表示される',
+  hasImage: true,
+  asked: false,
+}
+
+// エラー表示の時刻。実行した時刻にするとスクショのたびに変わるので固定する
+const PREVIEW_FAILED_AT = new Date('2026-09-13T13:05:12+09:00')
+
+// ボタンを押しても何もしない。CONTROL_CASES より上に書く(const は宣言より前で使えない)
+const noopHandlers = { onAdvanceText: noop, onShowAnswer: noop, onReset: noop }
+
+// 「進行操作(#108)」のパネル群の取りうる状態。
+//
+// #107 の PANEL_CASES と同じく、通信もトークンも無いこの場所で全状態を並べられる。
+// ボタンを押しても noop なので、実際に何が起こるかは §9 のシナリオで確認する。
+const CONTROL_CASES = [
+  {
+    title: '操作パネル / 待機中',
+    note: 'waiting・進行の2つと「待機画面を表示」が押せない',
+    node: <ControlPanel state={adminWaiting} remainingSec={null} busy={false} {...noopHandlers} />,
+  },
+  {
+    title: '操作パネル / 出題中・残りあり',
+    note: 'question・未公開の区切りがあるので「次を表示」が押せる',
+    node: (
+      <ControlPanel state={adminQuestionTwo} remainingSec={30} busy={false} {...noopHandlers} />
+    ),
+  },
+  {
+    title: '操作パネル / 出題中・全区切り公開済み',
+    note: 'question・revealedSegments === totalSegments なので「次を表示」が押せない',
+    node: (
+      <ControlPanel
+        state={{ ...adminQuestionTwo, revealedSegments: 3 }}
+        remainingSec={15}
+        busy={false}
+        {...noopHandlers}
+      />
+    ),
+  },
+  {
+    title: '操作パネル / 締切',
+    note: 'question・残り0秒。phase は動かず、「正答を表示」は押せるまま',
+    node: <ControlPanel state={adminQuestionTwo} remainingSec={0} busy={false} {...noopHandlers} />,
+  },
+  {
+    title: '操作パネル / 正解発表',
+    note: 'answer・進行の2つが両方押せない',
+    node: (
+      <ControlPanel state={adminAnswerAri} remainingSec={null} busy={false} {...noopHandlers} />
+    ),
+  },
+  {
+    title: '操作パネル / 終了',
+    note: 'finished・「待機画面を表示」だけが押せる',
+    node: <ControlPanel state={adminFinished} remainingSec={null} busy={false} {...noopHandlers} />,
+  },
+  {
+    title: '操作パネル / 送信中',
+    note: 'busy・4つ全部が押せない',
+    node: <ControlPanel state={adminQuestionTwo} remainingSec={21} busy={true} {...noopHandlers} />,
+  },
+  {
+    title: '残り時間 / 残りあり',
+    note: '30秒。まだ余裕がある表示',
+    node: <RemainingTime phase="question" remainingSec={30} />,
+  },
+  {
+    title: '残り時間 / 残りわずか',
+    note: '5秒。#108 の範囲では色などは変えていない',
+    node: <RemainingTime phase="question" remainingSec={5} />,
+  },
+  {
+    title: '残り時間 / 締切',
+    note: '0秒。「締切」の表示に切り替わる',
+    node: <RemainingTime phase="question" remainingSec={0} />,
+  },
+  {
+    title: '残り時間 / 制限時間なし',
+    note: 'remainingSec が null。「制限なし」と出て、締切にはならない',
+    node: <RemainingTime phase="question" remainingSec={null} />,
+  },
+  {
+    title: '残り時間 / question 以外',
+    note: 'phase が question でないときは常に --:--',
+    node: <RemainingTime phase="waiting" remainingSec={null} />,
+  },
+  {
+    title: '選択中の問題 / 未選択',
+    note: '問題一覧(#109)でまだ何も選んでいない',
+    node: (
+      <ShowQuestionForm
+        selected={null}
+        currentQuestionId={null}
+        timeLimitInput="30"
+        busy={false}
+        onTimeLimitInputChange={noop}
+        onSubmit={noop}
+      />
+    ),
+  },
+  {
+    title: '選択中の問題 / 選択中',
+    note: '選んだ問題の概要が出る。まだ出題していない',
+    node: (
+      <ShowQuestionForm
+        selected={PREVIEW_SELECTED}
+        currentQuestionId={null}
+        timeLimitInput="30"
+        busy={false}
+        onTimeLimitInputChange={noop}
+        onSubmit={noop}
+      />
+    ),
+  },
+  {
+    title: '選択中の問題 / 出題中の問題と同じ',
+    note: '出題中の問題を選び直すと、やり直しの注意が出る',
+    node: (
+      <ShowQuestionForm
+        selected={PREVIEW_SELECTED}
+        currentQuestionId={PREVIEW_SELECTED.id}
+        timeLimitInput="30"
+        busy={false}
+        onTimeLimitInputChange={noop}
+        onSubmit={noop}
+      />
+    ),
+  },
+  {
+    title: '選択中の問題 / 出題済み',
+    note: '出題済み(asked)だが、選び直して出し直せる',
+    node: (
+      <ShowQuestionForm
+        selected={{ ...PREVIEW_SELECTED, asked: true }}
+        currentQuestionId={null}
+        timeLimitInput="30"
+        busy={false}
+        onTimeLimitInputChange={noop}
+        onSubmit={noop}
+      />
+    ),
+  },
+  {
+    title: '選択中の問題 / 秒数が範囲外',
+    note: '5未満。エラー文が出てボタンが押せない',
+    node: (
+      <ShowQuestionForm
+        selected={PREVIEW_SELECTED}
+        currentQuestionId={null}
+        timeLimitInput="3"
+        busy={false}
+        onTimeLimitInputChange={noop}
+        onSubmit={noop}
+      />
+    ),
+  },
+  {
+    title: '選択中の問題 / 秒数が小数',
+    note: '整数でない。エラー文が出てボタンが押せない',
+    node: (
+      <ShowQuestionForm
+        selected={PREVIEW_SELECTED}
+        currentQuestionId={null}
+        timeLimitInput="30.5"
+        busy={false}
+        onTimeLimitInputChange={noop}
+        onSubmit={noop}
+      />
+    ),
+  },
+  {
+    title: '選択中の問題 / 空欄',
+    note: '空欄。「秒数を入れてください」が出る',
+    node: (
+      <ShowQuestionForm
+        selected={PREVIEW_SELECTED}
+        currentQuestionId={null}
+        timeLimitInput=""
+        busy={false}
+        onTimeLimitInputChange={noop}
+        onSubmit={noop}
+      />
+    ),
+  },
+  {
+    title: '選択中の問題 / 送信中',
+    note: 'busy・入力欄とボタンが両方無効',
+    node: (
+      <ShowQuestionForm
+        selected={PREVIEW_SELECTED}
+        currentQuestionId={null}
+        timeLimitInput="30"
+        busy={true}
+        onTimeLimitInputChange={noop}
+        onSubmit={noop}
+      />
+    ),
+  },
+  {
+    title: '確認ポップアップ / 開いた状態',
+    note: '「やめる」が大きく先にある。「はい」ではなく動作が書いてある',
+    node: (
+      <ConfirmDialogCard
+        title="正答を表示しますか?"
+        message="モニタと参加者のスマホに、正答が表示されます。表示すると取り消せません。"
+        confirmLabel="正答を表示する"
+        onConfirm={noop}
+        onCancel={noop}
+      />
+    ),
+  },
+  {
+    title: 'エラー / 出ていない',
+    note: 'failure が null。高さだけ確保して、他のパネルが上下に動かないようにする',
+    node: <ErrorBanner failure={null} onDismiss={noop} />,
+  },
+  {
+    title: 'エラー / いまの phase では押せない',
+    note: '409 INVALID_PHASE・どの操作が失敗したかが見出しに出る',
+    node: (
+      <ErrorBanner
+        failure={{
+          action: ACTION_LABEL.showAnswer,
+          message: toMessage('INVALID_PHASE'),
+          occurredAt: PREVIEW_FAILED_AT,
+        }}
+        onDismiss={noop}
+      />
+    ),
+  },
+  {
+    title: 'エラー / 通信失敗',
+    note: '通信自体ができない。401 と取り違えないこと',
+    node: (
+      <ErrorBanner
+        failure={{
+          action: ACTION_LABEL.advanceText,
+          message: NETWORK_ERROR_MESSAGE,
+          occurredAt: PREVIEW_FAILED_AT,
+        }}
+        onDismiss={noop}
+      />
+    ),
+  },
+  {
+    title: 'エラー / 想定外の code',
+    note: '知らない code でも画面が壊れないことの確認',
+    node: (
+      <ErrorBanner
+        failure={{
+          action: ACTION_LABEL.resetWaiting,
+          message: toMessage('SOMETHING_NEW'),
+          occurredAt: PREVIEW_FAILED_AT,
+        }}
+        onDismiss={noop}
+      />
+    ),
+  },
+] as const
+
 function AdminPreviewPage() {
   const [width, setWidth] = useState<(typeof WIDTHS)[number]>(WIDTHS[0])
 
@@ -224,6 +501,18 @@ function AdminPreviewPage() {
       </p>
       <div className="flex flex-col gap-10">
         {PANEL_CASES.map((c) => (
+          <PreviewCase key={c.title} title={c.title} note={c.note} width={width.width}>
+            {c.node}
+          </PreviewCase>
+        ))}
+      </div>
+
+      <h2 className="mt-14 mb-2 text-xl font-bold">進行操作(#108)</h2>
+      <p className="mb-4 text-sm text-neutral-600">
+        ボタンを押しても通信しない。確認ポップアップは開いた状態をそのまま置いている。
+      </p>
+      <div className="flex flex-col gap-10">
+        {CONTROL_CASES.map((c) => (
           <PreviewCase key={c.title} title={c.title} note={c.note} width={width.width}>
             {c.node}
           </PreviewCase>
