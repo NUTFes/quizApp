@@ -88,17 +88,24 @@ fi
 if [ -n "$REF" ]; then
   echo "=== ① コードを取得(${REF}) ==============================="
   git fetch --prune --tags origin
-  if git rev-parse -q --verify "refs/tags/${REF}" >/dev/null; then
-    # タグ: detached HEAD で固定する(動かない = 何が動いているか特定できる)
-    git checkout -q --detach "refs/tags/${REF}"
-  elif [[ "$REF" =~ ^[0-9a-f]{40}$ ]]; then
+  if [[ "$REF" =~ ^[0-9a-f]{40}$ ]]; then
     # コミットSHA: タグと同じく detached HEAD で固定する。
     # ★ 短縮SHAは受け付けない。ブランチ名と見分けられず、衝突もしうるため。
+    # ★ タグ判定より先に、必ずこちらを試すこと。git は「refs/tags/<40桁hex>」という
+    #   名前のタグが実在すればそちらを優先して解決してしまう(40桁hexそのものを
+    #   指定した場合は、そういうタグを無視して常にオブジェクトIDとして解決される。
+    #   これは git 自身の既定の挙動で、そういうタグを作ること自体に git が警告を出す)。
+    #   CD は「stgで検証したのと同じSHA」を渡す前提なので、書き込み権限を持つ誰かが
+    #   そのSHAと同じ名前のタグを未レビューのコミットに向けて作ってしまうと、
+    #   タグ判定が先だと main の祖先チェックを済ませたはずの別コードがデプロイされる。
     if ! git cat-file -e "${REF}^{commit}" 2>/dev/null; then
       echo "!! コミット ${REF} が origin から取得できません。push 済みか確認してください。" >&2
       exit 1
     fi
     git checkout -q --detach "${REF}"
+  elif git rev-parse -q --verify "refs/tags/${REF}" >/dev/null; then
+    # タグ: detached HEAD で固定する(動かない = 何が動いているか特定できる)
+    git checkout -q --detach "refs/tags/${REF}"
   else
     # ブランチ: 追従する。--ff-only なので、勝手なマージコミットは作られない
     git checkout -q "${REF}"

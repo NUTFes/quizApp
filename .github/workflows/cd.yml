@@ -118,7 +118,16 @@ jobs:
     #   policy(検証用CTと本番CTは並存させない)により、将来 quiz-stg を廃止して
     #   STG_CD_ENABLED を false に戻す運用が想定されるため、skipped の時は通す。
     #   deploy-stg が実際に failure/cancelled だった時は素通りしない(その2値は含めていない)。
+    #
+    # ★ status check 関数(success()/always()/failure()/cancelled())を1つも使わない
+    #   if には、GitHub が暗黙で `success() &&` を先頭に足す。上の意図(skipped でも
+    #   通す)がその暗黙の success() に打ち消されてしまうため、always() を使って
+    #   暗黙の付与そのものを止め、必要な条件(resolve の成功・スイッチ・deploy-stg の結果)
+    #   を全部自分で書く。always() は「ワークフローが取り消された後でも実行する」効果も
+    #   持つが、resolve の成功を明示チェックしているため対象SHAが無いまま動くことはない。
     if: >-
+      always() &&
+      needs.resolve.result == 'success' &&
       vars.PROD_CD_ENABLED == 'true' &&
       (needs.deploy-stg.result == 'success' || needs.deploy-stg.result == 'skipped')
     runs-on: [self-hosted, quiz-prod]
