@@ -10,6 +10,8 @@ import {
   adminQuestionFour,
   adminWaiting,
 } from '../../lib/mock/admin/index'
+import { DEV_QUESTION_LIST } from '../admin/parts/__devPreviewData'
+import { QuestionList } from '../admin/parts/QuestionList'
 
 // 管理者画面の全パターン確認用ページ（開発時のみ / パス: /dev/admin）
 //
