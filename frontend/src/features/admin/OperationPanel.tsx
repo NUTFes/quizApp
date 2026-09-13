@@ -11,9 +11,10 @@ import { useRemainingTime } from '../../lib/useRemainingTime'
 import { ErrorBanner, OperationFailure } from './parts/ErrorBanner'
 import { useRef, useState } from 'react'
 import { ACTION_LABEL, ActionLabel } from './labels'
-import { advanceText, ApiError, reset, showAnswer } from '../../lib/api'
+import { advanceText, ApiError, reset, showAnswer, showQuestion } from '../../lib/api'
 import { NETWORK_ERROR_MESSAGE, toMessage } from './errorMessages'
 import { ControlPanel } from './parts/ControlPanel'
+import { ShowQuestionForm } from './parts/ShowQuestionForm'
 
 type Props = {
   // トークンが無効になったことが分かったときに呼ぶ。AdminPage がログイン画面へ戻す
@@ -33,7 +34,7 @@ export function OperationPanel({ onAuthExpired }: Props) {
   const [failure, setFailure] = useState<OperationFailure | null>(null)
   const [busy, setBusy] = useState(false) // 連続で操作できないようにするための排他処理のためのロック
   const inFlight = useRef(false)
-  const [timeLimitInput, setTimelimitInput] = useState('30')
+  const [timeLimitInput, setTimelimitInput] = useState('30') // 制限時間のための箱 state
 
   if (state === null) return <p>接続中...</p>
 
@@ -76,6 +77,14 @@ export function OperationPanel({ onAuthExpired }: Props) {
             reset(to),
           )
         }
+      />
+      <ShowQuestionForm
+        selected={null /*109 で、選んだ問題を渡す*/}
+        currentQuestionId={state.phase === 'question' ? (state.question?.id ?? null) : null}
+        timeLimitInput={timeLimitInput}
+        busy={busy}
+        onTimeLimitInputChange={setTimelimitInput}
+        onSubmit={(id, sec) => run(ACTION_LABEL.showQuestion, () => showQuestion(id, sec))}
       />
       <ErrorBanner failure={failure} onDismiss={() => setFailure(null)} />
       {/*ここからは、以降のイシューで足していく */}
