@@ -5,5 +5,12 @@ type Props = {
   selectedId: number | null
   onSelect: (id: number) => void
   currentQuestionId: number | null
-  disavles: boolean
+}
+
+export function QuestionList({ items, selectedId, onSelect, currentQuestionId }: Props) {
+  if (items.length === 0) {
+    return <p>問題がまだ投入されていません</p>
+  }
+
+  return <table></table>
 }
