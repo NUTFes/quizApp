@@ -21,10 +21,20 @@ export function ControlPanel({
   onShowAnswer,
   onReset,
 }: Props) {
-  const [confirmingAnswer, setConfirmingAnswer] = useState(false)
   const isQuestion = state.phase === 'question'
-  // ダイアログの開いてるときにフェーズが変わったらこれは閉じる
-  const dialogOpen = confirmingAnswer && isQuestion
+  // 問題idだけでなく questionStartedAt も含める。
+  // 「やり直し」は同じ問題idのままタイマーだけリセットされるので、id だけの比較だと
+  // 「やり直した直後の別インスタンス」を「さっきと同じ出題」と誤認してしまう
+  const currentInstanceKey =
+    isQuestion && state.question !== null ? `${state.question.id}:${state.questionStartedAt}` : null
+  // 確認を開いた時点の出題インスタンス。null は「確認していない」
+  const [confirmingInstanceKey, setConfirmingInstanceKey] = useState<string | null>(null)
+
+  // 開いた時点のインスタンスと、今のインスタンスが一致しているときだけ表示する。
+  // (SSEで届いた新しい state を反映するこの描画そのものの中で判定するので、
+  //  古い確認を「開いたまま」表示し続けて、その一瞬に確定操作を許してしまう隙が無い。
+  //  別タブ操作・やり直しで一致しなくなれば、この式だけで自動的に閉じる)
+  const dialogOpen = confirmingInstanceKey !== null && confirmingInstanceKey === currentInstanceKey
   // ロック操作をして、排他的制御する
   const locked = busy || dialogOpen
 
@@ -49,7 +59,7 @@ export function ControlPanel({
         <ControlButton
           label={ACTION_LABEL.showAnswer}
           disabled={locked || !isQuestion}
-          onClick={() => setConfirmingAnswer(true)}
+          onClick={() => setConfirmingInstanceKey(currentInstanceKey)}
         />
       </div>
 
@@ -79,10 +89,10 @@ export function ControlPanel({
           message="モニタと参加者のスマホに、正答が表示されます。表示すると取り消せません。"
           confirmLabel="正答を表示する"
           onConfirm={() => {
-            setConfirmingAnswer(false)
+            setConfirmingInstanceKey(null)
             onShowAnswer()
           }}
-          onCancel={() => setConfirmingAnswer(false)}
+          onCancel={() => setConfirmingInstanceKey(null)}
         />
       )}
     </section>
