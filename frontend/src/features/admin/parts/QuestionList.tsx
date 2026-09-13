@@ -1,4 +1,5 @@
 import { QuestionListItem } from '../../../types'
+import { difficultyLabel, questionTypeLabel } from '../labels'
 
 type Props = {
   items: QuestionListItem[]
@@ -40,6 +41,10 @@ export function QuestionList({ items, selectedId, onSelect, currentQuestionId }:
                 出題する問題を選ぶ
               </label>
             </td>
+            <td>{item.id}</td>
+            <td>{item.textPreview}</td>
+            <td>{questionTypeLabel(item.type)}</td>
+            <td>{difficultyLabel(item.difficulty)}</td>
           </tr>
         ))}
       </tbody>
