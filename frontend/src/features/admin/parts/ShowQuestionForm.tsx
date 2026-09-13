@@ -20,3 +20,15 @@ export function checkTimeLimit(input: string): string | null {
   if (sec < MIN_SEC || sec > MAX_SEC) return `${MIN_SEC} ~ ${MAX_SEC} 秒の範囲で入れてください`
   return null
 }
+
+// 選んだ問題の出題
+export function ShowQuestionForm({
+  selected,
+  currentQuestionId,
+  timeLimitInput,
+  busy,
+  onTimeLimitInputChange,
+  onSubmit,
+}: Props) {
+  return <div></div>
+}
