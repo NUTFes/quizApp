@@ -29,7 +29,11 @@ export function QuestionList({ items, selectedId, onSelect, currentQuestionId }:
       </thead>
       <tbody>
         {items.map((item) => (
-          <tr>
+          <tr
+            key={item.id}
+            // 出題済みは薄くする。当日「もう出した問題」を再出題しないため
+            className={item.asked ? 'opacity-60' : undefined}
+          >
             <td>
               <label>
                 <input
