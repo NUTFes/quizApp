@@ -10,9 +10,10 @@ import type { AdminStatus } from './parts/StatusBadge'
 import { useRemainingTime } from '../../lib/useRemainingTime'
 import { ErrorBanner, OperationFailure } from './parts/ErrorBanner'
 import { useRef, useState } from 'react'
-import { ActionLabel } from './labels'
-import { ApiError } from '../../lib/api'
+import { ACTION_LABEL, ActionLabel } from './labels'
+import { advanceText, ApiError, reset, showAnswer } from '../../lib/api'
 import { NETWORK_ERROR_MESSAGE, toMessage } from './errorMessages'
+import { ControlPanel } from './parts/ControlPanel'
 
 type Props = {
   // トークンが無効になったことが分かったときに呼ぶ。AdminPage がログイン画面へ戻す
@@ -63,6 +64,18 @@ export function OperationPanel({ onAuthExpired }: Props) {
   return (
     <div>
       <CurrentStatus state={state} status={toStatus(state, remainingSec)} />
+      <ControlPanel
+        state={state}
+        remainingSec={remainingSec}
+        busy={busy}
+        onAdvanceText={() => run(ACTION_LABEL.advanceText, advanceText)}
+        onShowAnswer={() => run(ACTION_LABEL.showAnswer, showAnswer)}
+        onReset={(to) =>
+          run(to == 'finished' ? ACTION_LABEL.resetFinished : ACTION_LABEL.resetWaiting, () =>
+            reset(to),
+          )
+        }
+      />
       <ErrorBanner failure={failure} onDismiss={() => setFailure(null)} />
       {/*ここからは、以降のイシューで足していく */}
     </div>
