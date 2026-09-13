@@ -14,9 +14,35 @@ export function QuestionList({ items, selectedId, onSelect, currentQuestionId }:
 
   return (
     <table>
-      <thread>
-        <tr></tr>
-      </thread>
+      <thead>
+        <tr>
+          <th></th>
+          <th>ID</th>
+          <th>問題文</th>
+          <th>形式</th>
+          <th>難易度</th>
+          <th>出題済み</th>
+          <th>画像あり</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((item) => (
+          <tr>
+            <td>
+              <label>
+                <input
+                  type="radio"
+                  name="question"
+                  value={item.id}
+                  checked={selectedId === item.id}
+                  onChange={() => onSelect(item.id)}
+                />
+                出題する問題を選ぶ
+              </label>
+            </td>
+          </tr>
+        ))}
+      </tbody>
     </table>
   )
 }
