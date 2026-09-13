@@ -11,3 +11,8 @@ type Props = {
   onTimeLimitInputChange: (value: string) => void
   onSubmit: (questionId: number, timeLimitSec: number) => void
 }
+
+// 入力欄の文字列を検査 何もなければ null
+export function checkTimeLimit(input: string): string | null {
+  return null
+}
