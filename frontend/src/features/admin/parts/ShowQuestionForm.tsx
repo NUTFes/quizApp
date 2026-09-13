@@ -14,5 +14,9 @@ type Props = {
 
 // 入力欄の文字列を検査 何もなければ null
 export function checkTimeLimit(input: string): string | null {
+  if (input.trim() === '') return `秒数を入れてください(${MIN_SEC} ~ ${MAX_SEC})`
+  const sec = Number(input)
+  if (!Number.isInteger(sec)) return '秒数は整数で入れてください'
+  if (sec < MIN_SEC || sec > MAX_SEC) return `${MIN_SEC} ~ ${MAX_SEC} 秒の範囲で入れてください`
   return null
 }
