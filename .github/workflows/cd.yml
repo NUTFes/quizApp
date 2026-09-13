@@ -1,13 +1,15 @@
 name: CD
 
 # main に入った変更を、承認してから CT にデプロイする。
-#   main にマージ → CI が通る → [練習環境] 承認待ち → デプロイ
+#   main にマージ → CI が通る → [練習環境] 承認待ち → デプロイ(STG_CD_ENABLED が true の時だけ)
 #                                → [本番]     承認待ち → デプロイ(PROD_CD_ENABLED が true の時だけ)
 #
 # ★ 勝手にはデプロイしない。各段で GitHub の Environments(stg / prod)の
 #   「承認者必須」で止まり、承認されるまでジョブは CT に届かない。
 # ★ CT には外から入れない(policy Q6)ので、CT 上のセルフホストランナーが
 #   GitHub に繋ぎに行ってジョブを受け取る。cloudflared と同じ「中から外へ」の形。
+# ★ ランナーは他のワークフローからも指定できてしまうので、CT 側のガード
+#   (infra/runner-job-guard.sh)で「main の cd.yml のこのジョブ」以外を拒否している。
 # 設定と操作の手順 → docs/ガイドライン/デプロイ手順.md 「3.5 GitHub Actions から承認してデプロイする」
 on:
   # CI の完了を待つ。push で直接起動すると、CI が落ちたコミットも承認待ちに並ぶ
@@ -63,6 +65,11 @@ jobs:
 
   deploy-stg:
     needs: resolve
+    # ★ 練習環境へのCDも、準備が終わるまで止めておくスイッチ(既定 OFF)。
+    #   Environment `stg` の承認者設定・ランナーとガードの登録を済ませてから true にする。
+    #   先に動くと、存在しない Environment が「保護ルールなし」で自動作成され、
+    #   承認なしで通過したジョブがランナー登録を待つ状態になりうる。
+    if: vars.STG_CD_ENABLED == 'true'
     runs-on: [self-hosted, quiz-stg]
     environment: stg # ★ ここで承認待ちになる
     # 同じ CT へのデプロイを同時に走らせない。途中で止めるとマイグレーションが
@@ -72,6 +79,15 @@ jobs:
       cancel-in-progress: false
     timeout-minutes: 30
     steps:
+      # ★ ランナーのジョブ開始前ガード(infra/runner-job-guard.sh)を通ってきたか確かめる。
+      #   ガードが無いランナーは、他のワークフローからも CT 上でコードを実行できてしまう。
+      #   入れ忘れたまま使い続けないように、ここで CD 自体を失敗させる。
+      - name: ランナーのガードを確認
+        run: |
+          if [ "${QUIZ_RUNNER_GUARD:-}" != passed ]; then
+            echo "::error::ランナーにジョブ開始前ガードが設定されていません。デプロイ手順 3.5 ② を確認してください。"
+            exit 1
+          fi
       # ★ /opt/quizApp の deploy.sh を直接実行しない。deploy.sh は途中で git checkout して
       #   自分自身を書き換えるため、deploy.sh を変更した回だけ挙動がおかしくなりうる。
       #   作業フォルダに取り出した同じコミットの deploy.sh を、APP_DIR を指定して使う。
@@ -88,8 +104,8 @@ jobs:
     needs: [resolve, deploy-stg] # 練習環境で成功したものだけが本番に進む
     # ★ 本番へのCDをしてよいと決まるまで止めておくスイッチ。
     #   Settings → Secrets and variables → Actions → Variables の PROD_CD_ENABLED を true にすると有効になる。
-    #   本番CTにランナー(quiz-prod)を登録してから true にすること。先に true にすると、
-    #   承認しても受け取るランナーがおらず待ち続ける。
+    #   Environment `prod` の承認者設定と、本番CTへのランナー(quiz-prod)・ガードの登録を
+    #   済ませてから true にすること(理由は deploy-stg の STG_CD_ENABLED と同じ)。
     if: vars.PROD_CD_ENABLED == 'true'
     runs-on: [self-hosted, quiz-prod]
     environment: prod
@@ -98,6 +114,12 @@ jobs:
       cancel-in-progress: false
     timeout-minutes: 30
     steps:
+      - name: ランナーのガードを確認
+        run: |
+          if [ "${QUIZ_RUNNER_GUARD:-}" != passed ]; then
+            echo "::error::ランナーにジョブ開始前ガードが設定されていません。デプロイ手順 3.5 ② を確認してください。"
+            exit 1
+          fi
       - uses: actions/checkout@v5
         with:
           ref: ${{ needs.resolve.outputs.sha }}
