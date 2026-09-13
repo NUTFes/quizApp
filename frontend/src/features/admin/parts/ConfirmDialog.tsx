@@ -57,11 +57,35 @@ export function ConfirmDialogCard({ title, message, confirmLabel, onConfirm, onC
   )
 }
 
-// ポップアップの範囲外は押せなくする
+// ポップアップの範囲外は押せなくする。
+//
+// <div> の幕ではなく、ブラウザ標準の <dialog> + showModal() を使う。
+// これだけで「開いている間はTabが背面に抜けない(フォーカストラップ)」
+// 「背面はクリックできない」をブラウザが保証してくれる。自前で実装すると
+// フォーカス可能な要素を自分で探して回す処理が要り、かえって複雑になる。
 export function ConfirmDialog(props: Props) {
+  const dialogRef = useRef<HTMLDialogElement>(null)
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (dialog === null) return
+    dialog.showModal()
+    // アンマウント時(=正答を表示 or やめる、で閉じたとき)の後始末。
+    // 既に閉じている場合の close() は何もしないので、呼んでも問題ない
+    return () => dialog.close()
+  }, [])
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <dialog
+      ref={dialogRef}
+      className="border-0 bg-transparent p-4 backdrop:bg-black/50"
+      // Escキー(ブラウザ標準の「閉じる」操作)を、キャンセル操作に合わせる
+      onCancel={(e) => {
+        e.preventDefault() // 標準の close() だと state と食い違うので、onCancel 経由に統一する
+        props.onCancel()
+      }}
+    >
       <ConfirmDialogCard {...props} />
-    </div>
+    </dialog>
   )
 }
