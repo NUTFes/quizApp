@@ -45,10 +45,11 @@ v1では**シンプルに3ジョブだけ**。テスト文化は後から育て�
 ## CD(GitHub Actions)
 
 `.github/workflows/cd.yml`。**main に入っても勝手にはデプロイしない。**CI 成功後に承認待ちで止まり、
-練習環境 → 本番の順に毎回承認してから CT に入れる(本番は `PROD_CD_ENABLED` で止めてある)。
+練習環境 → 本番の順に毎回承認してから CT に入れる(Variables の `STG_CD_ENABLED` / `PROD_CD_ENABLED` で有効化する)。
 
 - ブランチ戦略は変えない。デプロイ用ブランチは作らず、「入れるか」は承認で判断する
 - **Public リポジトリなので、CI を self-hosted ランナーで動かさないこと。**PR から CT 上でコードが動く経路になる
+- CT のランナーは `infra/runner-job-guard.sh` で main の `cd.yml` 以外を拒否している。**他のワークフローから `runs-on: [self-hosted, ...]` を指定しても動かない**
 - 背景と決定 → `dev_policy/インフラ・デプロイ_policy.md` 「承認制の CD」、手順 → `docs/ガイドライン/デプロイ手順.md` 3.5
 
 ## コミットメッセージ
