@@ -33,6 +33,7 @@ export function OperationPanel({ onAuthExpired }: Props) {
   const [failure, setFailure] = useState<OperationFailure | null>(null)
   const [busy, setBusy] = useState(false) // 連続で操作できないようにするための排他処理のためのロック
   const inFlight = useRef(false)
+  const [timeLimitInput, setTimelimitInput] = useState('30')
 
   if (state === null) return <p>接続中...</p>
 

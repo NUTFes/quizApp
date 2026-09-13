@@ -1,7 +1,6 @@
 import { useId } from 'react'
 import { QuestionListItem } from '../../../types'
 import { ACTION_LABEL, difficultyLabel, questionTypeLabel } from '../labels'
-import { UNSAFE_getTurboStreamSingleFetchDataStrategy } from 'react-router-dom'
 
 const MIN_SEC = 5
 const MAX_SEC = 120
@@ -39,34 +38,42 @@ export function ShowQuestionForm({
   const canSubmit = !busy && selected !== null && inputError === null
 
   return (
-    <section>
-      <h2>選択中の問題</h2>
+    <section className="w-full max-w-[440px] rounded-3xl border border-border-soft bg-surface px-6 py-4 font-zen-kaku-gothic-new">
+      <h2 className="text-admin-header text-brand">選択中の問題</h2>
 
       {selected === null ? (
-        <p>問題一覧から１問選んでください</p>
+        <p className="mt-2 text-admin-func-label text-neutral-500">
+          問題一覧から１問選んでください
+        </p>
       ) : (
-        <div>
+        <div className="mt-2 text-admin-func-label">
           <p>
-            ID {selected.id} ? {questionTypeLabel(selected.type)} /{' '}
+            ID {selected.id} / {questionTypeLabel(selected.type)} /{' '}
             {difficultyLabel(selected.difficulty)}
           </p>
-          <p>{selected.textPreview}</p>
+          <p className="[overflow-wrap:anywhere]">{selected.textPreview}</p>
           {selected.id === currentQuestionId ? (
-            <p>出題中の問題を最初からやり直します(タイマーも戻ります)</p>
+            <p className="text-sm text-red-700">
+              出題中の問題を最初からやり直します(タイマーも戻ります)
+            </p>
           ) : (
-            selected.asked && <p>出題済みの問題です</p>
+            selected.asked && <p className="text-sm text-red-700">出題済みの問題です</p>
           )}
         </div>
       )}
+
       <form
+        className="mt-4 flex flex-wrap items-start gap-4"
         onSubmit={(e) => {
           e.preventDefault() //  何もせず送信したときの強制再リロードを防ぐ
-          if (!canSubmit || selected === null) return // これ以降の行で、selected が nullでないことを見持して、TS の型チェックでのエラーを防ぐ
+          if (!canSubmit || selected === null) return // これ以降の行で、selected が nullでないことを保証して、TS の型チェックでのエラーを防ぐ
           onSubmit(selected.id, Number(timeLimitInput))
         }}
       >
         <div>
-          <p>制限時間(秒)</p>
+          <label htmlFor={inputId} className="block text-sm">
+            制限時間(秒)
+          </label>
           <input
             id={inputId}
             type="number"
@@ -76,11 +83,21 @@ export function ShowQuestionForm({
             step={1}
             value={timeLimitInput}
             disabled={busy}
+            aria-invalid={inputError !== null}
+            aria-describedby={inputError === null ? undefined : errorId}
             onChange={(e) => onTimeLimitInputChange(e.target.value)}
+            className={`w-24 rounded-lg border px-3 py-2 ${inputError === null ? 'border-border-soft' : 'border-red-700'}`}
           />
-          <p>{inputError}</p>
+          {/* 出ていないときも高さを取っておき、ボタンが上下に動かないようにする */}
+          <p id={errorId} className="min-h-5 text-sm text-red-700">
+            {inputError}
+          </p>
         </div>
-        <button type="submit" disabled={!canSubmit}>
+        <button
+          type="submit"
+          disabled={!canSubmit}
+          className="mt-5 rounded-xl bg-brand px-6 py-3 text-admin-func-label text-white disabled:cursor-not-allowed disabled:opacity-40"
+        >
           {ACTION_LABEL.showQuestion}
         </button>
       </form>
