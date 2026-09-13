@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import { QuestionListItem } from '../../../types'
+import { ACTION_LABEL } from '../labels'
 
 const MIN_SEC = 5
 const MAX_SEC = 120
@@ -46,7 +47,25 @@ export function ShowQuestionForm({
           if (!canSubmit || selected === null) return // これ以降の行で、selected が nullでないことを見持して、TS の型チェックでのエラーを防ぐ
           onSubmit(selected.id, Number(timeLimitInput))
         }}
-      ></form>
+      >
+        <div>
+          <p>制限時間(秒)</p>
+          <input
+            id={inputId}
+            type="number"
+            inputMode="numeric"
+            min={MIN_SEC}
+            max={MAX_SEC}
+            step={1}
+            value={timeLimitInput}
+            disabled={busy}
+            onChange={(e) => onTimeLimitInputChange(e.target.value)}
+          />
+        </div>
+        <button type="submit" disabled={!canSubmit}>
+          {ACTION_LABEL.showQuestion}
+        </button>
+      </form>
     </section>
   )
 }
