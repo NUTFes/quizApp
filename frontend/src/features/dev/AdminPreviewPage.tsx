@@ -175,6 +175,40 @@ const PANEL_CASES = [
   },
 ] as const
 
+const QUESTION_LIST_CASES = [
+  {
+    title: '通常 + 出題済み混在',
+    note: '3件・うち1件が asked: true',
+    node: (
+      <QuestionList
+        items={DEV_QUESTION_LIST}
+        selectedId={null}
+        onSelect={() => {}}
+        currentQuestionId={null}
+      />
+    ),
+  },
+  {
+    title: '0件',
+    note: '問題データがまだ投入されていない状態。画面が壊れないことの確認',
+    node: (
+      <QuestionList items={[]} selectedId={null} onSelect={() => {}} currentQuestionId={null} />
+    ),
+  },
+  {
+    title: '選択中',
+    note: '1件を選んでいる状態。ラジオの見た目確認',
+    node: (
+      <QuestionList
+        items={DEV_QUESTION_LIST}
+        selectedId={1}
+        onSelect={() => {}}
+        currentQuestionId={null}
+      />
+    ),
+  },
+] as const
+
 function AdminPreviewPage() {
   const [width, setWidth] = useState<(typeof WIDTHS)[number]>(WIDTHS[0])
 
