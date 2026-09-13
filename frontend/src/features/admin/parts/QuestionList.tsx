@@ -61,7 +61,7 @@ export function QuestionList({ items, selectedId, onSelect, currentQuestionId }:
                 item.asked && <Badge>出題済み</Badge>
               )}
             </td>
-            <td>{item.hasImage && <p>画像あり</p>}</td>
+            <td>{item.hasImage && <Badge>画像あり</Badge>}</td>
           </tr>
         ))}
       </tbody>
