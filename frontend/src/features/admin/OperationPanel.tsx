@@ -18,26 +18,26 @@ type Props = {
 export function OperationPanel({ onAuthExpired }: Props) {
   // SSE でつなぎっぱなしにする。状態が変わるたびに新しい state が届く
   const state = useAdminState(onAuthExpired)
-  const deadlinePassed = useDeadlinePassed(state)
+  const remainingSec = useDeadlinePassed(state)
 
   if (state === null) return <p>接続中...</p>
 
   return (
     <div>
-      <CurrentStatus state={state} status={toStatus(state, deadlinePassed)} />
+      <CurrentStatus state={state} status={toStatus(state, remainingSec)} />
       {/*ここからは、以降のイシューで足していく */}
     </div>
   )
 }
 
 // 会場に出ている状態を決める。バッジを出さないときは null を返す
-function toStatus(state: AdminState, deadlinePassed: boolean): AdminStatus | null {
+function toStatus(state: AdminState, remainingSec: number): AdminStatus | null {
   if (state.phase === 'answer') return 'answer'
   if (state.phase !== 'question') return null
-  return deadlinePassed ? 'closed' : 'accepting'
+  return remainingSec === 0 ? 'closed' : 'accepting'
 }
 
-// 「回答を締め切ったか」を判定する。
+// 残り時間を求める。
 //
 // lib/useRemainingTime は残り秒数を state に持ち、最初の値が入るのは描画の後。
 // その値で締切を判定すると、制限時間つきの問題を受け取った最初の1描画が必ず「残り0秒」に
