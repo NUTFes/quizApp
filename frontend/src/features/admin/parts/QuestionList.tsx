@@ -1,3 +1,4 @@
+import React from 'react'
 import { QuestionListItem } from '../../../types'
 import { difficultyLabel, questionTypeLabel } from '../labels'
 
@@ -43,13 +44,32 @@ export function QuestionList({ items, selectedId, onSelect, currentQuestionId }:
             </td>
             <td>{item.id}</td>
             <td>{item.textPreview}</td>
-            <td>{questionTypeLabel(item.type)}</td>
-            <td>{difficultyLabel(item.difficulty)}</td>
-            <td>{item.id === currentQuestionId ? <p>表示中</p> : item.asked && <p>出題済み</p>}</td>
+            <td>
+              <Badge>{questionTypeLabel(item.type)}</Badge>
+            </td>
+            <td>
+              <Badge>{difficultyLabel(item.difficulty)}</Badge>
+            </td>
+            <td>
+              {item.id === currentQuestionId ? (
+                <Badge>表示中</Badge>
+              ) : (
+                item.asked && <Badge>出題済み</Badge>
+              )}
+            </td>
             <td>{item.hasImage && <p>画像あり</p>}</td>
           </tr>
         ))}
       </tbody>
     </table>
+  )
+}
+
+// シンプルなラベル
+function Badge({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="rounded-full bg-surface-soft px-3 py-1 text-admin-func-label whitespace-nowrap">
+      {children}
+    </span>
   )
 }
