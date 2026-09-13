@@ -8,6 +8,7 @@ import type { AdminState } from '../../types'
 import { CurrentStatus } from './parts/CurrentStatus'
 import type { AdminStatus } from './parts/StatusBadge'
 import { useRemainingTime } from '../../lib/useRemainingTime'
+import { OperationFailure } from './parts/ErrorBanner'
 
 type Props = {
   // トークンが無効になったことが分かったときに呼ぶ。AdminPage がログイン画面へ戻す
@@ -23,6 +24,8 @@ export function OperationPanel({ onAuthExpired }: Props) {
     timeLimitSec: state?.timeLimitSec ?? null,
     questionStartedAt: state?.questionStartedAt ?? null,
   })
+
+  const [failure, setFailure] = useState<OperationFailure | null>(null)
 
   if (state === null) return <p>接続中...</p>
 
