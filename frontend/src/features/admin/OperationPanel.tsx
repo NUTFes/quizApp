@@ -38,8 +38,10 @@ export function OperationPanel({ onAuthExpired }: Props) {
 }
 
 // 会場に出ている状態を決める。バッジを出さないときは null を返す
-function toStatus(state: AdminState, remainingSec: number): AdminStatus | null {
+function toStatus(state: AdminState, remainingSec: number | null): AdminStatus | null {
   if (state.phase === 'answer') return 'answer'
   if (state.phase !== 'question') return null
+  // 制限時間なしの時はずっと受付中
+  // 其れ以外の時で、0の時だけ締め切る
   return remainingSec === 0 ? 'closed' : 'accepting'
 }
