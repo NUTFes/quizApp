@@ -44,8 +44,9 @@ v1では**シンプルに3ジョブだけ**。テスト文化は後から育て�
 
 ## CD(GitHub Actions)
 
-`.github/workflows/cd.yml`。**main に入っても勝手にはデプロイしない。**CI 成功後に承認待ちで止まり、
-練習環境 → 本番の順に毎回承認してから CT に入れる(Variables の `STG_CD_ENABLED` / `PROD_CD_ENABLED` で有効化する)。
+`.github/workflows/cd.yml`。**main に入っても勝手にはデプロイしない。**CI 成功後に承認待ちで止まる。
+main へのマージから進むのは練習環境まで。**本番はタグを指定した手動起動(Run workflow)の時だけ**、
+承認してから CT に入れる(Variables の `STG_CD_ENABLED` / `PROD_CD_ENABLED` で有効化する)。
 
 - ブランチ戦略は変えない。デプロイ用ブランチは作らず、「入れるか」は承認で判断する
 - **Public リポジトリなので、CI を self-hosted ランナーで動かさないこと。**PR から CT 上でコードが動く経路になる
