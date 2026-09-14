@@ -26,6 +26,19 @@ export const toMessage = (code: string): string =>
 export const toImageMessage = (err: ApiError): string =>
   err.status === 413 ? toMessage('FILE_TOO_LARGE') : toMessage(err.code)
 
+// 問題データの投入(PUT /api/admin/questions)専用の文言。
+//
+// INVALID_REQUEST は show-question の秒数エラーと同じ code だが、
+// 投入APIでは「JSONを解釈できない」「questions が空」という別の意味で返ってくる
+// (→ backend/internal/question/handler.go)。ERROR_MESSAGES の文言をそのまま出すと
+// 「制限時間は5〜120秒です」という無関係な指示が出てしまうため、ここだけ訳し分ける。
+export const toImportMessage = (code: string): string => {
+  if (code === 'INVALID_REQUEST') {
+    return 'JSONの形式が正しくありません(型が違う項目がある、questionsが空、等)。内容を確認してください。'
+  }
+  return toMessage(code)
+}
+
 // 通信自体ができなかったとき(サーバー停止・回線断)。ApiError にならないのでこちら。
 export const NETWORK_ERROR_MESSAGE =
   '通信に失敗しました。ネットワークとサーバーを確認してください。'

@@ -1,17 +1,22 @@
 import { ReactNode, useState } from 'react'
 import { Link } from 'react-router-dom'
+import testSquareA from '../../assets/dev/test-square-a.svg'
+import testSquareB from '../../assets/dev/test-square-b.svg'
 import { CheckingView, UnreachableView } from '../admin/AdminPage'
 import { LoginForm } from '../admin/LoginView'
-import { NETWORK_ERROR_MESSAGE, toMessage } from '../admin/errorMessages'
+import { NETWORK_ERROR_MESSAGE, toImportMessage, toMessage } from '../admin/errorMessages'
 import { ACTION_LABEL } from '../admin/labels'
 import { ConfirmDialogCard } from '../admin/parts/ConfirmDialog'
 import { ControlPanel } from '../admin/parts/ControlPanel'
 import { CurrentStatus } from '../admin/parts/CurrentStatus'
 import { ErrorBanner } from '../admin/parts/ErrorBanner'
 import { ImagePanel } from '../admin/parts/ImagePanel'
+import { ImportPanel } from '../admin/parts/ImportPanel'
 import { RemainingTime } from '../admin/parts/RemainingTime'
+import { SelectedQuestion } from '../admin/parts/SelectedQuestion'
 import { ShowQuestionForm } from '../admin/parts/ShowQuestionForm'
-import type { QuestionListItem } from '../../types'
+import type { ImportResult, QuestionListItem } from '../../types'
+import type { RowIssue } from '../../types/rowIssue'
 import {
   adminAnswerAri,
   adminFinished,
@@ -234,6 +239,54 @@ const QUESTION_LIST_CASES = [
         onSelect={() => {}}
         currentQuestionId={null}
       />
+    ),
+  },
+] as const
+
+// 「選択中の問題(詳細)」(#116)の取りうる状態。
+//
+// #107 の PANEL_CASES と同じく、通信もトークンも無いこの場所で全状態を並べられる。
+// 通常ケースの Question は新規に作らず、既存の adminQuestionFour(lib/mock/admin)の
+// question をそのまま使い回す(架空データの二重管理を避けるため)。
+// 画像ありケースだけは、他のdevプレビュー(MonitorPreviewPage等)と同じく
+// assets/dev/ の架空画像で imageUrl を差し替える(サーバーが無い場所で画像表示を確認するため)。
+const SELECTED_QUESTION_CASES = [
+  {
+    title: '通常',
+    note: '取得済み。選択肢・正答まで表示される。問題文の区切りが番号付きで並ぶ',
+    node: <SelectedQuestion status="loaded" question={adminQuestionFour.question!} />,
+  },
+  {
+    title: '通常 / 画像あり',
+    note: '問題画像・選択肢画像が両方ある場合。一覧(#109)には出ない実体をここで確認する',
+    node: (
+      <SelectedQuestion
+        status="loaded"
+        question={{
+          ...adminQuestionFour.question!,
+          imageUrl: testSquareA,
+          choices: adminQuestionFour.question!.choices.map((c, i) =>
+            i === 0 ? { ...c, imageUrl: testSquareB } : c,
+          ),
+        }}
+      />
+    ),
+  },
+  {
+    title: '未選択',
+    note: '問題一覧(#109)でまだ何も選んでいない',
+    node: <SelectedQuestion status="empty" />,
+  },
+  {
+    title: '取得中',
+    note: 'GET /api/admin/questions/:id の応答待ち',
+    node: <SelectedQuestion status="loading" />,
+  },
+  {
+    title: '取得失敗',
+    note: '404 QUESTION_NOT_FOUND。「もう一度取得する」ボタンで再試行できる',
+    node: (
+      <SelectedQuestion status="error" message={toMessage('QUESTION_NOT_FOUND')} onRetry={noop} />
     ),
   },
 ] as const
@@ -507,6 +560,231 @@ const CONTROL_CASES = [
   },
 ] as const
 
+// 架空のGAS出力サンプル(1問だけ)。貼り付け欄の見え方確認用。
+// 🔒 架空の問題文だけ。本番の問題文・正答は絶対に書かない。
+const DEV_IMPORT_JSON = JSON.stringify(
+  {
+    questions: [
+      {
+        sourceRow: 3,
+        number: 1,
+        type: 'four_choice',
+        difficulty: 'easy',
+        textSegments: ['【仮データ】学園祭の来場者数は', 'およそ何人でしょう'],
+        imageUrl: null,
+        choices: [
+          { id: 'A', text: '1000人', imageUrl: null },
+          { id: 'B', text: '3000人', imageUrl: null },
+          { id: 'C', text: '5000人', imageUrl: null },
+          { id: 'D', text: '10000人', imageUrl: null },
+        ],
+        correctChoiceId: 'B',
+        explanation: null,
+      },
+    ],
+  },
+  null,
+  2,
+)
+
+const DEV_IMPORT_RESULT_NO_WARNINGS: ImportResult = {
+  imported: 30,
+  importedAt: '2026-09-13T13:05:12+09:00',
+  warnings: [],
+}
+
+const DEV_IMPORT_RESULT_WITH_WARNINGS: ImportResult = {
+  imported: 30,
+  importedAt: '2026-09-13T13:05:12+09:00',
+  warnings: [{ sourceRow: 12, reason: '画像 /images/q7.png がサーバーに存在しません' }],
+}
+
+const DEV_IMPORT_ISSUES: RowIssue[] = [
+  { sourceRow: 5, reason: "correctChoiceId 'E' が choices に存在しません" },
+  { sourceRow: 9, reason: 'type が two_choice ですが choices が4件あります' },
+]
+
+// 「問題データの投入(#110)」の取りうる状態。
+//
+// #107/#108/#109 の各 CASES と同じく、通信もトークンも無いこの場所で全状態を並べられる。
+// ImportPanel 自身は通信しない(OperationPanel に寄せている)ので、
+// 送信中・成功・エラーは props で強制的に作って見せる。
+const IMPORT_CASES = [
+  {
+    title: '初期(未入力)',
+    note: '貼り付け前。まだ何も送っていない',
+    node: (
+      <ImportPanel
+        phase="waiting"
+        input=""
+        busy={false}
+        result={null}
+        error={null}
+        issues={[]}
+        onInputChange={noop}
+        onSubmit={noop}
+      />
+    ),
+  },
+  {
+    title: '入力あり',
+    note: '貼り付け済み・送信していない',
+    node: (
+      <ImportPanel
+        phase="waiting"
+        input={DEV_IMPORT_JSON}
+        busy={false}
+        result={null}
+        error={null}
+        issues={[]}
+        onInputChange={noop}
+        onSubmit={noop}
+      />
+    ),
+  },
+  {
+    title: '送信中',
+    note: 'busy・入力欄とボタンが無効',
+    node: (
+      <ImportPanel
+        phase="waiting"
+        input={DEV_IMPORT_JSON}
+        busy={true}
+        result={null}
+        error={null}
+        issues={[]}
+        onInputChange={noop}
+        onSubmit={noop}
+      />
+    ),
+  },
+  {
+    title: '成功 / warnings なし',
+    note: '取り込み件数と日時が出る',
+    node: (
+      <ImportPanel
+        phase="waiting"
+        input={DEV_IMPORT_JSON}
+        busy={false}
+        result={DEV_IMPORT_RESULT_NO_WARNINGS}
+        error={null}
+        issues={[]}
+        onInputChange={noop}
+        onSubmit={noop}
+      />
+    ),
+  },
+  {
+    title: '成功 / warnings あり',
+    note: '失敗ではないので見出しを分けて表示する(画像が見つからない等)',
+    node: (
+      <ImportPanel
+        phase="waiting"
+        input={DEV_IMPORT_JSON}
+        busy={false}
+        result={DEV_IMPORT_RESULT_WITH_WARNINGS}
+        error={null}
+        issues={[]}
+        onInputChange={noop}
+        onSubmit={noop}
+      />
+    ),
+  },
+  {
+    title: 'エラー / details 複数件',
+    note: '400 SYNC_VALIDATION_ERROR・sourceRow を頭に出して全件並べる',
+    node: (
+      <ImportPanel
+        phase="waiting"
+        input={DEV_IMPORT_JSON}
+        busy={false}
+        result={null}
+        error={toImportMessage('SYNC_VALIDATION_ERROR')}
+        issues={DEV_IMPORT_ISSUES}
+        onInputChange={noop}
+        onSubmit={noop}
+      />
+    ),
+  },
+  {
+    title: '成功後にエラー / 直前の成功結果を残す',
+    note: '再投入が失敗しても、既存データは置換されていないので日時・件数は消さない',
+    node: (
+      <ImportPanel
+        phase="waiting"
+        input={DEV_IMPORT_JSON}
+        busy={false}
+        result={DEV_IMPORT_RESULT_NO_WARNINGS}
+        error={toImportMessage('SYNC_VALIDATION_ERROR')}
+        issues={DEV_IMPORT_ISSUES}
+        onInputChange={noop}
+        onSubmit={noop}
+      />
+    ),
+  },
+  {
+    title: 'エラー / INVALID_REQUEST(JSONの形が不正)',
+    note: 'show-questionの秒数エラーと同じcodeだが、投入では別の意味。文言を訳し分けている',
+    node: (
+      <ImportPanel
+        phase="waiting"
+        input={DEV_IMPORT_JSON}
+        busy={false}
+        result={null}
+        error={toImportMessage('INVALID_REQUEST')}
+        issues={[]}
+        onInputChange={noop}
+        onSubmit={noop}
+      />
+    ),
+  },
+  {
+    title: 'phase でブロック中 / 出題中',
+    note: '409 INVALID_PHASE を待たず、押せない理由を先に見せる',
+    node: (
+      <ImportPanel
+        phase="question"
+        input={DEV_IMPORT_JSON}
+        busy={false}
+        result={null}
+        error={null}
+        issues={[]}
+        onInputChange={noop}
+        onSubmit={noop}
+      />
+    ),
+  },
+  {
+    title: 'phase でブロック中 / 正答発表中',
+    note: 'answer も同様に投入できない',
+    node: (
+      <ImportPanel
+        phase="answer"
+        input={DEV_IMPORT_JSON}
+        busy={false}
+        result={null}
+        error={null}
+        issues={[]}
+        onInputChange={noop}
+        onSubmit={noop}
+      />
+    ),
+  },
+  {
+    title: '確認ポップアップ / 開いた状態',
+    note: '全置換であることを送信前に明示する',
+    node: (
+      <ConfirmDialogCard
+        title="問題データを置き換えますか?"
+        message="今ある問題データをすべて、貼り付けた内容に置き換えます。取り消せません。"
+        confirmLabel="置き換える"
+        onConfirm={noop}
+        onCancel={noop}
+      />
+    ),
+  },
+] as const
+
 // ImagePanel は選択ファイル・通信結果を内部 state で持つため、初期状態だけを置く。
 // このケースでは画像を選ぶところまで確認できる。送信すると実APIを呼ぶので注意する。
 const IMAGE_PANEL_CASES = [
@@ -584,12 +862,36 @@ function AdminPreviewPage() {
         ))}
       </div>
 
+      <h2 className="mt-14 mb-2 text-xl font-bold">選択中の問題(詳細)(#116)</h2>
+      <p className="mb-4 text-sm text-neutral-600">
+        通信していない。「出題中の問題」(CurrentStatus)と見出しが違うことを確認する。
+      </p>
+      <div className="flex flex-col gap-10">
+        {SELECTED_QUESTION_CASES.map((c) => (
+          <PreviewCase key={c.title} title={c.title} note={c.note} width={width.width}>
+            {c.node}
+          </PreviewCase>
+        ))}
+      </div>
+
       <h2 className="mt-14 mb-2 text-xl font-bold">進行操作(#108)</h2>
       <p className="mb-4 text-sm text-neutral-600">
         ボタンを押しても通信しない。確認ポップアップは開いた状態をそのまま置いている。
       </p>
       <div className="flex flex-col gap-10">
         {CONTROL_CASES.map((c) => (
+          <PreviewCase key={c.title} title={c.title} note={c.note} width={width.width}>
+            {c.node}
+          </PreviewCase>
+        ))}
+      </div>
+
+      <h2 className="mt-14 mb-2 text-xl font-bold">問題データの投入(#110)</h2>
+      <p className="mb-4 text-sm text-neutral-600">
+        ImportPanel 自身は通信しない。送信中・成功・エラーは props で強制的に作って見せている。
+      </p>
+      <div className="flex flex-col gap-10">
+        {IMPORT_CASES.map((c) => (
           <PreviewCase key={c.title} title={c.title} note={c.note} width={width.width}>
             {c.node}
           </PreviewCase>

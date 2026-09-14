@@ -19,7 +19,7 @@
   - `message` は開発者向けデバッグ文言。表示に使わない(バックが自由に変えてよい)。
 - 日時はすべて **ISO 8601 + タイムゾーン付き**(例: `"2026-09-13T13:05:00+09:00"`)。
 - **キーは消さない**: 値が無いときは `null`、空リストは `[]`。同一宛先内ではphaseによらずキー構成は常に一定。
-- 状態変更系API(§3)の成功レスポンスは、**すべて「更新後のstate(管理者向け・§2.1の形)」**。個別の形を覚える必要はない。
+- 状態変更系API(§3.1〜§3.4、§3.8)の成功レスポンスは、**すべて「更新後のstate(管理者向け・§2.1の形)」**。個別の形を覚える必要はない。
 - **残り時間の計算**: サーバーは残り秒数を送らない。クライアントが `serverTime` と `questionStartedAt` + `timeLimitSec` から計算する(端末時計のずれを `serverTime` で補正)。
   - **「締切」も同じ計算で出す**。残り0秒になったらクライアントが締切表示に切り替える(→ `画面・要件.md` §4)。**`close` のようなphaseは無く、APIも増えない**。サーバーは最後まで `phase: "question"` を配り続ける。
   - 判断基準: **配ったデータから計算で復元できるものはクライアントに任せ、復元できないものはサーバーが配る。** 締切は `questionStartedAt` から復元できるのでクライアント側、`askedCount`(今何問目)は復元できないのでサーバー側。
@@ -40,22 +40,32 @@
 ### phase(状態)の遷移図
 
 ```
-             show-question                 show-answer
-  waiting ──────────────────▶ question ──────────────────▶ answer
-     ▲                        │    ▲                          │
-     │                        │    │ advance-text             │ show-question(次の問題)
-     │                        └────┘ (セグメント表示を進める)   ▼
-     │                                                     question
-     │                  reset {"to":"waiting"}                │
-     ├────────────────────◀───(どのphaseからでも)◀────────────┤
-     │                                                        │
-  finished ◀──────── reset {"to":"finished"} ◀────────────────┘
+              show-question                 show-answer
+   waiting ──────────────────▶ question ──────────────────▶ answer
+                              │    ▲                          │
+                              │    │ advance-text             │ revival {"to":"video"}
+                              └────┘                          ▼
+                                                   revival-video
+                                                          │
+                                           revival {"to":"entry"}
+                                                          ▼
+                                                   revival-entry
+                                                          │
+                                           show-question(次の問題)
+                                                          ▼
+                                                      question
+
+   どのphaseからでも:
+   - revival {"to":"video" | "entry"} → 指定した敗者復活phase
+   - reset   {"to":"waiting" | "finished"} → 待機または終了
 ```
 
 - 遷移はすべて管理者の操作。時間切れによる自動遷移は**ない**(タイマーは表示のみ)。
 - ただし `question` の中には**「締切」という表示状態**がある。残り0秒でクライアントが自分で切り替えるもので、**phaseは `question` のまま**動かない(§0・`画面・要件.md` §4)。バック班がこのために書くコードは無い。
 - `answer` 中に `show-question` を呼ぶと次の問題へ(waitingを経由しない)。
 - 同じ問題を `question` 中に再度 `show-question` すると**その問題をやり直し**(セグメント・タイマーがリセット)。
+- 敗者復活の通常の流れは `answer → revival-video → revival-entry → question`。ただし運営が途中から復旧できるよう、`revival` はどのphaseからでも呼べる。
+- `revival-entry` 中に `show-question` を呼ぶと次の問題へ戻る。敗者復活では全問題の `asked` を変更しないため、`askedCount` は途切れない。
 
 ---
 
@@ -115,20 +125,20 @@
 
 | フィールド | 型 | 説明 |
 | --- | --- | --- |
-| `phase` | `"waiting"` \| `"question"` \| `"answer"` \| `"finished"` | 現在の進行状態。遷移は**すべて管理者の操作**で、時間切れによる自動遷移は無い(→§0の遷移図) |
+| `phase` | `"waiting"` \| `"question"` \| `"answer"` \| `"revival-video"` \| `"revival-entry"` \| `"finished"` | 現在の進行状態。遷移は**すべて管理者の操作**で、時間切れによる自動遷移は無い(→§0の遷移図) |
 | `serverTime` | `string` | サーバーの現在時刻(ISO 8601)。**端末時計のずれを補正する基準**。state を受け取るたびに更新する(→§0) |
-| `timeLimitSec` | `number \| null` | 制限時間の秒数。既定30、範囲5〜120(→§3.1)。**`waiting` / `finished` では `null`** |
-| `questionStartedAt` | `string \| null` | タイマーの起点(ISO 8601)。`waiting` / `finished` では `null` |
-| `revealedSegments` | `number` | 現在何セグメントまで公開しているか。`waiting` / `finished` では `0` |
-| `totalSegments` | `number` | 出題中の問題のセグメント総数。`waiting` / `finished` では `0`。**閲覧者には送らない**(§2.2) |
+| `timeLimitSec` | `number \| null` | 制限時間の秒数。既定30、範囲5〜120(→§3.1)。**`waiting` / `revival-video` / `revival-entry` / `finished` では `null`** |
+| `questionStartedAt` | `string \| null` | タイマーの起点(ISO 8601)。`waiting` / `revival-video` / `revival-entry` / `finished` では `null` |
+| `revealedSegments` | `number` | 現在何セグメントまで公開しているか。`waiting` / `revival-video` / `revival-entry` / `finished` では `0` |
+| `totalSegments` | `number` | 出題中の問題のセグメント総数。`waiting` / `revival-video` / `revival-entry` / `finished` では `0`。**閲覧者には送らない**(§2.2) |
 | `askedCount` | `number` | 今何問目か。詳細は下記 |
-| `question` | `Question \| null` | 出題中の問題(§1の形そのまま。`correctChoiceId` を含む)。`waiting` / `finished` では `null` |
+| `question` | `Question \| null` | 出題中の問題(§1の形そのまま。`correctChoiceId` を含む)。`waiting` / `revival-video` / `revival-entry` / `finished` では `null` |
 
-- **キーは消えない。** `waiting` / `finished` でも上記8つのキーはすべて存在し、値が `null` / `0` になるだけ(→§0)。
-- `phase` が `waiting` / `finished` のとき: `question` `questionStartedAt` `timeLimitSec` は `null`、`revealedSegments` `totalSegments` は `0`。**キーは残る**。
+- **キーは消えない。** `waiting` / `revival-video` / `revival-entry` / `finished` でも上記8つのキーはすべて存在し、問題関連の値が `null` / `0` になるだけ(→§0)。
+- `phase` が `waiting` / `revival-video` / `revival-entry` / `finished` のとき: `question` `questionStartedAt` `timeLimitSec` は `null`、`revealedSegments` `totalSegments` は `0`。**キーは残る**。
 - `askedCount` は**「今何問目か」**。`asked` が `true` の問題を数えた値で、`asked` から**毎回導出する**(この数を別途保存しない。二重管理を避けるため)。**出題中の問題自身を含む**ので、1問目を出している最中は `1`(`0` ではない)。画面には「第1問」と出る。
   - **同じ問題を `show-question` し直しても増えない**(`asked` が既に `true` のため)。`reset` すると `0` に戻る。
-  - したがって **`waiting` / `finished` では必ず `0`**(`finished` へは `reset {"to":"finished"}` でしか入らないため)。**画面には `question` / `answer` でのみ表示する**(そのまま出すと「第0問」になる。→ `画面・要件.md` §4)。
+  - **`waiting` / `finished` では必ず `0`**(`reset` が全問題の `asked` を `false` にするため)。一方、**`revival-video` / `revival-entry` では直前の値を保持する**。敗者復活を挟んでも「第8問 → 第9問」を維持するため。ただし敗者復活画面には問題番号を表示しない(→ `画面・要件.md` §4)。
   - **総問題数(分母)は持たない。** 勝ち残り式で当日その場で出題を増減させるため、「全N問」を先に確定できない。画面表示は「第3問」のように分子だけを出す(→ `画面・要件.md` §6)。
 
 ---
@@ -210,6 +220,23 @@
 }
 ```
 
+**モニタ向け実例(phase=revival-video / revival-entry)** — 問題関連は空、出題数は保持する:
+
+```json
+{
+  "phase": "revival-entry",
+  "serverTime": "2026-09-13T14:00:00+09:00",
+  "timeLimitSec": null,
+  "questionStartedAt": null,
+  "askedCount": 8,
+  "joinUrl": "https://quiz.example.jp/play",
+  "question": null,
+  "answer": null
+}
+```
+
+`joinUrl` はキーを一定にするため届くが、敗者復活画面には表示しない。`revival-video` も `phase` 以外は同じ形。
+
 **スマホ向け(`view=phone`)**: モニタ向けから `joinUrl` を除いた形(自分がすでにそのURLにいるため)。それ以外は完全に同一。
 
 #### 2.2.1 ViewerState の定義
@@ -223,7 +250,7 @@
 | `timeLimitSec` | `number \| null` | §1と同じ |
 | `questionStartedAt` | `string \| null` | §1と同じ |
 | `askedCount` | `number` | §1と同じ。**閲覧者にも送る**(原則3''。「第3問」の表示に使う) |
-| `joinUrl` | `string` | 参加用URL。QRコードの生成元。**`view=monitor` にのみ存在し、`view=phone` には無い**。**phaseによらず常に送る**が、`finished` では画面に出さない(→ `画面・要件.md` §4) |
+| `joinUrl` | `string` | 参加用URL。QRコードの生成元。**`view=monitor` にのみ存在し、`view=phone` には無い**。**phaseによらず常に送る**が、`revival-video` / `revival-entry` / `finished` では画面に出さない(→ `画面・要件.md` §4) |
 | `question` | `ViewerQuestion \| null` | 下記。**§1の `Question` とは別の形** |
 | `answer` | `{ "correctChoiceId": string \| null, "explanation": string \| null } \| null` | 正答と解説。**`answer` phase になるまで `null`**(原則2・3')。`correctChoiceId` は `hayaoshi` のみ `null`(扱いはフェーズ2で決定)、`explanation` は解説の無い問題で `null` |
 
@@ -262,10 +289,10 @@ type MonitorState = ViewerState & { joinUrl: string }   // view=monitor
 
 ## 3. 状態変更(管理者API・認証必須)
 
-成功時は**すべて `200 OK` + 更新後のstate(§2.1のフル形)**を返す。
+状態変更系API(§3.1〜§3.4、§3.8)は、成功時に**すべて `200 OK` + 更新後のstate(§2.1のフル形)**を返す。
 副作用として**全宛先へSSE `state` イベントが配信される**(中身は§5の出し分け)。以下、この2点は各APIで省略する。
 
-**例外は §3.5(問題投入)と §3.6(画像投入)の2本**。stateではなく取り込み結果・`imageUrl` を返し、§3.6 はSSEも配信しない(→ 各節)。
+§3.5(問題投入)・§3.6(画像投入)・§3.7(画像一覧)は進行状態を変えるAPIではないため、成功レスポンスとSSEの扱いを各節に記載する。
 
 共通エラー: 未ログイン → 401 `UNAUTHORIZED`(全APIで共通なので以下の表からも省略)。
 
@@ -382,7 +409,7 @@ GAS側でシートを読み、**この形に整形してから**送る。列→J
 | 内容が不正(型違い・correctChoiceIdが選択肢に無い・choices数がtypeと不一致・numberの重複・arunashiの書式違反 等) | 400 | `SYNC_VALIDATION_ERROR` |
 | type が `hayaoshi`(**v1では未対応**。フェーズ2実装後に解放。解放後は `textSegments` 2要素以上=問題文に `/` 区切りがあることを必須とする) | 400 | `SYNC_VALIDATION_ERROR` |
 | `questions` が空配列 | 400 | `INVALID_REQUEST` |
-| phase が `question`/`answer`(本番進行中の置換は禁止) | 409 | `INVALID_PHASE` |
+| phase が `waiting` / `finished` 以外(本番進行中の置換は禁止。`revival-video` / `revival-entry` を含む) | 409 | `INVALID_PHASE` |
 
 バリデーションエラーは**全件まとめて** `details` に入れて返す(1件ずつ直して再送、を避けるため):
 
@@ -558,6 +585,37 @@ curl -F "file=@q5.png" -H "Authorization: Bearer $ADMIN_TOKEN" \
 - DBは使用しない。
 - SSE、削除、ページング、サムネイルは行わない。
 
+### 3.8 POST /api/admin/revival
+
+敗者復活の画面を切り替える。どのphaseからでも呼べる。
+
+**リクエスト**:
+
+```json
+{ "to": "video" }
+```
+
+または:
+
+```json
+{ "to": "entry" }
+```
+
+| `to` | 更新後の `phase` |
+| --- | --- |
+| `"video"` | `"revival-video"` |
+| `"entry"` | `"revival-entry"` |
+
+| 状況 | ステータス | code |
+| --- | --- | --- |
+| `to` が未指定、または `video` / `entry` 以外 | 400 | `INVALID_REQUEST` |
+
+- 成功時は `200 OK` + 更新後の管理者向けstate(§2.1)を返し、全宛先へSSE `state` イベントを配信する。
+- **全問題の `asked` は変更しない。** したがって敗者復活の前後で `askedCount` は変わらない。
+- `revival-video` / `revival-entry` 中は出題していないため、問題関連の項目は §1 のとおり `null` / `0` になる。
+- `revival-entry` から §3.1 `show-question` を呼べば、そのまま次の問題へ戻れる。
+- 待機・終了へ移る場合は従来どおり §3.4 `reset` を使う。新しい2フェーズからも呼べる。
+
 ---
 
 ## 4. 問題一覧・認証(管理者API)
@@ -666,7 +724,9 @@ curl -F "file=@q5.png" -H "Authorization: Bearer $ADMIN_TOKEN" \
 
 ---
 
-## 6. 静的ファイル(画像)
+## 6. 静的ファイル(画像・動画)
+
+### 6.1 画像
 
 - 問題・選択肢画像はサーバーの `GET /images/...` で配信する(認証なし)。
 - **入稿は管理者画面からのアップロード(§3.6 `POST /api/admin/images`)。** スプシには `/images/ファイル名` のパスを書く。
@@ -675,6 +735,15 @@ curl -F "file=@q5.png" -H "Authorization: Bearer $ADMIN_TOKEN" \
 - **ファイル名はアップロードする側が決める**(サーバーは生成しない)。同名アップロードは**上書き**する。詳細は §3.6.2。
 - `PUT /api/admin/questions`(§3.5)は参照先ファイルの存在チェックを行い、無ければ `warnings` で知らせる(取り込み自体は成功させる)。
 - nginx の `location /images/` は、**長期キャッシュしない**(名前を変えずに差し替える運用のため。当日「差し替えたのに古いのが出る」を避ける)。あわせて `X-Content-Type-Options: nosniff` を付ける(§3.6.3)。
+
+### 6.2 動画(敗者復活用)
+
+- 敗者復活で流す動画はサーバーの `GET /videos/...` で配信する(認証なし)。画像と同じ `r.Static` の作りだが、**別ディレクトリ・別locationの独立した経路**(#121)。
+- **アップロードAPIは無い。入稿はCT(本番サーバー)へ scp で直接置く。** §6.1で画像のアップロードAPIに置き換えた「手動配置の廃止」は**画像だけの話であり、動画には適用しない**。
+  - 理由: 画像投入API(§3.6)は5MB上限。動画は確実に超えるためそもそも同じ経路に乗らない。動画は当日差し替える頻度が低く、準備期間中〜当日にCTへ scp する運用で足りると判断した。
+- ファイル名はアップロードする側(scpする人)が決める。同名での上書きに対応する(長期キャッシュしない設定のため、差し替えれば当日から反映される)。
+- nginx の `location /videos/` も画像と同じく長期キャッシュせず(`max-age=300`)、`X-Content-Type-Options: nosniff` を付ける。
+- **`.mp4` は Content-Type を明示登録する。** 実行環境(alpine)に `/etc/mime.types` が無く、Goの組み込みMIMEテーブルにも `.mp4` が無いため、登録しないとファイル内容のスニッフィング任せになる。スマホで撮った動画をリネームしただけのファイルは `video/mp4` と判定されないことがあり、`nosniff` と組み合わさるとブラウザが再生を拒否する(`backend/internal/platform/router.go` の `mime.AddExtensionType`)。
 
 ---
 
@@ -687,6 +756,8 @@ curl -F "file=@q5.png" -H "Authorization: Bearer $ADMIN_TOKEN" \
 
 ## 変更履歴(新しい順)
 
+- 2026-09-14 第15版。**敗者復活用の `revival-video` / `revival-entry` フェーズと `POST /api/admin/revival` を追加**した(#120)。①敗者復活は動画と参加受付で画面全体が2回変わるため、1フェーズ内の表示値ではなく独立した2フェーズとして表す ②通常の流れは `answer → revival-video → revival-entry → question` だが、当日の復旧を妨げないよう `revival` 自体はどのphaseからでも呼べる ③`reset` は全問題の `asked` を消して `askedCount` を0に戻すため敗者復活には使わない。専用APIはphaseだけを更新し、「第8問 → 敗者復活 → 第9問」を維持する ④敗者復活中は出題していないので問題関連項目を `null` / `0` にする一方、`askedCount` は保持する ⑤動画配信・画面・フォームURL・管理者ボタンは後続Issue #121〜#126の範囲 ⑥問題の一括投入は全問題を作り直して `asked` を消すため、`waiting` / `finished` のときだけ許可し、敗者復活中を含む本番進行中は409で拒否する
+- 2026-09-14 第14版。**§6 を「静的ファイル(画像・動画)」に改め、§6.2として動画の配信経路 `GET /videos/...` を追記**した(#121)。①敗者復活の動画配信は `/images/` の配信の作りをそのまま真似るが、**アップロードAPIは持たない**(動画は5MB上限の画像投入APIに確実に収まらないため)。**入稿はCTへの scp 固定**で、§6.1で画像について書いた「手動配置の廃止(2026-09-09)」は画像だけの話であり動画には適用されないことを明記した(そのままでは同一節内で矛盾して見えるため) ②実行環境(alpine)にMIMEタイプ定義が無く `.mp4` が拡張子で解決できないため `mime.AddExtensionType` で明示登録する必要があることを明記。登録しないとファイル内容のスニッフィングに委ねられ、動画によっては `video/mp4` と判定されず、nginx の `nosniff` と組み合わさってブラウザが再生を拒否する事故につながる
 - 2026-09-13 第13版。**画像一覧API `GET /api/admin/images` を §3.7 として新設**した(#104)。①管理者画面から、画像のURL・ファイルサイズ・更新日時を確認できるようにした。同名アップロードによる意図しない上書きを防ぎ、「すでに投入済みか」を当日サーバーへ入らず確認するため ②対象は `GET /images/...` の配信元である `./static/images`。#103 で `STATIC_DIR` 環境変数は廃止され、画像の配信・投入・存在チェックが `platform.StaticDir` の同じ場所を見る設計に一本化されている ③`.png` / `.jpg` / `.jpeg` のみを `imageUrl` 昇順で返す。画像が無い場合は `{"images":[]}` とし、`.gitkeep`・ディレクトリ・その他の拡張子は含めない ④認証は `ADMIN_TOKEN` のみで、`IMPORT_TOKEN` は通さない。SSE・削除・ページング・サムネイル生成は行わない
 - 2026-09-09 第12版。**画像投入API `POST /api/admin/images` を §3.6 として新設**した(#103)。①**§6 の「サーバーの静的フォルダへの手動配置」を廃止**した。**当日、運営はサーバー(本番CT)に触らない**ため、手動配置だと当日は画像を1枚も追加できない。管理者画面から投入できる経路を契約として持つ ②**このAPIのリクエストのみ `multipart/form-data`** とし、**§0「すべてJSON」の唯一の例外**として明記した。base64+JSONは転送量1.33倍・サーバーのピークメモリ約2倍で、`curl -F` の1行で試せる利点も失う。**例外はこの1本に限る** ③**ファイル名はアップロードする側が決める**(サーバーは生成しない)。スプシには運営メンバーが手で `/images/q5.png` と書くため、サーバーがランダムな名前を付けるとシートに何を書けばよいか分からなくなる。**同名の上書きは許可**(nginx が「名前を変えずに差し替える」前提でキャッシュを切っているため、禁止すると運用と矛盾する) ④**中身をマジックナンバーで検証**する(§3.6.3)。拡張子だけを信じると中身がHTMLの `evil.png` を置けてしまい、同一オリジンでJSが動いて `localStorage` の `ADMIN_TOKEN` が読まれる ⑤**認証は `ADMIN_TOKEN` のみ。`IMPORT_TOKEN` は通さない**(GASは画像を送らない)。§0 の「通る範囲」表はそのまま(`IMPORT_TOKEN` は §3.5 のみ) ⑥**サイズ上限は「画像1枚 5MB」と「リクエスト全体 5MB + 64KB」の2つに分ける**(全体には multipart の包みが乗るので、同じ5MBにすると5MBちょうどの画像が通らない)。全体の上限は nginx と Go の両方に置く(開発ではバックエンドを直接叩くためGo側にも要る)。nginx が弾く413はJSON形式ではないので、**フロントは `code` ではなく `status` で分岐する**。**一覧API・削除API・投入UIは別Issue**
 - 2026-08-17 第11版。**§4.1 問題一覧レスポンスに項目表を追加**した(仕様の抜けの補完。**API・サーバーの変更はゼロ**)。①`hasImage` が**何の画像を指すのか未定義だった**。`Question` には問題画像(`imageUrl`)と選択肢画像(`choices[].imageUrl`)の2種類があり、どちらを見るかでバックの実装が変わる。**「いずれか1つでも存在すれば `true`」で確定**(一覧のバッジは「この問題は画像を含む」ことが分かればよく、どちらの画像かを区別する意味が無いため) ②**なぜURLではなく boolean なのかを明記**。URLを返すとフロントが `<img>` を並べたくなり、数十件の一覧で画像を数十枚読み込む重い画面ができてしまう。**一覧は「有無・要約」、詳細(§4.2)は「実体」**という役割分担を文章として残した ③このレスポンスは §1 の `Question` とは形が違う(`textSegments`→`textPreview`、`imageUrl`→`hasImage`、`choices`・`correctChoiceId`・`explanation` は無い)のに**区別する名前が無かった**ため、フロントの型名を **`QuestionListItem`** として確定。第8版で `AdminState` / `ViewerState` を確定させたのと同じ趣旨

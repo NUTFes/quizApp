@@ -26,5 +26,6 @@ func RegisterRoutes(db *gorm.DB, adminToken string, joinURL string, b *sse.Broad
 		g.POST("/advance-text", func(c *gin.Context) { advanceText(c, db, joinURL, b) })
 		g.POST("/show-answer", func(c *gin.Context) { showAnswer(c, db, joinURL, b) })
 		g.POST("/reset", func(c *gin.Context) { reset(c, db, joinURL, b) })
+		g.POST("/revival", func(c *gin.Context) { revival(c, db, joinURL, b) })
 	}
 }

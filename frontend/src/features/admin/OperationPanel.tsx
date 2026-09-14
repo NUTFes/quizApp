@@ -1,19 +1,40 @@
 // 操作盤。認証を通ったあとに表示される画面。
 //
-// 進行状態の受け取りと操作APIはここに寄せ、各パネルには props で配る。
-// 画像投入だけは進行状態と独立した一連の処理なので、ImagePanel 内でAPIを呼ぶ。
+// この画面で唯一、サーバーと通信する場所。状態の受け取りと計算をここに寄せ、
+// 各パネルには props で配る。パネル側が通信すると、/dev/admin で描画できなくなる
+// (トークンも fetch も無い場所で全状態を並べたいため)。
+//
+// ⚠️ ImagePanel(#105)だけこの原則の例外。内部でAPIを直接呼ぶ(→ ImagePanel.tsx 冒頭のコメント)。
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAdminState } from '../../lib/useEventState'
 import { useRemainingTime } from '../../lib/useRemainingTime'
-import type { AdminState, QuestionListItem } from '../../types'
-import { advanceText, ApiError, getQuestions, reset, showAnswer, showQuestion } from '../../lib/api'
-import { NETWORK_ERROR_MESSAGE, toMessage } from './errorMessages'
+import type {
+  AdminState,
+  ImportResult,
+  Question,
+  QuestionImport,
+  QuestionListItem,
+} from '../../types'
+import type { RowIssue } from '../../types/rowIssue'
+import {
+  advanceText,
+  ApiError,
+  getQuestionById,
+  getQuestions,
+  putQuestions,
+  reset,
+  showAnswer,
+  showQuestion,
+} from '../../lib/api'
+import { NETWORK_ERROR_MESSAGE, toImportMessage, toMessage } from './errorMessages'
 import { ACTION_LABEL, ActionLabel } from './labels'
 import { ControlPanel } from './parts/ControlPanel'
 import { CurrentStatus } from './parts/CurrentStatus'
 import { ErrorBanner, OperationFailure } from './parts/ErrorBanner'
 import { ImagePanel } from './parts/ImagePanel'
+import { ImportPanel } from './parts/ImportPanel'
 import { QuestionList } from './parts/QuestionList'
+import { SelectedQuestion, type SelectedQuestionProps } from './parts/SelectedQuestion'
 import { ShowQuestionForm } from './parts/ShowQuestionForm'
 import type { AdminStatus } from './parts/StatusBadge'
 
@@ -40,6 +61,25 @@ export function OperationPanel({ onAuthExpired }: Props) {
   const [questions, setQuestions] = useState<QuestionListItem[] | null>(null)
   const [questionListError, setQuestionListError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  // 同じ id のまま詳細取得だけをやり直すためのカウンタ(通信失敗時の「もう一度取得する」用)。
+  // selectedId が変わらないと effect が再実行されないので、専用の依存値を用意する
+  const [retryCount, setRetryCount] = useState(0)
+  // getQuestionById の結果。id・retryCount を一緒に持ち、いまの選択/リトライ回数とずれていたら
+  // (選び直し直後・リトライ直後)「取得中」扱いにする(古い問題の詳細が一瞬見えるのを防ぐ)
+  const [selectedQuestionResult, setSelectedQuestionResult] = useState<{
+    id: number
+    retryCount: number
+    result: { status: 'loaded'; question: Question } | { status: 'error'; message: string }
+  } | null>(null)
+
+  // 問題データの投入(#110)。busy / inFlight は他の操作(showQuestion等)と共有する。
+  // 別系統にすると、投入中に出題を押せてしまい(逆に出題中に投入を押せてしまい)、
+  // 全置換でidが振り直された直後の出題が404になる・進行中の投入が409になる、
+  // といった競合を起こす
+  const [importInput, setImportInput] = useState('')
+  const [importResult, setImportResult] = useState<ImportResult | null>(null)
+  const [importError, setImportError] = useState<string | null>(null)
+  const [importIssues, setImportIssues] = useState<RowIssue[]>([])
 
   // 呼び出し側がその場で作った関数を渡しても、依存配列に入れずに済むようにする
   // (lib/useEventState.ts の onUnauthorizedRef と同じ理由)
@@ -48,12 +88,23 @@ export function OperationPanel({ onAuthExpired }: Props) {
     onAuthExpiredRef.current = onAuthExpired
   })
 
-  // 問題一覧の取得。showQuestion/reset は asked を書き換えるので、成功後にも呼び直す
-  // (呼ばないと、出題した/リセットした直後の一覧が古い asked のまま表示される)
+  // 直近に発行した refreshQuestions の世代。古い応答が後から返ってきても
+  // 上書きさせないために使う(→ lib/useEventState.ts の revision と同じ考え方)。
+  // 特に投入(#110)は全置換で id が丸ごと変わるため、投入前に発行した古いGETが
+  // 投入後の新しい一覧を、存在しないidを含む古い一覧で上書きすると事故になる
+  const questionsRequestId = useRef(0)
+
+  // 問題一覧の取得。showQuestion/reset は asked を書き換え、投入は全置換するので、
+  // 成功後にも呼び直す(呼ばないと一覧が古いまま表示される)
   const refreshQuestions = useCallback(() => {
-    getQuestions()
-      .then(({ questions }) => setQuestions(questions))
+    const requestId = ++questionsRequestId.current
+    return getQuestions()
+      .then(({ questions }) => {
+        if (requestId !== questionsRequestId.current) return // 後から発行された取得より古い応答は捨てる
+        setQuestions(questions)
+      })
       .catch((e) => {
+        if (requestId !== questionsRequestId.current) return
         if (e instanceof ApiError && e.status === 401) {
           onAuthExpiredRef.current()
           return
@@ -65,6 +116,57 @@ export function OperationPanel({ onAuthExpired }: Props) {
   useEffect(() => {
     refreshQuestions()
   }, [refreshQuestions])
+
+  // 選んだ問題が変わるたびに詳細(選択肢・正答込み)を取り直す。一覧(QuestionListItem)には
+  // これらが無いため(→ API仕様書 §4.1)、別APIを叩く必要がある
+  useEffect(() => {
+    if (selectedId === null) return
+    let cancelled = false
+    getQuestionById(selectedId)
+      .then((question) => {
+        if (cancelled) return
+        setSelectedQuestionResult({
+          id: selectedId,
+          retryCount,
+          result: { status: 'loaded', question },
+        })
+      })
+      .catch((e) => {
+        if (cancelled) return
+        if (e instanceof ApiError && e.status === 401) {
+          onAuthExpiredRef.current()
+          return
+        }
+        setSelectedQuestionResult({
+          id: selectedId,
+          retryCount,
+          result: {
+            status: 'error',
+            message: e instanceof ApiError ? toMessage(e.code) : NETWORK_ERROR_MESSAGE,
+          },
+        })
+      })
+    // 選択を連打で変えたとき、古いリクエストの応答が新しい選択を上書きしないようにする
+    return () => {
+      cancelled = true
+    }
+  }, [selectedId, retryCount])
+
+  // 未選択なら empty、取得中(またはまだ選択/リトライ回数がずれている)なら loading、それ以外は結果をそのまま使う
+  const selectedQuestionState: SelectedQuestionProps =
+    selectedId === null
+      ? { status: 'empty' }
+      : selectedQuestionResult === null ||
+          selectedQuestionResult.id !== selectedId ||
+          selectedQuestionResult.retryCount !== retryCount
+        ? { status: 'loading' }
+        : selectedQuestionResult.result.status === 'error'
+          ? {
+              status: 'error',
+              message: selectedQuestionResult.result.message,
+              onRetry: () => setRetryCount((c) => c + 1),
+            }
+          : selectedQuestionResult.result
 
   if (state === null) return <p>接続中...</p>
 
@@ -95,6 +197,50 @@ export function OperationPanel({ onAuthExpired }: Props) {
       setBusy(false)
     }
   }
+
+  // 問題データの投入(#110)。件数・行番号つきの詳細を画面に残す必要があり、
+  // 「失敗時にだけ failure を出す」共通処理(run)とは形が違うので専用に書く。
+  // ただし排他ロック(inFlight/busy)は run と共有する(上のコメント参照)
+  const handleImport = async (questionsToImport: QuestionImport[]) => {
+    if (inFlight.current) return
+    inFlight.current = true
+    setBusy(true)
+    setImportError(null)
+    setImportIssues([])
+    try {
+      const imported = await putQuestions(questionsToImport)
+      setImportResult(imported)
+      // 全置換で id が採番し直されるので、取り直す前に古い一覧をすぐ無効化する。
+      // (残したままだと、再取得が終わる前や失敗したときに、旧idの問題を選択・出題できてしまい、
+      //  もう存在しないidを show-question に送って 404 になる)
+      setQuestions(null)
+      setSelectedId(null)
+      refreshQuestions() // 問題一覧を取り直す
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onAuthExpired()
+        return
+      }
+      // importResult はここでは消さない。全置換は失敗時ノーオペなので、
+      // 直前の成功結果(最終投入日時・件数)は今も有効な情報のまま
+      // (→ API仕様書 §3.5「管理者画面には最終投入日時と件数も表示する」)
+      //
+      // ここでは toImportMessage(code) の結果だけを持つ(「〇〇に失敗しました」の
+      // 組み立ては表示側の ImportPanel に任せる。ErrorBanner と同じ分担)
+      if (err instanceof ApiError) {
+        setImportError(toImportMessage(err.code))
+        // 不正な行は details にまとめて入っている。
+        // 1件ずつ直して送り直さずに済むよう、返ってきた全件をそのまま並べる(→ API仕様書 §3.5.3)
+        setImportIssues(err.details)
+      } else {
+        setImportError(NETWORK_ERROR_MESSAGE)
+      }
+    } finally {
+      inFlight.current = false
+      setBusy(false)
+    }
+  }
+
   const remainingSec =
     state.phase === 'question' && state.timeLimitSec !== null ? remainingTime : null
   // ShowQuestionForm は id ではなく QuestionListItem そのものを欲しがる(問題文・出題済みの警告表示に使うため)
@@ -108,10 +254,14 @@ export function OperationPanel({ onAuthExpired }: Props) {
         <QuestionList
           items={questions}
           selectedId={selectedId}
-          onSelect={setSelectedId}
+          onSelect={(id) => {
+            setSelectedId(id)
+            setRetryCount(0) // 選び直したら、前の問題のリトライ回数を引き継がない
+          }}
           currentQuestionId={state.question?.id ?? null}
         />
       )}
+      <SelectedQuestion {...selectedQuestionState} />
       <ShowQuestionForm
         selected={selectedQuestion}
         currentQuestionId={state.phase === 'question' ? (state.question?.id ?? null) : null}
@@ -137,6 +287,16 @@ export function OperationPanel({ onAuthExpired }: Props) {
         }
       />
       <ErrorBanner failure={failure} onDismiss={() => setFailure(null)} />
+      <ImportPanel
+        phase={state.phase}
+        input={importInput}
+        busy={busy}
+        result={importResult}
+        error={importError}
+        issues={importIssues}
+        onInputChange={setImportInput}
+        onSubmit={(questionsToImport) => void handleImport(questionsToImport)}
+      />
       <ImagePanel onAuthExpired={onAuthExpired} />
       {/*ここからは、以降のイシューで足していく */}
     </div>
