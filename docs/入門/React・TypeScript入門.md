@@ -394,6 +394,7 @@ const apiUrl = import.meta.env.VITE_API_URL
 
 - `VITE_API_URL` … APIの場所
 - `VITE_SURVEY_URL` … finishedフェーズで出すアンケートURL
+- `VITE_REVIVAL_URL` … revival-entryフェーズで出す敗者復活参加用URL
 
 ### 📚 参考リンク
 
