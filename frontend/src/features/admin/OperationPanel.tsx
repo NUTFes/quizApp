@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAdminState } from '../../lib/useEventState'
 import { useRemainingTime } from '../../lib/useRemainingTime'
-import type { AdminState, QuestionListItem } from '../../types'
+import type { AdminState, Question, QuestionListItem } from '../../types'
 import {
   advanceText,
   ApiError,
@@ -49,11 +49,15 @@ export function OperationPanel({ onAuthExpired }: Props) {
   const [questions, setQuestions] = useState<QuestionListItem[] | null>(null)
   const [questionListError, setQuestionListError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
-  // getQuestionById の結果。id を一緒に持ち、selectedId とずれていたら(選び直し直後)
-  // 「取得中」扱いにする(選び直した瞬間に古い問題の詳細が一瞬見えるのを防ぐ)
+  // 同じ id のまま詳細取得だけをやり直すためのカウンタ(通信失敗時の「もう一度取得する」用)。
+  // selectedId が変わらないと effect が再実行されないので、専用の依存値を用意する
+  const [retryCount, setRetryCount] = useState(0)
+  // getQuestionById の結果。id・retryCount を一緒に持ち、いまの選択/リトライ回数とずれていたら
+  // (選び直し直後・リトライ直後)「取得中」扱いにする(古い問題の詳細が一瞬見えるのを防ぐ)
   const [selectedQuestionResult, setSelectedQuestionResult] = useState<{
     id: number
-    props: SelectedQuestionProps
+    retryCount: number
+    result: { status: 'loaded'; question: Question } | { status: 'error'; message: string }
   } | null>(null)
 
   // 呼び出し側がその場で作った関数を渡しても、依存配列に入れずに済むようにする
@@ -89,7 +93,11 @@ export function OperationPanel({ onAuthExpired }: Props) {
     getQuestionById(selectedId)
       .then((question) => {
         if (cancelled) return
-        setSelectedQuestionResult({ id: selectedId, props: { status: 'loaded', question } })
+        setSelectedQuestionResult({
+          id: selectedId,
+          retryCount,
+          result: { status: 'loaded', question },
+        })
       })
       .catch((e) => {
         if (cancelled) return
@@ -99,7 +107,8 @@ export function OperationPanel({ onAuthExpired }: Props) {
         }
         setSelectedQuestionResult({
           id: selectedId,
-          props: {
+          retryCount,
+          result: {
             status: 'error',
             message: e instanceof ApiError ? toMessage(e.code) : NETWORK_ERROR_MESSAGE,
           },
@@ -109,15 +118,23 @@ export function OperationPanel({ onAuthExpired }: Props) {
     return () => {
       cancelled = true
     }
-  }, [selectedId])
+  }, [selectedId, retryCount])
 
-  // 未選択なら empty、取得中(またはまだ id がずれている)なら loading、それ以外は結果をそのまま使う
+  // 未選択なら empty、取得中(またはまだ選択/リトライ回数がずれている)なら loading、それ以外は結果をそのまま使う
   const selectedQuestionState: SelectedQuestionProps =
     selectedId === null
       ? { status: 'empty' }
-      : selectedQuestionResult?.id === selectedId
-        ? selectedQuestionResult.props
-        : { status: 'loading' }
+      : selectedQuestionResult === null ||
+          selectedQuestionResult.id !== selectedId ||
+          selectedQuestionResult.retryCount !== retryCount
+        ? { status: 'loading' }
+        : selectedQuestionResult.result.status === 'error'
+          ? {
+              status: 'error',
+              message: selectedQuestionResult.result.message,
+              onRetry: () => setRetryCount((c) => c + 1),
+            }
+          : selectedQuestionResult.result
 
   if (state === null) return <p>接続中...</p>
 
@@ -161,7 +178,10 @@ export function OperationPanel({ onAuthExpired }: Props) {
         <QuestionList
           items={questions}
           selectedId={selectedId}
-          onSelect={setSelectedId}
+          onSelect={(id) => {
+            setSelectedId(id)
+            setRetryCount(0) // 選び直したら、前の問題のリトライ回数を引き継がない
+          }}
           currentQuestionId={state.question?.id ?? null}
         />
       )}

@@ -1,5 +1,7 @@
 import { ReactNode, useState } from 'react'
 import { Link } from 'react-router-dom'
+import testSquareA from '../../assets/dev/test-square-a.svg'
+import testSquareB from '../../assets/dev/test-square-b.svg'
 import { CheckingView, UnreachableView } from '../admin/AdminPage'
 import { LoginForm } from '../admin/LoginView'
 import { NETWORK_ERROR_MESSAGE, toMessage } from '../admin/errorMessages'
@@ -243,11 +245,29 @@ const QUESTION_LIST_CASES = [
 // #107 の PANEL_CASES と同じく、通信もトークンも無いこの場所で全状態を並べられる。
 // 通常ケースの Question は新規に作らず、既存の adminQuestionFour(lib/mock/admin)の
 // question をそのまま使い回す(架空データの二重管理を避けるため)。
+// 画像ありケースだけは、他のdevプレビュー(MonitorPreviewPage等)と同じく
+// assets/dev/ の架空画像で imageUrl を差し替える(サーバーが無い場所で画像表示を確認するため)。
 const SELECTED_QUESTION_CASES = [
   {
     title: '通常',
-    note: '取得済み。選択肢・正答まで表示される',
+    note: '取得済み。選択肢・正答まで表示される。問題文の区切りが番号付きで並ぶ',
     node: <SelectedQuestion status="loaded" question={adminQuestionFour.question!} />,
+  },
+  {
+    title: '通常 / 画像あり',
+    note: '問題画像・選択肢画像が両方ある場合。一覧(#109)には出ない実体をここで確認する',
+    node: (
+      <SelectedQuestion
+        status="loaded"
+        question={{
+          ...adminQuestionFour.question!,
+          imageUrl: testSquareA,
+          choices: adminQuestionFour.question!.choices.map((c, i) =>
+            i === 0 ? { ...c, imageUrl: testSquareB } : c,
+          ),
+        }}
+      />
+    ),
   },
   {
     title: '未選択',
@@ -261,8 +281,10 @@ const SELECTED_QUESTION_CASES = [
   },
   {
     title: '取得失敗',
-    note: '404 QUESTION_NOT_FOUND。一覧を更新するよう促す文言が出る',
-    node: <SelectedQuestion status="error" message={toMessage('QUESTION_NOT_FOUND')} />,
+    note: '404 QUESTION_NOT_FOUND。「もう一度取得する」ボタンで再試行できる',
+    node: (
+      <SelectedQuestion status="error" message={toMessage('QUESTION_NOT_FOUND')} onRetry={noop} />
+    ),
   },
 ] as const
 
