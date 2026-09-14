@@ -125,6 +125,7 @@ cat <<'MSG'
 次にやること:
   pct snapshot <VMID> base-docker-ok      # 検証済みの状態を保存
   infra/deploy.sh をCT内で実行してアプリを載せる
+  2回目以降を CT に入らずに行うなら、ランナーを登録する(デプロイ手順.md 3.5)
 
 --- 2026-08-24 quiz-stg(VMID 201)での実測 -------------------
   PVE 9.2.3 / ストレージは lvmthin(ZFSではない)

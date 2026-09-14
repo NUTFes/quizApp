@@ -25,9 +25,19 @@ const PHASE_LABEL: Record<Phase, string> = {
   finished: '終了',
 }
 
+// 進行さボタンのテキストの対応表
+export const ACTION_LABEL = {
+  showQuestion: '出題',
+  advanceText: '次を表示',
+  showAnswer: '正解',
+  resetWaiting: '待機画面',
+  resetFinished: '終了',
+} as const
+
 // 知らない値が来ても画面を壊さず、受け取った値をそのまま出す。
 // サーバーに問題形式が増えたときに、管理者画面だけ真っ白になるのを防ぐため。
 export const difficultyLabel = (value: Difficulty): string => DIFFICULTY_LABEL[value] ?? value
 export const questionTypeLabel = (value: QuestionType): string =>
   QUESTION_TYPE_LABEL[value] ?? value
 export const phaseLabel = (value: Phase): string => PHASE_LABEL[value] ?? value
+export type ActionLabel = (typeof ACTION_LABEL)[keyof typeof ACTION_LABEL]

@@ -42,6 +42,17 @@ v1では**シンプルに3ジョブだけ**。テスト文化は後から育て�
 - pnpmキャッシュを効かせて数分で終わるようにする(遅いCIは無視されるようになる)
 - テスト(vitest)はジョブ枠だけ用意しておき、最初は通る空テスト1本から始める
 
+## CD(GitHub Actions)
+
+`.github/workflows/cd.yml`。**main に入っても勝手にはデプロイしない。**CI 成功後に承認待ちで止まる。
+main へのマージから進むのは練習環境まで。**本番はタグを指定した手動起動(Run workflow)の時だけ**、
+承認してから CT に入れる(Variables の `STG_CD_ENABLED` / `PROD_CD_ENABLED` で有効化する)。
+
+- ブランチ戦略は変えない。デプロイ用ブランチは作らず、「入れるか」は承認で判断する
+- **Public リポジトリなので、CI を self-hosted ランナーで動かさないこと。**PR から CT 上でコードが動く経路になる
+- CT のランナーは `infra/runner-job-guard.sh` で main の `cd.yml` 以外を拒否している。**他のワークフローから `runs-on: [self-hosted, ...]` を指定しても動かない**
+- 背景と決定 → `dev_policy/インフラ・デプロイ_policy.md` 「承認制の CD」、手順 → `docs/ガイドライン/デプロイ手順.md` 3.5
+
 ## コミットメッセージ
 
 厳密なConventional Commitsは求めない。「日本語でよいので、何をしたか分かる1行」だけルール化。Squash mergeなのでPRタイトルさえまともなら履歴は保たれる。
