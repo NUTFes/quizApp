@@ -6,12 +6,24 @@ type Props = {
   isActive: boolean
   hasError: boolean
   onError?: () => void
+  autoPlay?: boolean
+  muted?: boolean
+  loop?: boolean
 }
 
 // 敗者復活の告知動画。
 // 親がフェーズをまたいでこの部品をマウントし続け、hidden だけを切り替えることで、
 // 待機中に先読みした動画を捨てずにそのまま表示する。
-export function RevivalVideoView({ videoRef, src, isActive, hasError, onError }: Props) {
+export function RevivalVideoView({
+  videoRef,
+  src,
+  isActive,
+  hasError,
+  onError,
+  autoPlay,
+  muted,
+  loop,
+}: Props) {
   return (
     <>
       <video
@@ -19,6 +31,9 @@ export function RevivalVideoView({ videoRef, src, isActive, hasError, onError }:
         src={src}
         preload="auto"
         playsInline
+        autoPlay={autoPlay}
+        muted={muted}
+        loop={loop}
         hidden={!isActive || hasError}
         onError={onError}
         className="h-dvh min-h-[1080px] w-screen min-w-[1920px] bg-black object-cover"
