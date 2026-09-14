@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import testSquareA from '../../assets/dev/test-square-a.svg'
 import testSquareB from '../../assets/dev/test-square-b.svg'
+import revivalPreviewVideo from '../../assets/dev/revival-preview.mp4'
 import type { MonitorState } from '../../types'
 import {
   monitorAnswerAri,
@@ -11,6 +12,7 @@ import {
   monitorQuestionFour,
   monitorQuestionHayaoshi,
   monitorQuestionTwo,
+  monitorRevivalVideo,
   monitorWaiting,
 } from '../../lib/mock/monitor/index'
 import { AnswerView } from '../monitor/views/AnswerView'
@@ -18,6 +20,7 @@ import { FinishedView } from '../monitor/views/FinishedView'
 import { LoadingView } from '../monitor/views/LoadingView'
 import { QuestionView } from '../monitor/views/QuestionView'
 import { RevivalEntryView } from '../monitor/views/RevivalEntryView'
+import { RevivalVideoView } from '../monitor/views/RevivalVideoView'
 import { WaitingView } from '../monitor/views/WaitingView'
 import { PreviewFrame, PreviewStyles } from './parts/PreviewFrame'
 
@@ -91,6 +94,20 @@ const CASES = [
     title: '正解発表 / 早押し',
     note: 'answer',
     node: <AnswerView state={monitorAnswerHayaoshi} />,
+  },
+  {
+    title: '敗者復活 / 動画',
+    note: 'revival-video・開発用ダミー動画',
+    node: (
+      <RevivalVideoView
+        src={revivalPreviewVideo}
+        isActive={monitorRevivalVideo.phase === 'revival-video'}
+        hasError={false}
+        autoPlay
+        muted
+        loop
+      />
+    ),
   },
   {
     title: '敗者復活 / 参加受付・URL設定済み',

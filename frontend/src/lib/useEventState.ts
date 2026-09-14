@@ -16,6 +16,7 @@ import {
   monitorAnswerAri,
   monitorAnswerNashi,
   monitorFinished,
+  monitorRevivalVideo,
 } from './mock/monitor/index'
 import {
   phoneWaiting,
@@ -162,7 +163,8 @@ const MONITOR_STEPS = [
   { at: 5000, mock: monitorAnswerAri },
   { at: 8000, mock: monitorQuestionArunashi },
   { at: 11000, mock: monitorAnswerNashi },
-  { at: 14000, mock: monitorFinished },
+  { at: 14000, mock: monitorRevivalVideo },
+  { at: 17000, mock: monitorFinished },
 ]
 
 export const useMonitorState = () =>
