@@ -1,5 +1,7 @@
 import type {
   AdminState,
+  ImageInfo,
+  ImageUploadResult,
   ImportResult,
   MonitorState,
   Question,
@@ -103,6 +105,33 @@ export const getQuestionById = (id: number) =>
   request<Question>(`/api/admin/questions/${id}`, {
     auth: true,
   })
+export const getImages = () =>
+  request<{ images: ImageInfo[] }>('/api/admin/images', {
+    auth: true,
+  })
+export const uploadImage = async (file: File, name: string): Promise<ImageUploadResult> => {
+  const body = new FormData()
+  body.append('file', file, name)
+
+  const res = await fetch(`${BASE}/api/admin/images`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${getAdminToken()}`,
+    },
+    // Content-Type は指定しない。multipart の boundary をブラウザに付けてもらう
+    body,
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => null)
+    throw new ApiError(
+      data?.error?.code ?? 'UNKNOWN',
+      res.status,
+      data?.error?.message ?? res.statusText,
+      data?.error?.details ?? [],
+    )
+  }
+  return res.json() as Promise<ImageUploadResult>
+}
 export const verify = () =>
   request<{ ok: true }>('/api/admin/verify', {
     auth: true,
