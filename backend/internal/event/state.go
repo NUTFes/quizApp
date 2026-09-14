@@ -67,7 +67,7 @@ func respondSnapshotError(c *gin.Context, err error) {
 
 // DBにある、EventState の形のものをAPIで返すState型に直す
 //
-// phase が waiting または finished のときは出題関係は全部 0/null にする
+// 出題していない phase のときは出題関係を全部 0/null にする
 // 絶対にキーは消さないように、 omitempty は使わない
 // 値を代入しないで、null にする
 func buildState(es EventState, q *question.Question, askedCount int) State {
@@ -77,9 +77,10 @@ func buildState(es EventState, q *question.Question, askedCount int) State {
 		AskedCount: askedCount,
 	}
 
-	// waiting か finished の時はここで返す
+	// waiting、敗者復活、finished の時はここで返す
 	// TimeLimitSec などはポインタであるから nil となるが、 JSON への変換で null になる
-	if es.Phase == "waiting" || es.Phase == "finished" {
+	if es.Phase == "waiting" || es.Phase == "finished" ||
+		es.Phase == "revival-video" || es.Phase == "revival-entry" {
 		return s
 	}
 

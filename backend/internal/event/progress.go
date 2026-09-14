@@ -218,3 +218,32 @@ func reset(c *gin.Context, db *gorm.DB, joinURL string, b *sse.Broadcaster) {
 	broadcastState(db, joinURL, b)
 	getState(c, db)
 }
+
+// 敗者復活の画面へ切り替える。
+// reset と違い、出題済みの記録(questions.asked)は変更しない。
+func revival(c *gin.Context, db *gorm.DB, joinURL string, b *sse.Broadcaster) {
+	var req struct {
+		To string `json:"to" binding:"required,oneof=video entry"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("revival invalid request: %v", err)
+		platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "リクエストの形が不正です")
+		return
+	}
+
+	var es EventState
+	if ok := readEventState(c, db, &es); !ok {
+		return
+	}
+
+	// phase だけを更新する。questions.asked に触れないことで、
+	// 敗者復活の前後でも askedCount(今何問目か)を維持する。
+	if err := db.Model(&es).Update("phase", "revival-"+req.To).Error; err != nil {
+		platform.RespondError(c, http.StatusInternalServerError, "INTERNAL", "event_states を更新できませんでした")
+		return
+	}
+
+	broadcastState(db, joinURL, b)
+	getState(c, db)
+}
