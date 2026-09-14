@@ -6,11 +6,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAdminState } from '../../lib/useEventState'
 import { useRemainingTime } from '../../lib/useRemainingTime'
-import type { AdminState, ImportResult, QuestionImport, QuestionListItem } from '../../types'
+import type {
+  AdminState,
+  ImportResult,
+  Question,
+  QuestionImport,
+  QuestionListItem,
+} from '../../types'
 import type { RowIssue } from '../../types/rowIssue'
 import {
   advanceText,
   ApiError,
+  getQuestionById,
   getQuestions,
   putQuestions,
   reset,
@@ -24,6 +31,7 @@ import { CurrentStatus } from './parts/CurrentStatus'
 import { ErrorBanner, OperationFailure } from './parts/ErrorBanner'
 import { ImportPanel } from './parts/ImportPanel'
 import { QuestionList } from './parts/QuestionList'
+import { SelectedQuestion, type SelectedQuestionProps } from './parts/SelectedQuestion'
 import { ShowQuestionForm } from './parts/ShowQuestionForm'
 import type { AdminStatus } from './parts/StatusBadge'
 
@@ -50,6 +58,16 @@ export function OperationPanel({ onAuthExpired }: Props) {
   const [questions, setQuestions] = useState<QuestionListItem[] | null>(null)
   const [questionListError, setQuestionListError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  // 同じ id のまま詳細取得だけをやり直すためのカウンタ(通信失敗時の「もう一度取得する」用)。
+  // selectedId が変わらないと effect が再実行されないので、専用の依存値を用意する
+  const [retryCount, setRetryCount] = useState(0)
+  // getQuestionById の結果。id・retryCount を一緒に持ち、いまの選択/リトライ回数とずれていたら
+  // (選び直し直後・リトライ直後)「取得中」扱いにする(古い問題の詳細が一瞬見えるのを防ぐ)
+  const [selectedQuestionResult, setSelectedQuestionResult] = useState<{
+    id: number
+    retryCount: number
+    result: { status: 'loaded'; question: Question } | { status: 'error'; message: string }
+  } | null>(null)
 
   // 問題データの投入(#110)。busy / inFlight は他の操作(showQuestion等)と共有する。
   // 別系統にすると、投入中に出題を押せてしまい(逆に出題中に投入を押せてしまい)、
@@ -95,6 +113,57 @@ export function OperationPanel({ onAuthExpired }: Props) {
   useEffect(() => {
     refreshQuestions()
   }, [refreshQuestions])
+
+  // 選んだ問題が変わるたびに詳細(選択肢・正答込み)を取り直す。一覧(QuestionListItem)には
+  // これらが無いため(→ API仕様書 §4.1)、別APIを叩く必要がある
+  useEffect(() => {
+    if (selectedId === null) return
+    let cancelled = false
+    getQuestionById(selectedId)
+      .then((question) => {
+        if (cancelled) return
+        setSelectedQuestionResult({
+          id: selectedId,
+          retryCount,
+          result: { status: 'loaded', question },
+        })
+      })
+      .catch((e) => {
+        if (cancelled) return
+        if (e instanceof ApiError && e.status === 401) {
+          onAuthExpiredRef.current()
+          return
+        }
+        setSelectedQuestionResult({
+          id: selectedId,
+          retryCount,
+          result: {
+            status: 'error',
+            message: e instanceof ApiError ? toMessage(e.code) : NETWORK_ERROR_MESSAGE,
+          },
+        })
+      })
+    // 選択を連打で変えたとき、古いリクエストの応答が新しい選択を上書きしないようにする
+    return () => {
+      cancelled = true
+    }
+  }, [selectedId, retryCount])
+
+  // 未選択なら empty、取得中(またはまだ選択/リトライ回数がずれている)なら loading、それ以外は結果をそのまま使う
+  const selectedQuestionState: SelectedQuestionProps =
+    selectedId === null
+      ? { status: 'empty' }
+      : selectedQuestionResult === null ||
+          selectedQuestionResult.id !== selectedId ||
+          selectedQuestionResult.retryCount !== retryCount
+        ? { status: 'loading' }
+        : selectedQuestionResult.result.status === 'error'
+          ? {
+              status: 'error',
+              message: selectedQuestionResult.result.message,
+              onRetry: () => setRetryCount((c) => c + 1),
+            }
+          : selectedQuestionResult.result
 
   if (state === null) return <p>接続中...</p>
 
@@ -182,10 +251,14 @@ export function OperationPanel({ onAuthExpired }: Props) {
         <QuestionList
           items={questions}
           selectedId={selectedId}
-          onSelect={setSelectedId}
+          onSelect={(id) => {
+            setSelectedId(id)
+            setRetryCount(0) // 選び直したら、前の問題のリトライ回数を引き継がない
+          }}
           currentQuestionId={state.question?.id ?? null}
         />
       )}
+      <SelectedQuestion {...selectedQuestionState} />
       <ShowQuestionForm
         selected={selectedQuestion}
         currentQuestionId={state.phase === 'question' ? (state.question?.id ?? null) : null}
