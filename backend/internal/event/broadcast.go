@@ -11,17 +11,18 @@ import (
 
 // buildPayloads は同じ瞬間の state を、宛先ごとの JSON にして返す。
 func buildPayloads(snap snapshot, joinURL string) (adminJSON, monitorJSON, phoneJSON []byte, err error) {
-	vs := buildViewerState(snap.es, snap.q, snap.askedCount)
+	monitorState := buildViewerState(snap.es, snap.q, snap.askedCount, "monitor")
+	phoneState := buildViewerState(snap.es, snap.q, snap.askedCount, "phone")
 
 	adminJSON, err = json.Marshal(buildState(snap.es, snap.q, snap.askedCount))
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	monitorJSON, err = json.Marshal(MonitorState{ViewerState: vs, JoinURL: joinURL})
+	monitorJSON, err = json.Marshal(MonitorState{ViewerState: monitorState, JoinURL: joinURL})
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	phoneJSON, err = json.Marshal(vs)
+	phoneJSON, err = json.Marshal(phoneState)
 	if err != nil {
 		return nil, nil, nil, err
 	}
