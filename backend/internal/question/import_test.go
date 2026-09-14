@@ -193,3 +193,27 @@ func TestValidateImport_hayaoshiでも共通項目のエラーが同時に出る
 		}
 	}
 }
+
+func TestCanReplaceQuestions(t *testing.T) {
+	tests := []struct {
+		phase string
+		want  bool
+	}{
+		{phase: "waiting", want: true},
+		{phase: "finished", want: true},
+		{phase: "question", want: false},
+		{phase: "answer", want: false},
+		{phase: "revival-video", want: false},
+		{phase: "revival-entry", want: false},
+		// 未知のphaseも許可しない。将来phaseが増えたときの更新漏れを安全側に倒す。
+		{phase: "unknown", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.phase, func(t *testing.T) {
+			if got := canReplaceQuestions(tt.phase); got != tt.want {
+				t.Errorf("canReplaceQuestions(%q)=%v, want %v", tt.phase, got, tt.want)
+			}
+		})
+	}
+}

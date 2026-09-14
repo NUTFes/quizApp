@@ -85,10 +85,12 @@ func putQuestions(c *gin.Context, db *gorm.DB) {
 				"event_states(id=1)がありません。mise run db:reset を実行して下さい")
 			return errNoEventState
 		}
-		// 本番進行中の置換は禁止(§3.5.3)。進行中に問題が差し替わる事故を構造的に防ぐ
-		if phase == "question" || phase == "answer" {
+		// 問題の全置換は開始前か終了後だけ許可する(§3.5.3)。
+		// 禁止するphaseを列挙すると、新しいphaseを追加したときに漏れるため、
+		// 許可する2つだけを列挙して安全側に倒す。
+		if !canReplaceQuestions(phase) {
 			platform.RespondError(c, http.StatusConflict, "INVALID_PHASE",
-				"本番進行中(phase="+phase+")は問題を差し替えられません。reset してから実行してください")
+				"本番進行中(phase="+phase+")は問題を差し替えられません")
 			return errInvalidPhase{phase: phase}
 		}
 
@@ -164,6 +166,13 @@ func putQuestions(c *gin.Context, db *gorm.DB) {
 		ImportedAt: time.Now(),
 		Warnings:   warnings,
 	})
+}
+
+// canReplaceQuestions は、問題を全置換してよいphaseかを返す。
+// 全置換すると questions.asked が消えて askedCount が0に戻るため、
+// クイズ途中のphaseでは必ずfalseにする。
+func canReplaceQuestions(phase string) bool {
+	return phase == "waiting" || phase == "finished"
 }
 
 // errInvalidPhase は「本番進行中のため置換不可」をトランザクション内から伝えるためのエラー。
