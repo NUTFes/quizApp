@@ -20,6 +20,10 @@ export default defineConfig({
         target: 'http://backend:3000',
         changeOrigin: true,
       },
+      '/videos': {
+        target: 'http://backend:3000',
+        changeOrigin: true,
+      },
     },
   },
 })
