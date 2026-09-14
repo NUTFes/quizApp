@@ -55,6 +55,10 @@ func NewRouter(registers ...RegisterFunc) *gin.Engine {
 	// 問題・選択肢の画像を配信する(認証なし)。仕様書 §6。
 	r.Static("/images", filepath.Join(StaticDir, "images"))
 
+	// 敗者復活の動画を配信する(認証なし)。Issue #121。
+	// 投入経路は無い(CTへ scp で置く運用)。配信の作りだけ /images と同一にする。
+	r.Static("/videos", filepath.Join(StaticDir, "videos"))
+
 	// 存在しないパスでも §0 の形でエラーを返す。
 	// これが無いと Gin 標準の 404(text/plain)が返ってしまい、
 	// フロントの「codeで分岐する」前提が壊れる。
