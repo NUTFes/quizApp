@@ -2,7 +2,14 @@ import type { AdminState, MonitorState, ViewerState } from '../types'
 
 type EventState = AdminState | MonitorState | ViewerState
 
-const VALID_PHASES = ['waiting', 'question', 'answer', 'finished'] as const
+const VALID_PHASES = [
+  'waiting',
+  'question',
+  'answer',
+  'finished',
+  'revival-video',
+  'revival-entry',
+] as const
 const VALID_QUESTION_TYPES = ['four_choice', 'two_choice', 'arunashi', 'hayaoshi'] as const
 
 const EXPECTED_CHOICE_COUNTS: Record<string, number> = {
