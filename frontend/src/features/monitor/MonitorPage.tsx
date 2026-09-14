@@ -1,9 +1,11 @@
 import { useMonitorState } from '../../lib/useEventState'
+import { REVIVAL_URL } from '../../lib/config'
 import { WaitingView } from './views/WaitingView'
 import { QuestionView } from './views/QuestionView'
 import { FinishedView } from './views/FinishedView'
 import { AnswerView } from './views/AnswerView'
 import { LoadingView } from './views/LoadingView'
+import { RevivalEntryView } from './views/RevivalEntryView'
 
 function MonitorPage() {
   const state = useMonitorState()
@@ -17,6 +19,8 @@ function MonitorPage() {
       return <QuestionView state={state} />
     case 'answer':
       return <AnswerView state={state} />
+    case 'revival-entry':
+      return <RevivalEntryView revivalUrl={REVIVAL_URL} />
     case 'finished':
       return <FinishedView />
     default:
