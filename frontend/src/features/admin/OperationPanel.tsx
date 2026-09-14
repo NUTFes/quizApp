@@ -6,13 +6,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAdminState } from '../../lib/useEventState'
 import { useRemainingTime } from '../../lib/useRemainingTime'
-import type { AdminState, QuestionListItem } from '../../types'
-import { advanceText, ApiError, getQuestions, reset, showAnswer, showQuestion } from '../../lib/api'
-import { NETWORK_ERROR_MESSAGE, toMessage } from './errorMessages'
+import type { AdminState, ImportResult, QuestionImport, QuestionListItem } from '../../types'
+import type { RowIssue } from '../../types/rowIssue'
+import {
+  advanceText,
+  ApiError,
+  getQuestions,
+  putQuestions,
+  reset,
+  showAnswer,
+  showQuestion,
+} from '../../lib/api'
+import { NETWORK_ERROR_MESSAGE, toImportMessage, toMessage } from './errorMessages'
 import { ACTION_LABEL, ActionLabel } from './labels'
 import { ControlPanel } from './parts/ControlPanel'
 import { CurrentStatus } from './parts/CurrentStatus'
 import { ErrorBanner, OperationFailure } from './parts/ErrorBanner'
+import { ImportPanel } from './parts/ImportPanel'
 import { QuestionList } from './parts/QuestionList'
 import { ShowQuestionForm } from './parts/ShowQuestionForm'
 import type { AdminStatus } from './parts/StatusBadge'
@@ -40,6 +50,14 @@ export function OperationPanel({ onAuthExpired }: Props) {
   const [questions, setQuestions] = useState<QuestionListItem[] | null>(null)
   const [questionListError, setQuestionListError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
+
+  // 問題データの投入(#110)。他の操作とは別系統の排他制御にする
+  // (投入中に会場操作が止まる必要はなく、逆も然り)
+  const [importInput, setImportInput] = useState('')
+  const [importBusy, setImportBusy] = useState(false)
+  const [importResult, setImportResult] = useState<ImportResult | null>(null)
+  const [importError, setImportError] = useState<string | null>(null)
+  const [importIssues, setImportIssues] = useState<RowIssue[]>([])
 
   // 呼び出し側がその場で作った関数を渡しても、依存配列に入れずに済むようにする
   // (lib/useEventState.ts の onUnauthorizedRef と同じ理由)
@@ -95,6 +113,47 @@ export function OperationPanel({ onAuthExpired }: Props) {
       setBusy(false)
     }
   }
+
+  // 問題データの投入(#110)。成功/失敗どちらも件数・行番号つきの詳細まで画面に残すので、
+  // 他の操作の共通処理(run)には乗せず専用に書く
+  const handleImport = async (questionsToImport: QuestionImport[]) => {
+    if (importBusy) return
+    setImportBusy(true)
+    setImportError(null)
+    setImportIssues([])
+    try {
+      const imported = await putQuestions(questionsToImport)
+      setImportResult(imported)
+      // 全置換で id が採番し直されるので、取り直す前に古い一覧をすぐ無効化する。
+      // (残したままだと、再取得が終わる前や失敗したときに、旧idの問題を選択・出題できてしまい、
+      //  もう存在しないidを show-question に送って 404 になる)
+      setQuestions(null)
+      setSelectedId(null)
+      refreshQuestions() // 問題一覧を取り直す
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onAuthExpired()
+        return
+      }
+      // importResult はここでは消さない。全置換は失敗時ノーオペなので、
+      // 直前の成功結果(最終投入日時・件数)は今も有効な情報のまま
+      // (→ API仕様書 §3.5「管理者画面には最終投入日時と件数も表示する」)
+      //
+      // ここでは toImportMessage(code) の結果だけを持つ(「〇〇に失敗しました」の
+      // 組み立ては表示側の ImportPanel に任せる。ErrorBanner と同じ分担)
+      if (err instanceof ApiError) {
+        setImportError(toImportMessage(err.code))
+        // 不正な行は details にまとめて入っている。
+        // 1件ずつ直して送り直さずに済むよう、返ってきた全件をそのまま並べる(→ API仕様書 §3.5.3)
+        setImportIssues(err.details)
+      } else {
+        setImportError(NETWORK_ERROR_MESSAGE)
+      }
+    } finally {
+      setImportBusy(false)
+    }
+  }
+
   const remainingSec =
     state.phase === 'question' && state.timeLimitSec !== null ? remainingTime : null
   // ShowQuestionForm は id ではなく QuestionListItem そのものを欲しがる(問題文・出題済みの警告表示に使うため)
@@ -137,6 +196,16 @@ export function OperationPanel({ onAuthExpired }: Props) {
         }
       />
       <ErrorBanner failure={failure} onDismiss={() => setFailure(null)} />
+      <ImportPanel
+        phase={state.phase}
+        input={importInput}
+        busy={importBusy}
+        result={importResult}
+        error={importError}
+        issues={importIssues}
+        onInputChange={setImportInput}
+        onSubmit={(questionsToImport) => void handleImport(questionsToImport)}
+      />
       {/*ここからは、以降のイシューで足していく */}
     </div>
   )
