@@ -3,18 +3,19 @@
 // この画面で唯一、サーバーと通信する場所。状態の受け取りと計算をここに寄せ、
 // 各パネルには props で配る。パネル側が通信すると、/dev/admin で描画できなくなる
 // (トークンも fetch も無い場所で全状態を並べたいため)。
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAdminState } from '../../lib/useEventState'
-import type { AdminState } from '../../types'
-import { CurrentStatus } from './parts/CurrentStatus'
-import type { AdminStatus } from './parts/StatusBadge'
 import { useRemainingTime } from '../../lib/useRemainingTime'
-import { ErrorBanner, OperationFailure } from './parts/ErrorBanner'
-import { useRef, useState } from 'react'
-import { ACTION_LABEL, ActionLabel } from './labels'
-import { advanceText, ApiError, reset, showAnswer, showQuestion } from '../../lib/api'
+import type { AdminState, QuestionListItem } from '../../types'
+import { advanceText, ApiError, getQuestions, reset, showAnswer, showQuestion } from '../../lib/api'
 import { NETWORK_ERROR_MESSAGE, toMessage } from './errorMessages'
+import { ACTION_LABEL, ActionLabel } from './labels'
 import { ControlPanel } from './parts/ControlPanel'
+import { CurrentStatus } from './parts/CurrentStatus'
+import { ErrorBanner, OperationFailure } from './parts/ErrorBanner'
+import { QuestionList } from './parts/QuestionList'
 import { ShowQuestionForm } from './parts/ShowQuestionForm'
+import type { AdminStatus } from './parts/StatusBadge'
 
 type Props = {
   // トークンが無効になったことが分かったときに呼ぶ。AdminPage がログイン画面へ戻す
@@ -36,15 +37,49 @@ export function OperationPanel({ onAuthExpired }: Props) {
   const inFlight = useRef(false)
   const [timeLimitInput, setTimelimitInput] = useState('30') // 制限時間のための箱 state
 
+  const [questions, setQuestions] = useState<QuestionListItem[] | null>(null)
+  const [questionListError, setQuestionListError] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
+
+  // 呼び出し側がその場で作った関数を渡しても、依存配列に入れずに済むようにする
+  // (lib/useEventState.ts の onUnauthorizedRef と同じ理由)
+  const onAuthExpiredRef = useRef(onAuthExpired)
+  useEffect(() => {
+    onAuthExpiredRef.current = onAuthExpired
+  })
+
+  // 問題一覧の取得。showQuestion/reset は asked を書き換えるので、成功後にも呼び直す
+  // (呼ばないと、出題した/リセットした直後の一覧が古い asked のまま表示される)
+  const refreshQuestions = useCallback(() => {
+    getQuestions()
+      .then(({ questions }) => setQuestions(questions))
+      .catch((e) => {
+        if (e instanceof ApiError && e.status === 401) {
+          onAuthExpiredRef.current()
+          return
+        }
+        setQuestionListError(e instanceof ApiError ? toMessage(e.code) : NETWORK_ERROR_MESSAGE)
+      })
+  }, [])
+
+  useEffect(() => {
+    refreshQuestions()
+  }, [refreshQuestions])
+
   if (state === null) return <p>接続中...</p>
 
-  const run = async (action: ActionLabel, request: () => Promise<unknown>) => {
+  const run = async (
+    action: ActionLabel,
+    request: () => Promise<unknown>,
+    onSuccess?: () => void,
+  ) => {
     if (inFlight.current) return
     inFlight.current = true
     setBusy(true)
     setFailure(null)
     try {
       await request()
+      onSuccess?.()
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         onAuthExpired()
@@ -62,10 +97,31 @@ export function OperationPanel({ onAuthExpired }: Props) {
   }
   const remainingSec =
     state.phase === 'question' && state.timeLimitSec !== null ? remainingTime : null
+  // ShowQuestionForm は id ではなく QuestionListItem そのものを欲しがる(問題文・出題済みの警告表示に使うため)
+  const selectedQuestion = questions?.find((q) => q.id === selectedId) ?? null
 
   return (
     <div>
       <CurrentStatus state={state} status={toStatus(state, remainingSec)} />
+      {questionListError !== null && <p>{questionListError}</p>}
+      {questions !== null && (
+        <QuestionList
+          items={questions}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          currentQuestionId={state.question?.id ?? null}
+        />
+      )}
+      <ShowQuestionForm
+        selected={selectedQuestion}
+        currentQuestionId={state.phase === 'question' ? (state.question?.id ?? null) : null}
+        timeLimitInput={timeLimitInput}
+        busy={busy}
+        onTimeLimitInputChange={setTimelimitInput}
+        onSubmit={(id, sec) =>
+          run(ACTION_LABEL.showQuestion, () => showQuestion(id, sec), refreshQuestions)
+        }
+      />
       <ControlPanel
         state={state}
         remainingSec={remainingSec}
@@ -73,18 +129,12 @@ export function OperationPanel({ onAuthExpired }: Props) {
         onAdvanceText={() => run(ACTION_LABEL.advanceText, advanceText)}
         onShowAnswer={() => run(ACTION_LABEL.showAnswer, showAnswer)}
         onReset={(to) =>
-          run(to == 'finished' ? ACTION_LABEL.resetFinished : ACTION_LABEL.resetWaiting, () =>
-            reset(to),
+          run(
+            to == 'finished' ? ACTION_LABEL.resetFinished : ACTION_LABEL.resetWaiting,
+            () => reset(to),
+            refreshQuestions,
           )
         }
-      />
-      <ShowQuestionForm
-        selected={null /*109 で、選んだ問題を渡す*/}
-        currentQuestionId={state.phase === 'question' ? (state.question?.id ?? null) : null}
-        timeLimitInput={timeLimitInput}
-        busy={busy}
-        onTimeLimitInputChange={setTimelimitInput}
-        onSubmit={(id, sec) => run(ACTION_LABEL.showQuestion, () => showQuestion(id, sec))}
       />
       <ErrorBanner failure={failure} onDismiss={() => setFailure(null)} />
       {/*ここからは、以降のイシューで足していく */}

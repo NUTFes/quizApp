@@ -18,6 +18,8 @@ import {
   adminQuestionTwo,
   adminWaiting,
 } from '../../lib/mock/admin/index'
+import { DEV_QUESTION_LIST } from '../admin/parts/__devPreviewData'
+import { QuestionList } from '../admin/parts/QuestionList'
 
 // 管理者画面の全パターン確認用ページ（開発時のみ / パス: /dev/admin）
 //
@@ -180,6 +182,58 @@ const PANEL_CASES = [
     title: '終了',
     note: 'finished・「第0問」と出ていないことを確認する',
     node: <CurrentStatus state={adminFinished} status={null} />,
+  },
+] as const
+
+// DEV_QUESTION_LIST は1件だけ asked: true(混在)なので、「通常」ケース用に全件 false へ落とす
+const DEV_QUESTION_LIST_UNASKED = DEV_QUESTION_LIST.map((q) => ({ ...q, asked: false }))
+
+// 「問題一覧(#109)」の取りうる状態。受け入れ条件の「通常・0件・出題済み混在」を必ず含む
+//
+// #107 の PANEL_CASES と同じく、通信もトークンも無いこの場所で全状態を並べられる。
+const QUESTION_LIST_CASES = [
+  {
+    title: '通常',
+    note: '3件・すべて asked: false',
+    node: (
+      <QuestionList
+        items={DEV_QUESTION_LIST_UNASKED}
+        selectedId={null}
+        onSelect={() => {}}
+        currentQuestionId={null}
+      />
+    ),
+  },
+  {
+    title: '出題済み混在',
+    note: '3件・うち1件が asked: true',
+    node: (
+      <QuestionList
+        items={DEV_QUESTION_LIST}
+        selectedId={null}
+        onSelect={() => {}}
+        currentQuestionId={null}
+      />
+    ),
+  },
+  {
+    title: '0件',
+    note: '問題データがまだ投入されていない状態。画面が壊れないことの確認',
+    node: (
+      <QuestionList items={[]} selectedId={null} onSelect={() => {}} currentQuestionId={null} />
+    ),
+  },
+  {
+    title: '選択中',
+    note: '1件を選んでいる状態。ラジオの見た目確認',
+    node: (
+      <QuestionList
+        items={DEV_QUESTION_LIST}
+        selectedId={1}
+        onSelect={() => {}}
+        currentQuestionId={null}
+      />
+    ),
   },
 ] as const
 
@@ -501,6 +555,18 @@ function AdminPreviewPage() {
       </p>
       <div className="flex flex-col gap-10">
         {PANEL_CASES.map((c) => (
+          <PreviewCase key={c.title} title={c.title} note={c.note} width={width.width}>
+            {c.node}
+          </PreviewCase>
+        ))}
+      </div>
+
+      <h2 className="mt-14 mb-2 text-xl font-bold">問題一覧(#109)</h2>
+      <p className="mb-4 text-sm text-neutral-600">
+        通信していない。3件・うち1件が asked: true の架空データ({DEV_QUESTION_LIST.length}件)。
+      </p>
+      <div className="flex flex-col gap-10">
+        {QUESTION_LIST_CASES.map((c) => (
           <PreviewCase key={c.title} title={c.title} note={c.note} width={width.width}>
             {c.node}
           </PreviewCase>
