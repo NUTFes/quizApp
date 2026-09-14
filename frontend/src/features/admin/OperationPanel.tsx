@@ -3,6 +3,8 @@
 // この画面で唯一、サーバーと通信する場所。状態の受け取りと計算をここに寄せ、
 // 各パネルには props で配る。パネル側が通信すると、/dev/admin で描画できなくなる
 // (トークンも fetch も無い場所で全状態を並べたいため)。
+//
+// ⚠️ ImagePanel(#105)だけこの原則の例外。内部でAPIを直接呼ぶ(→ ImagePanel.tsx 冒頭のコメント)。
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAdminState } from '../../lib/useEventState'
 import { useRemainingTime } from '../../lib/useRemainingTime'
@@ -29,6 +31,7 @@ import { ACTION_LABEL, ActionLabel } from './labels'
 import { ControlPanel } from './parts/ControlPanel'
 import { CurrentStatus } from './parts/CurrentStatus'
 import { ErrorBanner, OperationFailure } from './parts/ErrorBanner'
+import { ImagePanel } from './parts/ImagePanel'
 import { ImportPanel } from './parts/ImportPanel'
 import { QuestionList } from './parts/QuestionList'
 import { SelectedQuestion, type SelectedQuestionProps } from './parts/SelectedQuestion'
@@ -294,6 +297,7 @@ export function OperationPanel({ onAuthExpired }: Props) {
         onInputChange={setImportInput}
         onSubmit={(questionsToImport) => void handleImport(questionsToImport)}
       />
+      <ImagePanel onAuthExpired={onAuthExpired} />
       {/*ここからは、以降のイシューで足していく */}
     </div>
   )
