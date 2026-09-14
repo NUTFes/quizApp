@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMonitorState } from '../../lib/useEventState'
 import type { MonitorState } from '../../types'
+import { REVIVAL_URL } from '../../lib/config'
 import { WaitingView } from './views/WaitingView'
 import { QuestionView } from './views/QuestionView'
 import { FinishedView } from './views/FinishedView'
 import { AnswerView } from './views/AnswerView'
 import { LoadingView } from './views/LoadingView'
 import { RevivalVideoView } from './views/RevivalVideoView'
+import { RevivalEntryView } from './views/RevivalEntryView'
 
 const REVIVAL_VIDEO_SRC = '/videos/revival.mp4'
 
@@ -23,6 +25,8 @@ function renderCurrentView(state: MonitorState | null) {
     case 'revival-video':
       // 動画は先読みを保つため、この switch の外で常時マウントしている。
       return null
+    case 'revival-entry':
+      return <RevivalEntryView revivalUrl={REVIVAL_URL} />
     case 'finished':
       return <FinishedView />
     default:

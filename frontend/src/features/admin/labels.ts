@@ -32,6 +32,8 @@ export const ACTION_LABEL = {
   showQuestion: '出題',
   advanceText: '次を表示',
   showAnswer: '正解',
+  revivalVideo: '敗者復活へ',
+  revivalEntry: '参加受付へ',
   resetWaiting: '待機画面',
   resetFinished: '終了',
 } as const

@@ -19,6 +19,7 @@ import { AnswerView } from '../monitor/views/AnswerView'
 import { FinishedView } from '../monitor/views/FinishedView'
 import { LoadingView } from '../monitor/views/LoadingView'
 import { QuestionView } from '../monitor/views/QuestionView'
+import { RevivalEntryView } from '../monitor/views/RevivalEntryView'
 import { RevivalVideoView } from '../monitor/views/RevivalVideoView'
 import { WaitingView } from '../monitor/views/WaitingView'
 import { PreviewFrame, PreviewStyles } from './parts/PreviewFrame'
@@ -107,6 +108,16 @@ const CASES = [
         loop
       />
     ),
+  },
+  {
+    title: '敗者復活 / 参加受付・URL設定済み',
+    note: 'revival-entry',
+    node: <RevivalEntryView revivalUrl="https://example.com/revival-entry" />,
+  },
+  {
+    title: '敗者復活 / 参加受付・URL未設定',
+    note: 'revival-entry・revivalUrl: 空文字',
+    node: <RevivalEntryView revivalUrl="" />,
   },
   { title: '終了', note: 'finished', node: <FinishedView /> },
   { title: '読み込み中', note: 'state が null のとき', node: <LoadingView /> },

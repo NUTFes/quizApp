@@ -32,7 +32,11 @@ export function QuestionLayout({
 }: QuestionLayoutProps) {
   if (state.question === null) return <NoticeBody />
   if (state.question.type === 'hayaoshi')
-    return <NoticeBody isHayaoshi>会場モニターをご覧ください</NoticeBody>
+    return (
+      <NoticeBody isHayaoshi isInstruction>
+        会場モニターをご覧ください
+      </NoticeBody>
+    )
   return (
     <PhoneLayout questionType={state.question.type} footMessage={footMessage}>
       <div className="w-full">
