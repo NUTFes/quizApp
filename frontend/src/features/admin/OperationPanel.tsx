@@ -7,13 +7,22 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAdminState } from '../../lib/useEventState'
 import { useRemainingTime } from '../../lib/useRemainingTime'
 import type { AdminState, QuestionListItem } from '../../types'
-import { advanceText, ApiError, getQuestions, reset, showAnswer, showQuestion } from '../../lib/api'
+import {
+  advanceText,
+  ApiError,
+  getQuestionById,
+  getQuestions,
+  reset,
+  showAnswer,
+  showQuestion,
+} from '../../lib/api'
 import { NETWORK_ERROR_MESSAGE, toMessage } from './errorMessages'
 import { ACTION_LABEL, ActionLabel } from './labels'
 import { ControlPanel } from './parts/ControlPanel'
 import { CurrentStatus } from './parts/CurrentStatus'
 import { ErrorBanner, OperationFailure } from './parts/ErrorBanner'
 import { QuestionList } from './parts/QuestionList'
+import { SelectedQuestion, type SelectedQuestionProps } from './parts/SelectedQuestion'
 import { ShowQuestionForm } from './parts/ShowQuestionForm'
 import type { AdminStatus } from './parts/StatusBadge'
 
@@ -40,6 +49,12 @@ export function OperationPanel({ onAuthExpired }: Props) {
   const [questions, setQuestions] = useState<QuestionListItem[] | null>(null)
   const [questionListError, setQuestionListError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  // getQuestionById の結果。id を一緒に持ち、selectedId とずれていたら(選び直し直後)
+  // 「取得中」扱いにする(選び直した瞬間に古い問題の詳細が一瞬見えるのを防ぐ)
+  const [selectedQuestionResult, setSelectedQuestionResult] = useState<{
+    id: number
+    props: SelectedQuestionProps
+  } | null>(null)
 
   // 呼び出し側がその場で作った関数を渡しても、依存配列に入れずに済むようにする
   // (lib/useEventState.ts の onUnauthorizedRef と同じ理由)
@@ -65,6 +80,44 @@ export function OperationPanel({ onAuthExpired }: Props) {
   useEffect(() => {
     refreshQuestions()
   }, [refreshQuestions])
+
+  // 選んだ問題が変わるたびに詳細(選択肢・正答込み)を取り直す。一覧(QuestionListItem)には
+  // これらが無いため(→ API仕様書 §4.1)、別APIを叩く必要がある
+  useEffect(() => {
+    if (selectedId === null) return
+    let cancelled = false
+    getQuestionById(selectedId)
+      .then((question) => {
+        if (cancelled) return
+        setSelectedQuestionResult({ id: selectedId, props: { status: 'loaded', question } })
+      })
+      .catch((e) => {
+        if (cancelled) return
+        if (e instanceof ApiError && e.status === 401) {
+          onAuthExpiredRef.current()
+          return
+        }
+        setSelectedQuestionResult({
+          id: selectedId,
+          props: {
+            status: 'error',
+            message: e instanceof ApiError ? toMessage(e.code) : NETWORK_ERROR_MESSAGE,
+          },
+        })
+      })
+    // 選択を連打で変えたとき、古いリクエストの応答が新しい選択を上書きしないようにする
+    return () => {
+      cancelled = true
+    }
+  }, [selectedId])
+
+  // 未選択なら empty、取得中(またはまだ id がずれている)なら loading、それ以外は結果をそのまま使う
+  const selectedQuestionState: SelectedQuestionProps =
+    selectedId === null
+      ? { status: 'empty' }
+      : selectedQuestionResult?.id === selectedId
+        ? selectedQuestionResult.props
+        : { status: 'loading' }
 
   if (state === null) return <p>接続中...</p>
 
@@ -112,6 +165,7 @@ export function OperationPanel({ onAuthExpired }: Props) {
           currentQuestionId={state.question?.id ?? null}
         />
       )}
+      <SelectedQuestion {...selectedQuestionState} />
       <ShowQuestionForm
         selected={selectedQuestion}
         currentQuestionId={state.phase === 'question' ? (state.question?.id ?? null) : null}
