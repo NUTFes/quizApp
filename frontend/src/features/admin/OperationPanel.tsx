@@ -1,8 +1,7 @@
 // 操作盤。認証を通ったあとに表示される画面。
 //
-// この画面で唯一、サーバーと通信する場所。状態の受け取りと計算をここに寄せ、
-// 各パネルには props で配る。パネル側が通信すると、/dev/admin で描画できなくなる
-// (トークンも fetch も無い場所で全状態を並べたいため)。
+// 進行状態の受け取りと操作APIはここに寄せ、各パネルには props で配る。
+// 画像投入だけは進行状態と独立した一連の処理なので、ImagePanel 内でAPIを呼ぶ。
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAdminState } from '../../lib/useEventState'
 import { useRemainingTime } from '../../lib/useRemainingTime'
@@ -13,6 +12,7 @@ import { ACTION_LABEL, ActionLabel } from './labels'
 import { ControlPanel } from './parts/ControlPanel'
 import { CurrentStatus } from './parts/CurrentStatus'
 import { ErrorBanner, OperationFailure } from './parts/ErrorBanner'
+import { ImagePanel } from './parts/ImagePanel'
 import { QuestionList } from './parts/QuestionList'
 import { ShowQuestionForm } from './parts/ShowQuestionForm'
 import type { AdminStatus } from './parts/StatusBadge'
@@ -137,6 +137,7 @@ export function OperationPanel({ onAuthExpired }: Props) {
         }
       />
       <ErrorBanner failure={failure} onDismiss={() => setFailure(null)} />
+      <ImagePanel onAuthExpired={onAuthExpired} />
       {/*ここからは、以降のイシューで足していく */}
     </div>
   )
