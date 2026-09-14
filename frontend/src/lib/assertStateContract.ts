@@ -11,7 +11,7 @@ const VALID_PHASES = [
   'revival-entry',
 ] as const
 
-const NO_QUESTION_PHASES = ['answer', 'finished', 'revival-video', 'revival-entry'] as const
+const NO_QUESTION_PHASES = ['waiting', 'finished', 'revival-video', 'revival-entry'] as const
 
 const VALID_QUESTION_TYPES = ['four_choice', 'two_choice', 'arunashi', 'hayaoshi'] as const
 
