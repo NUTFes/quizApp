@@ -1,5 +1,5 @@
-import React from 'react'
-import { QuestionListItem } from '../../../types'
+import { useId, type ReactNode } from 'react'
+import type { QuestionListItem } from '../../../types'
 import { difficultyLabel, questionTypeLabel } from '../labels'
 
 type Props = {
@@ -10,6 +10,10 @@ type Props = {
 }
 
 export function QuestionList({ items, selectedId, onSelect, currentQuestionId }: Props) {
+  // ラジオの name をコンポーネントごとに一意にする。固定文字列だと、同じページに
+  // 複数の QuestionList が並んだとき(/dev/admin)にブラウザ上で1つのグループになってしまう
+  const radioGroupName = useId()
+
   if (items.length === 0) {
     return <p>問題がまだ投入されていません</p>
   }
@@ -38,7 +42,7 @@ export function QuestionList({ items, selectedId, onSelect, currentQuestionId }:
               <label className="flex cursor-pointer items-center justify-center">
                 <input
                   type="radio"
-                  name="question"
+                  name={radioGroupName}
                   value={item.id}
                   checked={selectedId === item.id}
                   onChange={() => onSelect(item.id)}
@@ -70,7 +74,7 @@ export function QuestionList({ items, selectedId, onSelect, currentQuestionId }:
 }
 
 // シンプルなラベル
-function Badge({ children }: { children: React.ReactNode }) {
+function Badge({ children }: { children: ReactNode }) {
   return (
     <span className="rounded-full bg-border-soft px-3 py-1 text-admin-func-label whitespace-nowrap">
       {children}

@@ -185,12 +185,27 @@ const PANEL_CASES = [
   },
 ] as const
 
-// 「問題一覧(#109)」の取りうる状態。
+// DEV_QUESTION_LIST は1件だけ asked: true(混在)なので、「通常」ケース用に全件 false へ落とす
+const DEV_QUESTION_LIST_UNASKED = DEV_QUESTION_LIST.map((q) => ({ ...q, asked: false }))
+
+// 「問題一覧(#109)」の取りうる状態。受け入れ条件の「通常・0件・出題済み混在」を必ず含む
 //
 // #107 の PANEL_CASES と同じく、通信もトークンも無いこの場所で全状態を並べられる。
 const QUESTION_LIST_CASES = [
   {
-    title: '通常 + 出題済み混在',
+    title: '通常',
+    note: '3件・すべて asked: false',
+    node: (
+      <QuestionList
+        items={DEV_QUESTION_LIST_UNASKED}
+        selectedId={null}
+        onSelect={() => {}}
+        currentQuestionId={null}
+      />
+    ),
+  },
+  {
+    title: '出題済み混在',
     note: '3件・うち1件が asked: true',
     node: (
       <QuestionList

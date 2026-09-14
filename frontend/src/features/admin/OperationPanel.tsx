@@ -3,7 +3,7 @@
 // この画面で唯一、サーバーと通信する場所。状態の受け取りと計算をここに寄せ、
 // 各パネルには props で配る。パネル側が通信すると、/dev/admin で描画できなくなる
 // (トークンも fetch も無い場所で全状態を並べたいため)。
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAdminState } from '../../lib/useEventState'
 import { useRemainingTime } from '../../lib/useRemainingTime'
 import type { AdminState, QuestionListItem } from '../../types'
@@ -48,34 +48,38 @@ export function OperationPanel({ onAuthExpired }: Props) {
     onAuthExpiredRef.current = onAuthExpired
   })
 
-  useEffect(() => {
-    let cancelled = false
+  // 問題一覧の取得。showQuestion/reset は asked を書き換えるので、成功後にも呼び直す
+  // (呼ばないと、出題した/リセットした直後の一覧が古い asked のまま表示される)
+  const refreshQuestions = useCallback(() => {
     getQuestions()
-      .then(({ questions }) => {
-        if (!cancelled) setQuestions(questions)
-      })
+      .then(({ questions }) => setQuestions(questions))
       .catch((e) => {
-        if (cancelled) return
         if (e instanceof ApiError && e.status === 401) {
           onAuthExpiredRef.current()
           return
         }
         setQuestionListError(e instanceof ApiError ? toMessage(e.code) : NETWORK_ERROR_MESSAGE)
       })
-    return () => {
-      cancelled = true
-    }
   }, [])
+
+  useEffect(() => {
+    refreshQuestions()
+  }, [refreshQuestions])
 
   if (state === null) return <p>接続中...</p>
 
-  const run = async (action: ActionLabel, request: () => Promise<unknown>) => {
+  const run = async (
+    action: ActionLabel,
+    request: () => Promise<unknown>,
+    onSuccess?: () => void,
+  ) => {
     if (inFlight.current) return
     inFlight.current = true
     setBusy(true)
     setFailure(null)
     try {
       await request()
+      onSuccess?.()
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         onAuthExpired()
@@ -114,7 +118,9 @@ export function OperationPanel({ onAuthExpired }: Props) {
         timeLimitInput={timeLimitInput}
         busy={busy}
         onTimeLimitInputChange={setTimelimitInput}
-        onSubmit={(id, sec) => run(ACTION_LABEL.showQuestion, () => showQuestion(id, sec))}
+        onSubmit={(id, sec) =>
+          run(ACTION_LABEL.showQuestion, () => showQuestion(id, sec), refreshQuestions)
+        }
       />
       <ControlPanel
         state={state}
@@ -123,8 +129,10 @@ export function OperationPanel({ onAuthExpired }: Props) {
         onAdvanceText={() => run(ACTION_LABEL.advanceText, advanceText)}
         onShowAnswer={() => run(ACTION_LABEL.showAnswer, showAnswer)}
         onReset={(to) =>
-          run(to == 'finished' ? ACTION_LABEL.resetFinished : ACTION_LABEL.resetWaiting, () =>
-            reset(to),
+          run(
+            to == 'finished' ? ACTION_LABEL.resetFinished : ACTION_LABEL.resetWaiting,
+            () => reset(to),
+            refreshQuestions,
           )
         }
       />
