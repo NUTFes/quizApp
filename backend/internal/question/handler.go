@@ -105,19 +105,7 @@ func putQuestions(c *gin.Context, db *gorm.DB) {
 
 		rows := make([]Question, 0, len(req.Questions))
 		for _, q := range req.Questions {
-			correct := q.CorrectChoiceID
-			rows = append(rows, Question{
-				// ID はサーバーが採番する(§3.5.1)ためゼロ値のまま
-				Number:          q.Number,
-				Type:            q.Type,
-				Difficulty:      q.Difficulty,
-				TextSegments:    q.TextSegments,
-				ImageURL:        q.ImageURL,
-				Choices:         q.Choices,
-				CorrectChoiceID: &correct,
-				Explanation:     q.Explanation,
-				Asked:           false,
-			})
+			rows = append(rows, questionFromImport(q))
 		}
 		if err := tx.Create(&rows).Error; err != nil {
 			platform.RespondError(c, http.StatusInternalServerError, "INTERNAL",
@@ -166,6 +154,30 @@ func putQuestions(c *gin.Context, db *gorm.DB) {
 		ImportedAt: time.Now(),
 		Warnings:   warnings,
 	})
+}
+
+// questionFromImport は投入用の形をDB保存用の形に変換する。
+// JSONの null は importQuestion の空文字に変換されるため、
+// 選択肢を持たない hayaoshi ではここで改めて nil に戻す。
+func questionFromImport(q importQuestion) Question {
+	var correctChoiceID *string
+	if q.CorrectChoiceID != "" {
+		correct := q.CorrectChoiceID
+		correctChoiceID = &correct
+	}
+
+	return Question{
+		// ID はサーバーが採番する(§3.5.1)ためゼロ値のまま
+		Number:          q.Number,
+		Type:            q.Type,
+		Difficulty:      q.Difficulty,
+		TextSegments:    q.TextSegments,
+		ImageURL:        q.ImageURL,
+		Choices:         q.Choices,
+		CorrectChoiceID: correctChoiceID,
+		Explanation:     q.Explanation,
+		Asked:           false,
+	}
 }
 
 // canReplaceQuestions は、問題を全置換してよいphaseかを返す。

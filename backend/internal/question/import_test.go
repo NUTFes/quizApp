@@ -111,6 +111,18 @@ func TestValidateImport_正しいhayaoshiはエラーなし(t *testing.T) {
 	}
 }
 
+func TestQuestionFromImport_correctChoiceIdの空文字をnilで保存する(t *testing.T) {
+	hayaoshi := questionFromImport(validHayaoshi(5, 1))
+	if hayaoshi.CorrectChoiceID != nil {
+		t.Errorf("hayaoshi correctChoiceId=%q, want nil", *hayaoshi.CorrectChoiceID)
+	}
+
+	fourChoice := questionFromImport(validFourChoice(6, 2))
+	if fourChoice.CorrectChoiceID == nil || *fourChoice.CorrectChoiceID != "A" {
+		t.Errorf("four_choice correctChoiceId=%v, want A", fourChoice.CorrectChoiceID)
+	}
+}
+
 func TestValidateImport_correctChoiceIdが選択肢に無い(t *testing.T) {
 	q := validFourChoice(5, 1)
 	q.CorrectChoiceID = "E"
