@@ -115,7 +115,7 @@ func validateImport(qs []importQuestion) []RowIssue {
 		wantChoices, ok := choiceCountByType[q.Type]
 		if !ok {
 			issues = append(issues, RowIssue{row,
-				fmt.Sprintf("type '%s' は不正です(four_choice / two_choice / arunashi のいずれか)", q.Type)})
+				fmt.Sprintf("type '%s' は不正です(four_choice / two_choice / arunashi / hayaoshi のいずれか)", q.Type)})
 			continue
 		}
 
