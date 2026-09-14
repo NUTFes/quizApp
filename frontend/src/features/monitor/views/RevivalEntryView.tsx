@@ -1,9 +1,12 @@
-import { REVIVAL_URL } from '../../../lib/config'
 import { MonitorLayout } from '../parts/MonitorLayout'
 import { MonitorQrCode } from '../parts/MonitorQrCode'
 
+type RevivalEntryViewProps = {
+  revivalUrl: string
+}
+
 // 敗者復活、参加受付画面
-export function RevivalEntryView() {
+export function RevivalEntryView({ revivalUrl }: RevivalEntryViewProps) {
   return (
     <MonitorLayout>
       <div className="flex min-h-0 flex-1 px-12 py-9">
@@ -31,10 +34,10 @@ export function RevivalEntryView() {
             </div>
           </div>
           <div className="flex size-[668px] shrink-0 items-center justify-center overflow-hidden rounded-[80px] bg-canvas p-12">
-            {REVIVAL_URL === '' ? (
+            {revivalUrl === '' ? (
               <p className="text-p-instruction text-brand">敗者復活URL未設定</p>
             ) : (
-              <MonitorQrCode url={REVIVAL_URL} size={572} alt="敗者復活参加フォームのQR" />
+              <MonitorQrCode url={revivalUrl} size={572} alt="敗者復活参加フォームのQR" />
             )}
           </div>
         </section>

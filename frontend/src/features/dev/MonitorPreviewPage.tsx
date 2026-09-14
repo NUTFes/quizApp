@@ -92,7 +92,16 @@ const CASES = [
     note: 'answer',
     node: <AnswerView state={monitorAnswerHayaoshi} />,
   },
-  { title: '敗者復活 / 参加受付', note: 'revival-entry', node: <RevivalEntryView /> },
+  {
+    title: '敗者復活 / 参加受付・URL設定済み',
+    note: 'revival-entry',
+    node: <RevivalEntryView revivalUrl="https://example.com/revival-entry" />,
+  },
+  {
+    title: '敗者復活 / 参加受付・URL未設定',
+    note: 'revival-entry・revivalUrl: 空文字',
+    node: <RevivalEntryView revivalUrl="" />,
+  },
   { title: '終了', note: 'finished', node: <FinishedView /> },
   { title: '読み込み中', note: 'state が null のとき', node: <LoadingView /> },
   {
