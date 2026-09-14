@@ -79,6 +79,14 @@ export const showAnswer = () =>
     method: 'POST',
     auth: true,
   })
+export const revival = (to: 'video' | 'entry') =>
+  request<AdminState>('/api/admin/revival', {
+    method: 'POST',
+    body: {
+      to,
+    },
+    auth: true,
+  })
 export const reset = (to: 'waiting' | 'finished' = 'waiting') =>
   request<AdminState>('/api/admin/reset', {
     method: 'POST',
