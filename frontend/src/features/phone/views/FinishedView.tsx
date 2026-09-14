@@ -1,3 +1,4 @@
+import { SURVEY_URL } from '../../../lib/config'
 import { PhoneLayout } from '../parts/PhoneLayout'
 
 // 終了、アンケート誘導画面
@@ -19,12 +20,16 @@ export function FinishedView() {
           <p className="flex justify-center px-8 py-8 text-brand text-center text-instruction-alt-black">
             アンケートにご協力ください
           </p>
-          <a
-            href=""
-            className="mx-auto flex h-[57px] w-full items-center justify-center rounded-[20px] bg-live text-link text-brand"
-          >
-            Googleフォームを開く
-          </a>
+          {SURVEY_URL !== '' && (
+            <a
+              href={SURVEY_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mx-auto flex h-[57px] w-full items-center justify-center rounded-[20px] bg-live text-link text-brand"
+            >
+              Googleフォームを開く
+            </a>
+          )}
         </div>
       </div>
     </PhoneLayout>
