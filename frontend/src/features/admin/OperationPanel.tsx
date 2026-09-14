@@ -51,10 +51,11 @@ export function OperationPanel({ onAuthExpired }: Props) {
   const [questionListError, setQuestionListError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
 
-  // 問題データの投入(#110)。他の操作とは別系統の排他制御にする
-  // (投入中に会場操作が止まる必要はなく、逆も然り)
+  // 問題データの投入(#110)。busy / inFlight は他の操作(showQuestion等)と共有する。
+  // 別系統にすると、投入中に出題を押せてしまい(逆に出題中に投入を押せてしまい)、
+  // 全置換でidが振り直された直後の出題が404になる・進行中の投入が409になる、
+  // といった競合を起こす
   const [importInput, setImportInput] = useState('')
-  const [importBusy, setImportBusy] = useState(false)
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
   const [importIssues, setImportIssues] = useState<RowIssue[]>([])
@@ -66,12 +67,23 @@ export function OperationPanel({ onAuthExpired }: Props) {
     onAuthExpiredRef.current = onAuthExpired
   })
 
-  // 問題一覧の取得。showQuestion/reset は asked を書き換えるので、成功後にも呼び直す
-  // (呼ばないと、出題した/リセットした直後の一覧が古い asked のまま表示される)
+  // 直近に発行した refreshQuestions の世代。古い応答が後から返ってきても
+  // 上書きさせないために使う(→ lib/useEventState.ts の revision と同じ考え方)。
+  // 特に投入(#110)は全置換で id が丸ごと変わるため、投入前に発行した古いGETが
+  // 投入後の新しい一覧を、存在しないidを含む古い一覧で上書きすると事故になる
+  const questionsRequestId = useRef(0)
+
+  // 問題一覧の取得。showQuestion/reset は asked を書き換え、投入は全置換するので、
+  // 成功後にも呼び直す(呼ばないと一覧が古いまま表示される)
   const refreshQuestions = useCallback(() => {
-    getQuestions()
-      .then(({ questions }) => setQuestions(questions))
+    const requestId = ++questionsRequestId.current
+    return getQuestions()
+      .then(({ questions }) => {
+        if (requestId !== questionsRequestId.current) return // 後から発行された取得より古い応答は捨てる
+        setQuestions(questions)
+      })
       .catch((e) => {
+        if (requestId !== questionsRequestId.current) return
         if (e instanceof ApiError && e.status === 401) {
           onAuthExpiredRef.current()
           return
@@ -114,11 +126,13 @@ export function OperationPanel({ onAuthExpired }: Props) {
     }
   }
 
-  // 問題データの投入(#110)。成功/失敗どちらも件数・行番号つきの詳細まで画面に残すので、
-  // 他の操作の共通処理(run)には乗せず専用に書く
+  // 問題データの投入(#110)。件数・行番号つきの詳細を画面に残す必要があり、
+  // 「失敗時にだけ failure を出す」共通処理(run)とは形が違うので専用に書く。
+  // ただし排他ロック(inFlight/busy)は run と共有する(上のコメント参照)
   const handleImport = async (questionsToImport: QuestionImport[]) => {
-    if (importBusy) return
-    setImportBusy(true)
+    if (inFlight.current) return
+    inFlight.current = true
+    setBusy(true)
     setImportError(null)
     setImportIssues([])
     try {
@@ -150,7 +164,8 @@ export function OperationPanel({ onAuthExpired }: Props) {
         setImportError(NETWORK_ERROR_MESSAGE)
       }
     } finally {
-      setImportBusy(false)
+      inFlight.current = false
+      setBusy(false)
     }
   }
 
@@ -199,7 +214,7 @@ export function OperationPanel({ onAuthExpired }: Props) {
       <ImportPanel
         phase={state.phase}
         input={importInput}
-        busy={importBusy}
+        busy={busy}
         result={importResult}
         error={importError}
         issues={importIssues}
