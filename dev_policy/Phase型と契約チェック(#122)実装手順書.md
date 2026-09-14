@@ -281,12 +281,14 @@ mise run lint
 
 ### ② `VITE_REVIVAL_URL` を設定して `npm run build` した成果物に、その URL が入っている
 
+**⚠️ #122の時点では、このコマンドは何も出力せず非0終了します。** `REVIVAL_URL`(`config.ts`)を実際に使う画面がまだ無いため、Viteの本番ビルド(Rollup)が未参照のexportをtree-shakingで消してしまうからです。配線ミスではありません(§0の注意点も参照)。
+
 ```bash
 docker compose exec frontend sh -c \
   "VITE_REVIVAL_URL=https://example.com/revival-test pnpm build && grep -rl 'example.com/revival-test' dist/assets/"
 ```
 
-`dist/assets/` 配下の `.js` ファイル名が1つ出てくれば、値が焼き込まれています。
+`dist/assets/` 配下の `.js` ファイル名が1つ出てくれば、値が焼き込まれています。**現状のコードでは出ません。** 配線そのものが正しいかは、一時的に `frontend/src/main.tsx` などから `REVIVAL_URL` を1行importして確認し、確認し終えたら必ず元に戻してください(このIssueのスコープでは画面を作らないので、恒久的な参照コードは残さない)。この受け入れ条件が本当の意味で満たされるのは、#123〜#126のいずれかが `REVIVAL_URL` を画面で使い始めてからです。
 
 ### ③ 未設定でもビルドが通り、`REVIVAL_URL` が `''` になる
 
