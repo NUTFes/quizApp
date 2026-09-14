@@ -8,6 +8,7 @@ import { ConfirmDialogCard } from '../admin/parts/ConfirmDialog'
 import { ControlPanel } from '../admin/parts/ControlPanel'
 import { CurrentStatus } from '../admin/parts/CurrentStatus'
 import { ErrorBanner } from '../admin/parts/ErrorBanner'
+import { ImagePanel } from '../admin/parts/ImagePanel'
 import { RemainingTime } from '../admin/parts/RemainingTime'
 import { ShowQuestionForm } from '../admin/parts/ShowQuestionForm'
 import type { QuestionListItem } from '../../types'
@@ -506,6 +507,16 @@ const CONTROL_CASES = [
   },
 ] as const
 
+// ImagePanel は選択ファイル・通信結果を内部 state で持つため、初期状態だけを置く。
+// このケースでは画像を選ぶところまで確認できる。送信すると実APIを呼ぶので注意する。
+const IMAGE_PANEL_CASES = [
+  {
+    title: '画像投入 / 初期状態',
+    note: '内部 state で完結するパネル。画像選択後のプレビューと名前入力もここで確認できる',
+    node: <ImagePanel onAuthExpired={noop} />,
+  },
+] as const
+
 function AdminPreviewPage() {
   const [width, setWidth] = useState<(typeof WIDTHS)[number]>(WIDTHS[0])
 
@@ -579,6 +590,18 @@ function AdminPreviewPage() {
       </p>
       <div className="flex flex-col gap-10">
         {CONTROL_CASES.map((c) => (
+          <PreviewCase key={c.title} title={c.title} note={c.note} width={width.width}>
+            {c.node}
+          </PreviewCase>
+        ))}
+      </div>
+
+      <h2 className="mt-14 mb-2 text-xl font-bold">画像投入(#105)</h2>
+      <p className="mb-4 text-sm text-neutral-600">
+        内部 state を外から注入できないため初期状態だけを表示する。ファイル選択までは通信しない。
+      </p>
+      <div className="flex flex-col gap-10">
+        {IMAGE_PANEL_CASES.map((c) => (
           <PreviewCase key={c.title} title={c.title} note={c.note} width={width.width}>
             {c.node}
           </PreviewCase>
