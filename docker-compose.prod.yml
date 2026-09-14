@@ -20,6 +20,7 @@ services:
       dockerfile: Dockerfile.prod
       args:
         - VITE_SURVEY_URL=${VITE_SURVEY_URL}
+        - VITE_REVIVAL_URL=${VITE_REVIVAL_URL}
     ports:
       - "8080:80"              # CTの8080番だけを外に開ける。Cloudflareはここを向く
     environment:
