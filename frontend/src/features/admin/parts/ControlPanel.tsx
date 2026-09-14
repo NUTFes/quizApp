@@ -10,6 +10,7 @@ type Props = {
   busy: boolean
   onAdvanceText: () => void
   onShowAnswer: () => void
+  onRevival: (to: 'video' | 'entry') => void
   onReset: (to: 'waiting' | 'finished') => void
 }
 
@@ -19,9 +20,12 @@ export function ControlPanel({
   busy,
   onAdvanceText,
   onShowAnswer,
+  onRevival,
   onReset,
 }: Props) {
   const isQuestion = state.phase === 'question'
+  const isRevivalVideo = state.phase === 'revival-video'
+  const isRevivalEntry = state.phase === 'revival-entry'
   // 問題idだけでなく questionStartedAt も含める。
   // 「やり直し」は同じ問題idのままタイマーだけリセットされるので、id だけの比較だと
   // 「やり直した直後の別インスタンス」を「さっきと同じ出題」と誤認してしまう
@@ -61,6 +65,31 @@ export function ControlPanel({
           disabled={locked || !isQuestion}
           onClick={() => setConfirmingInstanceKey(currentInstanceKey)}
         />
+      </div>
+
+      {/* 敗者復活は左から順に進める。終了(reset)とは別グループにして、
+          出題済みの記録を消す操作との押し間違いを防ぐ */}
+      <div className="mt-6 border-t border-border-soft pt-4">
+        <p className="text-sm">敗者復活を進める(出題済みの記録は残ります)</p>
+        <p className="mt-1 min-h-5 text-sm font-bold text-brand">
+          {isRevivalVideo
+            ? '現在: 敗者復活動画 → 次は「参加受付へ」'
+            : isRevivalEntry
+              ? '現在: 参加受付 → 次は問題を選んで「出題」'
+              : '「敗者復活へ」から順に押してください'}
+        </p>
+        <div className="mt-2 grid grid-cols-2 gap-3">
+          <ControlButton
+            label={ACTION_LABEL.revivalVideo}
+            disabled={locked || isRevivalVideo || isRevivalEntry}
+            onClick={() => onRevival('video')}
+          />
+          <ControlButton
+            label={ACTION_LABEL.revivalEntry}
+            disabled={locked || !isRevivalVideo}
+            onClick={() => onRevival('entry')}
+          />
+        </div>
       </div>
 
       {/* 画面を切り替える2つ。進行ボタンと離して置き、見た目でも別グループにする。

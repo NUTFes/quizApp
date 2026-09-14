@@ -23,6 +23,7 @@ import {
   getQuestions,
   putQuestions,
   reset,
+  revival,
   showAnswer,
   showQuestion,
 } from '../../lib/api'
@@ -278,6 +279,11 @@ export function OperationPanel({ onAuthExpired }: Props) {
         busy={busy}
         onAdvanceText={() => run(ACTION_LABEL.advanceText, advanceText)}
         onShowAnswer={() => run(ACTION_LABEL.showAnswer, showAnswer)}
+        onRevival={(to) =>
+          run(to === 'video' ? ACTION_LABEL.revivalVideo : ACTION_LABEL.revivalEntry, () =>
+            revival(to),
+          )
+        }
         onReset={(to) =>
           run(
             to == 'finished' ? ACTION_LABEL.resetFinished : ACTION_LABEL.resetWaiting,

@@ -15,7 +15,7 @@ import { ImportPanel } from '../admin/parts/ImportPanel'
 import { RemainingTime } from '../admin/parts/RemainingTime'
 import { SelectedQuestion } from '../admin/parts/SelectedQuestion'
 import { ShowQuestionForm } from '../admin/parts/ShowQuestionForm'
-import type { ImportResult, QuestionListItem } from '../../types'
+import type { AdminState, ImportResult, QuestionListItem } from '../../types'
 import type { RowIssue } from '../../types/rowIssue'
 import {
   adminAnswerAri,
@@ -146,6 +146,18 @@ const CASES = [
 // 🔒 使っているのは lib/mock/admin の架空データ。本番の問題文・正答は絶対に置かない。
 //    lib/mock/ は別イシューの担当領域なので、読むだけで編集しない
 //    (この場所で必要な差分は、下のようにスプレッドで作る)。
+const adminRevivalVideo: AdminState = {
+  ...adminWaiting,
+  phase: 'revival-video',
+  askedCount: 8,
+}
+
+const adminRevivalEntry: AdminState = {
+  ...adminWaiting,
+  phase: 'revival-entry',
+  askedCount: 8,
+}
+
 const PANEL_CASES = [
   {
     title: '待機中',
@@ -183,6 +195,16 @@ const PANEL_CASES = [
     title: '正解発表',
     note: 'answer・全区切りが公開済み',
     node: <CurrentStatus state={adminAnswerAri} status="answer" />,
+  },
+  {
+    title: '敗者復活動画',
+    note: 'revival-video・問題情報を表示しない',
+    node: <CurrentStatus state={adminRevivalVideo} status={null} />,
+  },
+  {
+    title: '敗者復活の参加受付',
+    note: 'revival-entry・問題情報を表示しない',
+    node: <CurrentStatus state={adminRevivalEntry} status={null} />,
   },
   {
     title: '終了',
@@ -308,7 +330,12 @@ const PREVIEW_SELECTED: QuestionListItem = {
 const PREVIEW_FAILED_AT = new Date('2026-09-13T13:05:12+09:00')
 
 // ボタンを押しても何もしない。CONTROL_CASES より上に書く(const は宣言より前で使えない)
-const noopHandlers = { onAdvanceText: noop, onShowAnswer: noop, onReset: noop }
+const noopHandlers = {
+  onAdvanceText: noop,
+  onShowAnswer: noop,
+  onRevival: noop,
+  onReset: noop,
+}
 
 // 「進行操作(#108)」のパネル群の取りうる状態。
 //
@@ -317,7 +344,7 @@ const noopHandlers = { onAdvanceText: noop, onShowAnswer: noop, onReset: noop }
 const CONTROL_CASES = [
   {
     title: '操作パネル / 待機中',
-    note: 'waiting・進行の2つと「待機画面を表示」が押せない',
+    note: 'waiting・「敗者復活へ」は押せるが「参加受付へ」はまだ押せない',
     node: <ControlPanel state={adminWaiting} remainingSec={null} busy={false} {...noopHandlers} />,
   },
   {
@@ -346,19 +373,33 @@ const CONTROL_CASES = [
   },
   {
     title: '操作パネル / 正解発表',
-    note: 'answer・進行の2つが両方押せない',
+    note: 'answer・次に押す「敗者復活へ」だけが濃く表示される',
     node: (
       <ControlPanel state={adminAnswerAri} remainingSec={null} busy={false} {...noopHandlers} />
     ),
   },
   {
+    title: '操作パネル / 敗者復活動画',
+    note: 'revival-video・現在地と、次に押す「参加受付へ」が分かる',
+    node: (
+      <ControlPanel state={adminRevivalVideo} remainingSec={null} busy={false} {...noopHandlers} />
+    ),
+  },
+  {
+    title: '操作パネル / 敗者復活の参加受付',
+    note: 'revival-entry・次は問題を選んで「出題」と案内する',
+    node: (
+      <ControlPanel state={adminRevivalEntry} remainingSec={null} busy={false} {...noopHandlers} />
+    ),
+  },
+  {
     title: '操作パネル / 終了',
-    note: 'finished・「待機画面を表示」だけが押せる',
+    note: 'finished・「待機画面」と「敗者復活へ」が押せる',
     node: <ControlPanel state={adminFinished} remainingSec={null} busy={false} {...noopHandlers} />,
   },
   {
     title: '操作パネル / 送信中',
-    note: 'busy・4つ全部が押せない',
+    note: 'busy・6つ全部が押せない',
     node: <ControlPanel state={adminQuestionTwo} remainingSec={21} busy={true} {...noopHandlers} />,
   },
   {
