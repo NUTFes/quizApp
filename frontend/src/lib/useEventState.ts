@@ -23,6 +23,8 @@ import {
   phoneQuestionArunashi,
   phoneAnswerAri,
   phoneAnswerNashi,
+  phoneRevivalEntry,
+  phoneRevivalVideo,
   phoneFinished,
 } from './mock/phone/index'
 import { BASE, getAdminToken, USE_MOCK } from './config'
@@ -177,7 +179,9 @@ const VIEWER_STEP = [
   { at: 5000, mock: phoneAnswerAri },
   { at: 8000, mock: phoneQuestionArunashi },
   { at: 11000, mock: phoneAnswerNashi },
-  { at: 14000, mock: phoneFinished },
+  { at: 14000, mock: phoneRevivalVideo },
+  { at: 17000, mock: phoneRevivalEntry },
+  { at: 20000, mock: phoneFinished },
 ]
 
 export const useViewerState = () =>

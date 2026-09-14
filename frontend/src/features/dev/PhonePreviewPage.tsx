@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import testSquareA from '../../assets/dev/test-square-a.svg'
 import testSquareB from '../../assets/dev/test-square-b.svg'
+import { REVIVAL_URL } from '../../lib/config'
 import type { ViewerState } from '../../types'
 import {
   phoneAnswerAri,
@@ -14,6 +15,8 @@ import { AnswerView } from '../phone/views/AnswerView'
 import { FinishedView } from '../phone/views/FinishedView'
 import { LoadingView } from '../phone/views/LoadingView'
 import { QuestionView } from '../phone/views/QuestionView'
+import { RevivalEntryView } from '../phone/views/RevivalEntryView'
+import { RevivalVideoView } from '../phone/views/RevivalVideoView'
 import { WaitingView } from '../phone/views/WaitingView'
 import { PreviewFrame, PreviewStyles } from './parts/PreviewFrame'
 
@@ -106,6 +109,16 @@ const CASES = [
     title: '正解発表 / あるなし',
     note: 'answer',
     node: <AnswerView state={phoneAnswerNashi} />,
+  },
+  {
+    title: '敗者復活 / 動画中',
+    note: 'revival-video',
+    node: <RevivalVideoView />,
+  },
+  {
+    title: '敗者復活 / 参加受付',
+    note: 'revival-entry',
+    node: <RevivalEntryView revivalUrl={REVIVAL_URL} />,
   },
   { title: '終了', note: 'finished', node: <FinishedView /> },
   { title: '読み込み中', note: 'state が null のとき', node: <LoadingView /> },
