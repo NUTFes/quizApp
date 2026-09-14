@@ -17,3 +17,7 @@ backend/server
 # OS が作るゴミファイル
 .DS_Store
 Thumbs.db
+
+# 敗者復活の動画(CTへ scp で置く運用。.gitkeep だけは例外的にコミットする)
+backend/static/videos/*
+!backend/static/videos/.gitkeep
