@@ -32,9 +32,7 @@ function renderBody(props: SelectedQuestionProps) {
         </p>
       )
     case 'loading':
-      return (
-        <p className="py-3 pl-2 text-current-question leading-[normal]">取得中です…</p>
-      )
+      return <p className="py-3 pl-2 text-current-question leading-[normal]">取得中です…</p>
     case 'error':
       return (
         <p className="py-3 pl-2 text-current-question leading-[normal] text-red-700">

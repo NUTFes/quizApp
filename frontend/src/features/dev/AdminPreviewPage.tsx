@@ -9,6 +9,7 @@ import { ControlPanel } from '../admin/parts/ControlPanel'
 import { CurrentStatus } from '../admin/parts/CurrentStatus'
 import { ErrorBanner } from '../admin/parts/ErrorBanner'
 import { RemainingTime } from '../admin/parts/RemainingTime'
+import { SelectedQuestion } from '../admin/parts/SelectedQuestion'
 import { ShowQuestionForm } from '../admin/parts/ShowQuestionForm'
 import type { QuestionListItem } from '../../types'
 import {
@@ -234,6 +235,34 @@ const QUESTION_LIST_CASES = [
         currentQuestionId={null}
       />
     ),
+  },
+] as const
+
+// 「選択中の問題(詳細)」(#116)の取りうる状態。
+//
+// #107 の PANEL_CASES と同じく、通信もトークンも無いこの場所で全状態を並べられる。
+// 通常ケースの Question は新規に作らず、既存の adminQuestionFour(lib/mock/admin)の
+// question をそのまま使い回す(架空データの二重管理を避けるため)。
+const SELECTED_QUESTION_CASES = [
+  {
+    title: '通常',
+    note: '取得済み。選択肢・正答まで表示される',
+    node: <SelectedQuestion status="loaded" question={adminQuestionFour.question!} />,
+  },
+  {
+    title: '未選択',
+    note: '問題一覧(#109)でまだ何も選んでいない',
+    node: <SelectedQuestion status="empty" />,
+  },
+  {
+    title: '取得中',
+    note: 'GET /api/admin/questions/:id の応答待ち',
+    node: <SelectedQuestion status="loading" />,
+  },
+  {
+    title: '取得失敗',
+    note: '404 QUESTION_NOT_FOUND。一覧を更新するよう促す文言が出る',
+    node: <SelectedQuestion status="error" message={toMessage('QUESTION_NOT_FOUND')} />,
   },
 ] as const
 
@@ -567,6 +596,18 @@ function AdminPreviewPage() {
       </p>
       <div className="flex flex-col gap-10">
         {QUESTION_LIST_CASES.map((c) => (
+          <PreviewCase key={c.title} title={c.title} note={c.note} width={width.width}>
+            {c.node}
+          </PreviewCase>
+        ))}
+      </div>
+
+      <h2 className="mt-14 mb-2 text-xl font-bold">選択中の問題(詳細)(#116)</h2>
+      <p className="mb-4 text-sm text-neutral-600">
+        通信していない。「出題中の問題」(CurrentStatus)と見出しが違うことを確認する。
+      </p>
+      <div className="flex flex-col gap-10">
+        {SELECTED_QUESTION_CASES.map((c) => (
           <PreviewCase key={c.title} title={c.title} note={c.note} width={width.width}>
             {c.node}
           </PreviewCase>
