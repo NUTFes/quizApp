@@ -4,6 +4,7 @@ import { QuestionView } from './views/QuestionView'
 import { FinishedView } from './views/FinishedView'
 import { AnswerView } from './views/AnswerView'
 import { LoadingView } from './views/LoadingView'
+import { RevivalEntryView } from './views/RevivalEntryView'
 
 function MonitorPage() {
   const state = useMonitorState()
@@ -17,6 +18,8 @@ function MonitorPage() {
       return <QuestionView state={state} />
     case 'answer':
       return <AnswerView state={state} />
+    case 'revival-entry':
+      return <RevivalEntryView />
     case 'finished':
       return <FinishedView />
     default:
