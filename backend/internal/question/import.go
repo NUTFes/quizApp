@@ -93,14 +93,29 @@ func validateImport(qs []importQuestion) []RowIssue {
 
 		// --- type(ここから先は type が確定しないと判定できない) ---
 		if q.Type == "hayaoshi" {
-			// v1では未対応(フェーズ2で解放。解放後は textSegments 2要素以上を必須にする)
-			issues = append(issues, RowIssue{row, "type 'hayaoshi' はv1では未対応です(フェーズ2で解放予定)"})
-			continue // choices の件数・書式は型が決まらないと意味を持たないため次の問題へ
+			// 早押しは選択肢を持たず、explanation を正答表示に使う。
+			if len(q.Choices) != 0 {
+				issues = append(issues, RowIssue{row,
+					fmt.Sprintf("type が hayaoshi ですが choices が%d件あります(0件にしてください)", len(q.Choices))})
+			}
+			if q.CorrectChoiceID != "" {
+				issues = append(issues, RowIssue{row,
+					fmt.Sprintf("type が hayaoshi ですが correctChoiceId '%s' が指定されています(nullにしてください)", q.CorrectChoiceID)})
+			}
+			if len(q.TextSegments) == 1 {
+				issues = append(issues, RowIssue{row,
+					"type が hayaoshi ですが textSegments が1件です(2件以上にしてください)"})
+			}
+			if q.Explanation == nil || strings.TrimSpace(*q.Explanation) == "" {
+				issues = append(issues, RowIssue{row,
+					"type が hayaoshi ですが explanation が空です(正解を入力してください)"})
+			}
+			continue // 選択式問題の choices 件数・書式チェックは行わない
 		}
 		wantChoices, ok := choiceCountByType[q.Type]
 		if !ok {
 			issues = append(issues, RowIssue{row,
-				fmt.Sprintf("type '%s' は不正です(four_choice / two_choice / arunashi のいずれか)", q.Type)})
+				fmt.Sprintf("type '%s' は不正です(four_choice / two_choice / arunashi / hayaoshi のいずれか)", q.Type)})
 			continue
 		}
 

@@ -1,7 +1,7 @@
 # docs/api.md — クイズアプリ API仕様書
 
 > フロント班とバック班の契約書。この文書だけを見て両班が独立に実装できることをゴールとする。
-> 前提決定: 形式は4択/2択(○×は2択に統合)/あるなし/早押し(**早押しはv1未実装・フェーズ2**。仕様上の形だけ先に確保)・スマホは表示専用(回答APIなし)・phase遷移はすべて管理者操作・問題はスプレッドシートから同期・画像はサーバー配置をURL参照。
+> 前提決定: 形式は4択/2択(○×は2択に統合)/あるなし/早押し・スマホは表示専用(回答APIなし)・phase遷移はすべて管理者操作・問題はスプレッドシートから同期・画像はサーバー配置をURL参照。
 
 ---
 
@@ -97,13 +97,13 @@
 | --- | --- |
 | `id` | サーバー内部ID。API呼び出しで使うのはこちら |
 | `number` | 表示用のクイズ番号(司会者が口頭で指示する番号) |
-| `type` | `"four_choice"` \| `"two_choice"` \| `"arunashi"` \| `"hayaoshi"`(hayaoshiは**v1未実装**。投入時に弾く→§3.5.3) |
+| `type` | `"four_choice"` \| `"two_choice"` \| `"arunashi"` \| `"hayaoshi"` |
 | `difficulty` | `"easy"` \| `"normal"` \| `"hard"` |
-| `textSegments` | 問題文。スプシ入稿時に `/` で区切った配列。**全typeで配列に統一**(区切り不要な問題は要素1個)。形を揃えてフロントの分岐を減らす |
+| `textSegments` | 問題文。スプシ入稿時に `/` で区切った配列。**全typeで配列に統一**。hayaoshiは段階表示のため2要素以上が必須、その他は区切り不要なら要素1個でよい |
 | `imageUrl` | 問題画像。無ければ `null`。パスはサーバー上の静的ファイル |
 | `choices` | 2択なら要素2個(○×は `text` に `"○"` `"×"`)。4択なら4個。arunashiは2個(`text` は§3.5.6の書式)。**hayaoshiは `[]`**(選択肢なし・判定は人力) |
-| `correctChoiceId` | 正解の選択肢id。**管理者向けにしか出さない**(§2.2参照)。**hayaoshiのみ `null`**(正答の表示方法はフェーズ2実装時に決定) |
-| `explanation` | 正答の解説。**ほとんどの問題は `null`**(スプシの `explanation` 列が空)。解説文は正答を含みうるため、**閲覧者向けでは `question` ではなく `answer` オブジェクトに入れて配信する**(§2.2 原則3')。管理者向け(この表)では `Question` の一部として常に届く |
+| `correctChoiceId` | 正解の選択肢id。**管理者向けにしか出さない**(§2.2参照)。**hayaoshiのみ `null`**(選択肢が無く、判定は人力のため) |
+| `explanation` | 正答の解説。**hayaoshiでは正解そのものを必ず入れ、モニタの正答表示に使う**。その他の問題は解説が無ければ `null`。解説文は正答を含みうるため、**閲覧者向けでは `question` ではなく `answer` オブジェクトに入れて配信する**(§2.2 原則3')。管理者向け(この表)では `Question` の一部として常に届く |
 | `asked` | このゲーム中に出題済みか。**スプシ由来ではなくサーバーが管理する**(投入時は必ず `false`)。`show-question` で `true`、`reset` で全問 `false` に戻る。管理者の問題一覧で「もう出した問題」を潰すために使い、**`askedCount`(State)の集計元**でもある |
 
 ### State(現在の状態)— アプリの中心
@@ -162,7 +162,7 @@
 3. `difficulty` `totalSegments` は閲覧者に送らない。`question.asked` も送らない(管理者の一覧専用)
 3'. **`explanation` は `question` ではなく `answer` オブジェクトの中に入れる。** 解説文は正答を含みうるため、`correctChoiceId` とまったく同じ扱いにする。したがって question phase では `answer: null` の中に隠れ、**閲覧者向けJSONに解説のキーは現れない**。原則2と同じ仕組みなので、**隠すべき情報はすべて `answer` の中1箇所にまとまる**
 3''. **`askedCount` は閲覧者にも送る。** モニタ/スマホが「第3問」を表示するのに使う。秘密情報ではないので削らない。**フロント側で数えてはいけない**(QRから途中参加した端末・再接続した端末が別の数を表示してしまうため)
-4. **type=hayaoshi のとき、`view=phone` の `textSegments` は常に空配列**(スマホは type を見て「モニターをご覧ください」を表示する)。`view=monitor` には通常どおり表示済みセグメントを送る。手元で先に読めると早押しが成立しないため(→ docs/画面・要件.md §5)。※hayaoshi自体がフェーズ2実装
+4. **type=hayaoshi のとき、`view=phone` の `textSegments` は常に空配列**(スマホは type を見て「モニターをご覧ください」を表示する)。`view=monitor` には通常どおり表示済みセグメントを送る。手元で先に読めると早押しが成立しないため(→ docs/画面・要件.md §5)
 
 **モニタ向け実例(`view=monitor`, phase=question)**:
 
@@ -237,7 +237,7 @@
 
 `joinUrl` はキーを一定にするため届くが、敗者復活画面には表示しない。`revival-video` も `phase` 以外は同じ形。
 
-**スマホ向け(`view=phone`)**: モニタ向けから `joinUrl` を除いた形(自分がすでにそのURLにいるため)。それ以外は完全に同一。
+**スマホ向け(`view=phone`)**: モニタ向けから `joinUrl` を除いた形(自分がすでにそのURLにいるため)。ただし hayaoshi の `question.textSegments` は常に `[]` とする(原則4)。
 
 #### 2.2.1 ViewerState の定義
 
@@ -252,7 +252,7 @@
 | `askedCount` | `number` | §1と同じ。**閲覧者にも送る**(原則3''。「第3問」の表示に使う) |
 | `joinUrl` | `string` | 参加用URL。QRコードの生成元。**`view=monitor` にのみ存在し、`view=phone` には無い**。**phaseによらず常に送る**が、`revival-video` / `revival-entry` / `finished` では画面に出さない(→ `画面・要件.md` §4) |
 | `question` | `ViewerQuestion \| null` | 下記。**§1の `Question` とは別の形** |
-| `answer` | `{ "correctChoiceId": string \| null, "explanation": string \| null } \| null` | 正答と解説。**`answer` phase になるまで `null`**(原則2・3')。`correctChoiceId` は `hayaoshi` のみ `null`(扱いはフェーズ2で決定)、`explanation` は解説の無い問題で `null` |
+| `answer` | `{ "correctChoiceId": string \| null, "explanation": string \| null } \| null` | 正答と解説。**`answer` phase になるまで `null`**(原則2・3')。hayaoshiは `correctChoiceId: null` とし、必須の `explanation` に入稿した正解を表示する。その他の問題では解説が無ければ `explanation: null` |
 
 **§1 に有って ViewerState に無いもの**: `revealedSegments` / `totalSegments`(原則1により `textSegments` が既に公開分だけに削られているため、フロントが自分で切り出す必要が無い)。
 
@@ -260,7 +260,7 @@
 
 > **アンケートURLはstateに入らない。** フロントの環境変数 `VITE_SURVEY_URL` から読む(当日までURLが決まらず、決まってもアプリの再デプロイなしに差し替えたいため)。サーバーは一切関与しない。
 
-**モニタ向けとスマホ向けの差は `joinUrl` の有無だけ**なので、別々の型として全項目を書き下さず、**`ViewerState` を拡張する**:
+**モニタ向けとスマホ向けのJSONの形の差は `joinUrl` の有無だけ**なので、別々の型として全項目を書き下さず、**`ViewerState` を拡張する**。hayaoshi では同じ `textSegments: string[]` の値だけを宛先別に変える(原則4):
 
 ```ts
 type MonitorState = ViewerState & { joinUrl: string }   // view=monitor
@@ -407,7 +407,7 @@ GAS側でシートを読み、**この形に整形してから**送る。列→J
 | --- | --- | --- |
 | `Authorization` ヘッダが無い/トークン不一致 | 401 | `UNAUTHORIZED` |
 | 内容が不正(型違い・correctChoiceIdが選択肢に無い・choices数がtypeと不一致・numberの重複・arunashiの書式違反 等) | 400 | `SYNC_VALIDATION_ERROR` |
-| type が `hayaoshi`(**v1では未対応**。フェーズ2実装後に解放。解放後は `textSegments` 2要素以上=問題文に `/` 区切りがあることを必須とする) | 400 | `SYNC_VALIDATION_ERROR` |
+| type が `hayaoshi` で `choices` が空でない / `correctChoiceId` が `null` でない / `textSegments` が1要素以下 / `explanation` が空 | 400 | `SYNC_VALIDATION_ERROR` |
 | `questions` が空配列 | 400 | `INVALID_REQUEST` |
 | phase が `waiting` / `finished` 以外(本番進行中の置換は禁止。`revival-video` / `revival-entry` を含む) | 409 | `INVALID_PHASE` |
 
@@ -455,14 +455,14 @@ GAS側でシートを読み、**この形に整形してから**送る。列→J
 | 列 | 内容 | 例 |
 | --- | --- | --- |
 | number | 表示用クイズ番号 | 12 |
-| type | `four_choice` / `two_choice` / `arunashi`(`hayaoshi` はv1不可) | four_choice |
+| type | `four_choice` / `two_choice` / `arunashi` / `hayaoshi` | four_choice |
 | difficulty | `簡単` / `普通` / `難しい`(**日本語で書く**。GASが英語に変換して送る) | 難しい |
-| text | 問題文。区切りたい位置に `/` | 学園祭の来場者数は/およそ何人? |
-| choiceA〜choiceD | 選択肢文。2択はC/Dを空欄 | 1000人 |
-| correct | 正解の列名 | B |
+| text | 問題文。区切りたい位置に `/`。**hayaoshiは `/` 区切りを1つ以上必ず入れる** | 学園祭の来場者数は/およそ何人? |
+| choiceA〜choiceD | 選択肢文。2択はC/D、hayaoshiはすべて空欄 | 1000人 |
+| correct | 正解の列名。hayaoshiは空欄 | B |
 | imageUrl | 問題画像パス(任意) | /images/q5.png |
 | imageA〜imageD | 選択肢画像パス(任意) | |
-| explanation | 正答の解説(任意)。**入っている問題だけ、answer phase で画面に表示される** | |
+| explanation | 正答の解説。通常問題は任意。**hayaoshiは正解そのものを必ず入れ、answer phase のモニタに表示する** | |
 
 - 1行目はヘッダ行。GASは2行目以降を読む(`sourceRow` は実際の行番号)。
 - **difficulty は日本語で入稿し、GASが英語に変換する**(2026-08-16決定)。入稿するのは非エンジニアの運営メンバーなので、`hard` と打たせるより「難しい」を選ばせる方が表記ゆれ(`Hard` `HARD` `hard␣`)が起きにくい。一方 API・DB・フロントの内部表現は `easy` / `normal` / `hard` の1種類に統一する(§1)。**表記が2種類あるのは入り口だけ**、という切り分け。
@@ -756,6 +756,7 @@ curl -F "file=@q5.png" -H "Authorization: Bearer $ADMIN_TOKEN" \
 
 ## 変更履歴(新しい順)
 
+- 2026-09-14 第16版。**hayaoshiの問題投入を解放**した(#156)。①`choices: []` / `correctChoiceId: null` / `textSegments` 2要素以上 / `explanation` 必須を投入時に検証する ②早押しの正解は `explanation` に入稿し、answer phase のモニタに表示する ③phone向けの `textSegments` は公開済み数にかかわらず常に `[]`、monitor向けは従来どおり段階配信する
 - 2026-09-14 第15版。**敗者復活用の `revival-video` / `revival-entry` フェーズと `POST /api/admin/revival` を追加**した(#120)。①敗者復活は動画と参加受付で画面全体が2回変わるため、1フェーズ内の表示値ではなく独立した2フェーズとして表す ②通常の流れは `answer → revival-video → revival-entry → question` だが、当日の復旧を妨げないよう `revival` 自体はどのphaseからでも呼べる ③`reset` は全問題の `asked` を消して `askedCount` を0に戻すため敗者復活には使わない。専用APIはphaseだけを更新し、「第8問 → 敗者復活 → 第9問」を維持する ④敗者復活中は出題していないので問題関連項目を `null` / `0` にする一方、`askedCount` は保持する ⑤動画配信・画面・フォームURL・管理者ボタンは後続Issue #121〜#126の範囲 ⑥問題の一括投入は全問題を作り直して `asked` を消すため、`waiting` / `finished` のときだけ許可し、敗者復活中を含む本番進行中は409で拒否する
 - 2026-09-14 第14版。**§6 を「静的ファイル(画像・動画)」に改め、§6.2として動画の配信経路 `GET /videos/...` を追記**した(#121)。①敗者復活の動画配信は `/images/` の配信の作りをそのまま真似るが、**アップロードAPIは持たない**(動画は5MB上限の画像投入APIに確実に収まらないため)。**入稿はCTへの scp 固定**で、§6.1で画像について書いた「手動配置の廃止(2026-09-09)」は画像だけの話であり動画には適用されないことを明記した(そのままでは同一節内で矛盾して見えるため) ②実行環境(alpine)にMIMEタイプ定義が無く `.mp4` が拡張子で解決できないため `mime.AddExtensionType` で明示登録する必要があることを明記。登録しないとファイル内容のスニッフィングに委ねられ、動画によっては `video/mp4` と判定されず、nginx の `nosniff` と組み合わさってブラウザが再生を拒否する事故につながる
 - 2026-09-13 第13版。**画像一覧API `GET /api/admin/images` を §3.7 として新設**した(#104)。①管理者画面から、画像のURL・ファイルサイズ・更新日時を確認できるようにした。同名アップロードによる意図しない上書きを防ぎ、「すでに投入済みか」を当日サーバーへ入らず確認するため ②対象は `GET /images/...` の配信元である `./static/images`。#103 で `STATIC_DIR` 環境変数は廃止され、画像の配信・投入・存在チェックが `platform.StaticDir` の同じ場所を見る設計に一本化されている ③`.png` / `.jpg` / `.jpeg` のみを `imageUrl` 昇順で返す。画像が無い場合は `{"images":[]}` とし、`.gitkeep`・ディレクトリ・その他の拡張子は含めない ④認証は `ADMIN_TOKEN` のみで、`IMPORT_TOKEN` は通さない。SSE・削除・ページング・サムネイル生成は行わない

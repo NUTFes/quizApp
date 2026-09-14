@@ -53,6 +53,20 @@ func validArunashi(sourceRow, number int) importQuestion {
 	}
 }
 
+func validHayaoshi(sourceRow, number int) importQuestion {
+	explanation := "架空の正解"
+	return importQuestion{
+		SourceRow:       sourceRow,
+		Number:          number,
+		Type:            "hayaoshi",
+		Difficulty:      "normal",
+		TextSegments:    []string{"架空の早押し問題の", "答えは何?"},
+		Choices:         []Choice{},
+		CorrectChoiceID: "",
+		Explanation:     &explanation,
+	}
+}
+
 // reason に部分文字列 want を含む issue が sourceRow 行に対して出ているか
 func hasIssue(issues []RowIssue, sourceRow int, want string) bool {
 	for _, i := range issues {
@@ -74,12 +88,38 @@ func TestValidateImport_正常系はエラーなし(t *testing.T) {
 	}
 }
 
-func TestValidateImport_hayaoshiはv1未対応(t *testing.T) {
-	q := validFourChoice(5, 1)
-	q.Type = "hayaoshi"
+func TestValidateImport_hayaoshiの形式違反(t *testing.T) {
+	q := validHayaoshi(5, 1)
+	q.Choices = []Choice{{ID: "A", Text: "選択肢は持たない"}}
+	q.CorrectChoiceID = "A"
+	q.TextSegments = []string{"区切りがない問題文"}
+	q.Explanation = nil
+
 	issues := validateImport([]importQuestion{q})
-	if !hasIssue(issues, 5, "hayaoshi") {
-		t.Fatalf("hayaoshi のエラーが出ていない: %+v", issues)
+
+	for _, want := range []string{"choices が1件", "correctChoiceId 'A'", "textSegments が1件", "explanation が空"} {
+		if !hasIssue(issues, 5, want) {
+			t.Errorf("5行目に %q が出ていない: %+v", want, issues)
+		}
+	}
+}
+
+func TestValidateImport_正しいhayaoshiはエラーなし(t *testing.T) {
+	issues := validateImport([]importQuestion{validHayaoshi(5, 1)})
+	if len(issues) != 0 {
+		t.Fatalf("エラーは0件のはずが %d 件: %+v", len(issues), issues)
+	}
+}
+
+func TestQuestionFromImport_correctChoiceIdの空文字をnilで保存する(t *testing.T) {
+	hayaoshi := questionFromImport(validHayaoshi(5, 1))
+	if hayaoshi.CorrectChoiceID != nil {
+		t.Errorf("hayaoshi correctChoiceId=%q, want nil", *hayaoshi.CorrectChoiceID)
+	}
+
+	fourChoice := questionFromImport(validFourChoice(6, 2))
+	if fourChoice.CorrectChoiceID == nil || *fourChoice.CorrectChoiceID != "A" {
+		t.Errorf("four_choice correctChoiceId=%v, want A", fourChoice.CorrectChoiceID)
 	}
 }
 
@@ -179,15 +219,15 @@ func TestValidateImport_typeが不正でも共通項目のエラーが同時に�
 	}
 }
 
-// hayaoshi の行でも同じ。v1未対応のエラーだけで打ち切らない。
+// hayaoshi の行でも、型別項目と共通項目のエラーを同時に返す。
 func TestValidateImport_hayaoshiでも共通項目のエラーが同時に出る(t *testing.T) {
-	q := validFourChoice(2, 5)
-	q.Type = "hayaoshi"
+	q := validHayaoshi(2, 5)
 	q.Difficulty = "むずかしい"
+	q.TextSegments = []string{"区切りがない問題文"}
 
 	issues := validateImport([]importQuestion{q})
 
-	for _, want := range []string{"hayaoshi", "difficulty 'むずかしい' は不正です"} {
+	for _, want := range []string{"textSegments が1件", "difficulty 'むずかしい' は不正です"} {
 		if !hasIssue(issues, 2, want) {
 			t.Errorf("2行目に %q が出ていない: %+v", want, issues)
 		}

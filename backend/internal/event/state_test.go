@@ -68,7 +68,7 @@ func TestBuildViewerStateForRevivalPhase(t *testing.T) {
 				RevealedSegments:  1,
 			}
 
-			got := buildViewerState(es, testQuestion, 8)
+			got := buildViewerState(es, testQuestion, 8, "phone")
 
 			if got.Phase != phase {
 				t.Errorf("phase=%q, want %q", got.Phase, phase)
@@ -80,6 +80,84 @@ func TestBuildViewerStateForRevivalPhase(t *testing.T) {
 				t.Errorf("問題・正答関連の値がnilではない: %+v", got)
 			}
 		})
+	}
+}
+
+func TestBuildViewerStateHayaoshiの問題文を宛先別に出し分ける(t *testing.T) {
+	testQuestion := &question.Question{
+		Number:       3,
+		Type:         "hayaoshi",
+		TextSegments: []string{"架空の", "早押し", "問題"},
+		Choices:      []question.Choice{},
+	}
+	es := EventState{
+		Phase:            "question",
+		TimeLimitSec:     30,
+		RevealedSegments: 2,
+	}
+
+	tests := []struct {
+		view string
+		want []string
+	}{
+		{view: "phone", want: []string{}},
+		{view: "monitor", want: []string{"架空の", "早押し"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.view, func(t *testing.T) {
+			got := buildViewerState(es, testQuestion, 3, tt.view)
+			if got.Question == nil {
+				t.Fatal("question がnilになっている")
+			}
+			if len(got.Question.TextSegments) != len(tt.want) {
+				t.Fatalf("textSegments=%v, want %v", got.Question.TextSegments, tt.want)
+			}
+			for i := range tt.want {
+				if got.Question.TextSegments[i] != tt.want[i] {
+					t.Errorf("textSegments[%d]=%q, want %q", i, got.Question.TextSegments[i], tt.want[i])
+				}
+			}
+		})
+	}
+}
+
+func TestBuildPayloadsHayaoshiの問題文をSSEの宛先別に出し分ける(t *testing.T) {
+	testQuestion := &question.Question{
+		Number:       3,
+		Type:         "hayaoshi",
+		TextSegments: []string{"架空の", "早押し", "問題"},
+		Choices:      []question.Choice{},
+	}
+	snap := snapshot{
+		es: EventState{
+			Phase:            "question",
+			TimeLimitSec:     30,
+			RevealedSegments: 2,
+		},
+		q:          testQuestion,
+		askedCount: 3,
+	}
+
+	_, monitorJSON, phoneJSON, err := buildPayloads(snap, "https://example.invalid/join")
+	if err != nil {
+		t.Fatalf("payloadを作成できない: %v", err)
+	}
+
+	var monitorState MonitorState
+	if err := json.Unmarshal(monitorJSON, &monitorState); err != nil {
+		t.Fatalf("monitor payloadを読めない: %v", err)
+	}
+	var phoneState ViewerState
+	if err := json.Unmarshal(phoneJSON, &phoneState); err != nil {
+		t.Fatalf("phone payloadを読めない: %v", err)
+	}
+
+	if monitorState.Question == nil || len(monitorState.Question.TextSegments) != 2 {
+		t.Errorf("monitor textSegments=%v, want 2件", monitorState.Question)
+	}
+	if phoneState.Question == nil || len(phoneState.Question.TextSegments) != 0 {
+		t.Errorf("phone textSegments=%v, want []", phoneState.Question)
 	}
 }
 
