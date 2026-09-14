@@ -27,6 +27,7 @@ services:                            # ① 並べる箱の一覧。名前がそ�
       - VITE_API_URL=
       - VITE_USE_MOCK=${VITE_USE_MOCK:-false}
       - VITE_SURVEY_URL=${VITE_SURVEY_URL:-https://example.com/survey}   # 動作確認用の仮
+      - VITE_REVIVAL_URL=${VITE_REVIVAL_URL:-https://example.com/revival}   # 動作確認用の仮
 
   backend:
     build: ./backend                 # ② backend/Dockerfile(air入り)で自作。CMDはair起動

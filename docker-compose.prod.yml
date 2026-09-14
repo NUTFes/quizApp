@@ -20,6 +20,7 @@ services:
       dockerfile: Dockerfile.prod
       args:
         - VITE_SURVEY_URL=${VITE_SURVEY_URL}
+        - VITE_REVIVAL_URL=${VITE_REVIVAL_URL}
     ports:
       - "8080:80"              # CTの8080番だけを外に開ける。Cloudflareはここを向く
     environment:
@@ -50,12 +51,13 @@ services:
       - GIN_MODE=release       # 開発用のデバッグログを止める
       - TZ=Asia/Tokyo
     volumes:
-      # 問題の画像。JSON の imageUrl に書いた /images/xxx.png がここから配信される
-      # (backend/internal/platform/router.go の r.Static)。
+      # 問題の画像と、敗者復活の動画(#121)。どちらもここから配信される
+      # (backend/internal/platform/router.go の r.Static("/images", ...) / r.Static("/videos", ...))。
       #
-      # ★ イメージに焼かずボリュームで渡す。COPY にすると画像を1枚足すたびに
+      # ★ イメージに焼かずボリュームで渡す。COPY にすると1枚足すたびに
       #   backend の再ビルドが要るうえ、up --build のたびに手で置いた分が消える。
-      #   CT では /opt/quizApp/backend/static/images/ に scp で置く。
+      #   CT では /opt/quizApp/backend/static/images/ と .../videos/ にそれぞれ scp で置く。
+      #   動画はアップロードAPIが無い(scpのみ。images/ のような投入APIは作らない)。
       - ./backend/static:/app/static
     ulimits:
       nofile:

@@ -23,6 +23,8 @@ const PHASE_LABEL: Record<Phase, string> = {
   question: '出題中',
   answer: '正答発表',
   finished: '終了',
+  'revival-video': '敗者復活(動画)',
+  'revival-entry': '敗者復活(受付)',
 }
 
 // 進行さボタンのテキストの対応表

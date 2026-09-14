@@ -6,21 +6,30 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAdminState } from '../../lib/useEventState'
 import { useRemainingTime } from '../../lib/useRemainingTime'
-import type { AdminState, Question, QuestionListItem } from '../../types'
+import type {
+  AdminState,
+  ImportResult,
+  Question,
+  QuestionImport,
+  QuestionListItem,
+} from '../../types'
+import type { RowIssue } from '../../types/rowIssue'
 import {
   advanceText,
   ApiError,
   getQuestionById,
   getQuestions,
+  putQuestions,
   reset,
   showAnswer,
   showQuestion,
 } from '../../lib/api'
-import { NETWORK_ERROR_MESSAGE, toMessage } from './errorMessages'
+import { NETWORK_ERROR_MESSAGE, toImportMessage, toMessage } from './errorMessages'
 import { ACTION_LABEL, ActionLabel } from './labels'
 import { ControlPanel } from './parts/ControlPanel'
 import { CurrentStatus } from './parts/CurrentStatus'
 import { ErrorBanner, OperationFailure } from './parts/ErrorBanner'
+import { ImportPanel } from './parts/ImportPanel'
 import { QuestionList } from './parts/QuestionList'
 import { SelectedQuestion, type SelectedQuestionProps } from './parts/SelectedQuestion'
 import { ShowQuestionForm } from './parts/ShowQuestionForm'
@@ -60,6 +69,15 @@ export function OperationPanel({ onAuthExpired }: Props) {
     result: { status: 'loaded'; question: Question } | { status: 'error'; message: string }
   } | null>(null)
 
+  // 問題データの投入(#110)。busy / inFlight は他の操作(showQuestion等)と共有する。
+  // 別系統にすると、投入中に出題を押せてしまい(逆に出題中に投入を押せてしまい)、
+  // 全置換でidが振り直された直後の出題が404になる・進行中の投入が409になる、
+  // といった競合を起こす
+  const [importInput, setImportInput] = useState('')
+  const [importResult, setImportResult] = useState<ImportResult | null>(null)
+  const [importError, setImportError] = useState<string | null>(null)
+  const [importIssues, setImportIssues] = useState<RowIssue[]>([])
+
   // 呼び出し側がその場で作った関数を渡しても、依存配列に入れずに済むようにする
   // (lib/useEventState.ts の onUnauthorizedRef と同じ理由)
   const onAuthExpiredRef = useRef(onAuthExpired)
@@ -67,12 +85,23 @@ export function OperationPanel({ onAuthExpired }: Props) {
     onAuthExpiredRef.current = onAuthExpired
   })
 
-  // 問題一覧の取得。showQuestion/reset は asked を書き換えるので、成功後にも呼び直す
-  // (呼ばないと、出題した/リセットした直後の一覧が古い asked のまま表示される)
+  // 直近に発行した refreshQuestions の世代。古い応答が後から返ってきても
+  // 上書きさせないために使う(→ lib/useEventState.ts の revision と同じ考え方)。
+  // 特に投入(#110)は全置換で id が丸ごと変わるため、投入前に発行した古いGETが
+  // 投入後の新しい一覧を、存在しないidを含む古い一覧で上書きすると事故になる
+  const questionsRequestId = useRef(0)
+
+  // 問題一覧の取得。showQuestion/reset は asked を書き換え、投入は全置換するので、
+  // 成功後にも呼び直す(呼ばないと一覧が古いまま表示される)
   const refreshQuestions = useCallback(() => {
-    getQuestions()
-      .then(({ questions }) => setQuestions(questions))
+    const requestId = ++questionsRequestId.current
+    return getQuestions()
+      .then(({ questions }) => {
+        if (requestId !== questionsRequestId.current) return // 後から発行された取得より古い応答は捨てる
+        setQuestions(questions)
+      })
       .catch((e) => {
+        if (requestId !== questionsRequestId.current) return
         if (e instanceof ApiError && e.status === 401) {
           onAuthExpiredRef.current()
           return
@@ -165,6 +194,50 @@ export function OperationPanel({ onAuthExpired }: Props) {
       setBusy(false)
     }
   }
+
+  // 問題データの投入(#110)。件数・行番号つきの詳細を画面に残す必要があり、
+  // 「失敗時にだけ failure を出す」共通処理(run)とは形が違うので専用に書く。
+  // ただし排他ロック(inFlight/busy)は run と共有する(上のコメント参照)
+  const handleImport = async (questionsToImport: QuestionImport[]) => {
+    if (inFlight.current) return
+    inFlight.current = true
+    setBusy(true)
+    setImportError(null)
+    setImportIssues([])
+    try {
+      const imported = await putQuestions(questionsToImport)
+      setImportResult(imported)
+      // 全置換で id が採番し直されるので、取り直す前に古い一覧をすぐ無効化する。
+      // (残したままだと、再取得が終わる前や失敗したときに、旧idの問題を選択・出題できてしまい、
+      //  もう存在しないidを show-question に送って 404 になる)
+      setQuestions(null)
+      setSelectedId(null)
+      refreshQuestions() // 問題一覧を取り直す
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onAuthExpired()
+        return
+      }
+      // importResult はここでは消さない。全置換は失敗時ノーオペなので、
+      // 直前の成功結果(最終投入日時・件数)は今も有効な情報のまま
+      // (→ API仕様書 §3.5「管理者画面には最終投入日時と件数も表示する」)
+      //
+      // ここでは toImportMessage(code) の結果だけを持つ(「〇〇に失敗しました」の
+      // 組み立ては表示側の ImportPanel に任せる。ErrorBanner と同じ分担)
+      if (err instanceof ApiError) {
+        setImportError(toImportMessage(err.code))
+        // 不正な行は details にまとめて入っている。
+        // 1件ずつ直して送り直さずに済むよう、返ってきた全件をそのまま並べる(→ API仕様書 §3.5.3)
+        setImportIssues(err.details)
+      } else {
+        setImportError(NETWORK_ERROR_MESSAGE)
+      }
+    } finally {
+      inFlight.current = false
+      setBusy(false)
+    }
+  }
+
   const remainingSec =
     state.phase === 'question' && state.timeLimitSec !== null ? remainingTime : null
   // ShowQuestionForm は id ではなく QuestionListItem そのものを欲しがる(問題文・出題済みの警告表示に使うため)
@@ -211,6 +284,16 @@ export function OperationPanel({ onAuthExpired }: Props) {
         }
       />
       <ErrorBanner failure={failure} onDismiss={() => setFailure(null)} />
+      <ImportPanel
+        phase={state.phase}
+        input={importInput}
+        busy={busy}
+        result={importResult}
+        error={importError}
+        issues={importIssues}
+        onInputChange={setImportInput}
+        onSubmit={(questionsToImport) => void handleImport(questionsToImport)}
+      />
       {/*ここからは、以降のイシューで足していく */}
     </div>
   )
