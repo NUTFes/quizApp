@@ -307,7 +307,12 @@ const PREVIEW_SELECTED: QuestionListItem = {
 const PREVIEW_FAILED_AT = new Date('2026-09-13T13:05:12+09:00')
 
 // ボタンを押しても何もしない。CONTROL_CASES より上に書く(const は宣言より前で使えない)
-const noopHandlers = { onAdvanceText: noop, onShowAnswer: noop, onReset: noop }
+const noopHandlers = {
+  onAdvanceText: noop,
+  onShowAnswer: noop,
+  onRevival: noop,
+  onReset: noop,
+}
 
 // 「進行操作(#108)」のパネル群の取りうる状態。
 //
