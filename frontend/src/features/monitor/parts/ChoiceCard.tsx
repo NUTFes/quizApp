@@ -38,27 +38,32 @@ export function ChoiceCard({ choice, isCorrect = false, type }: Props) {
   if (type === 'two_choice') {
     // 選択肢画像が入稿されていればそれを出し、無ければ ○× の既定画像にフォールバックする
     return (
-      <div className={`${cardStyle} flex flex-col items-center px-10`}>
+      <div className={`${cardStyle} flex items-center justify-center px-10`}>
         <CorrectBadge isVisible={isCorrect} />
-        <img
-          src={choice.imageUrl ?? (choice.id === 'A' ? maru : batsu)}
-          alt={choice.imageUrl !== null ? choice.text : choice.id === 'A' ? '○' : '×'}
-          className="mt-36 size-[200px] object-contain"
-        />
-        <p className="mt-12 text-p-area-label">{choice.id === 'A' ? '左エリア' : '右エリア'}</p>
+        <div className="flex flex-col items-center gap-12">
+          <img
+            src={choice.imageUrl ?? (choice.id === 'A' ? maru : batsu)}
+            alt={choice.imageUrl !== null ? choice.text : choice.id === 'A' ? '○' : '×'}
+            className="size-[200px] object-contain"
+          />
+          <p className="text-p-area-label">{choice.id === 'A' ? '左エリア' : '右エリア'}</p>
+        </div>
       </div>
     )
   }
 
   return (
     <div className={`${cardStyle} flex items-center gap-10 px-10`}>
-      <div className="flex h-full w-[120px] shrink-0 flex-col justify-between pt-6 pb-[68px]">
-        <CorrectBadge isVisible={isCorrect} isStatic />
+      <div className="flex h-full w-[120px] shrink-0 flex-col items-center">
+        <div className="flex flex-1 items-center justify-center">
+          <CorrectBadge isVisible={isCorrect} className="" />
+        </div>
         <p
           className={`flex size-[120px] items-center justify-center rounded-[18px] text-p-choice-id shadow-[0_10px_14px_0_rgba(25,32,133,0.1)] ${choiceIdStyle}`}
         >
           {choice.id}
         </p>
+        <div className="flex-1" />
       </div>
       <p className="min-w-0 flex-1 text-p-choice-body text-brand">{choice.text}</p>
     </div>
@@ -67,13 +72,13 @@ export function ChoiceCard({ choice, isCorrect = false, type }: Props) {
 
 type CorrectBadgeProps = {
   isVisible: boolean
-  isStatic?: boolean
+  className?: string
 }
 
-function CorrectBadge({ isVisible, isStatic = false }: CorrectBadgeProps) {
+function CorrectBadge({ isVisible, className = 'absolute top-6 left-10' }: CorrectBadgeProps) {
   return (
     <span
-      className={`${isStatic ? '' : 'absolute top-6 left-10'} flex h-8 w-15 items-center justify-center rounded-[10px] bg-live text-p-correct-label text-brand shadow-[0_6px_8px_0_rgba(25,32,133,0.08)] ${
+      className={`${className} flex h-8 w-15 items-center justify-center rounded-[10px] bg-live text-p-correct-label text-brand shadow-[0_6px_8px_0_rgba(25,32,133,0.08)] ${
         isVisible ? 'visible' : 'invisible'
       }`}
     >
