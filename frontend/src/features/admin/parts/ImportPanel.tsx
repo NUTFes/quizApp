@@ -7,6 +7,8 @@ import { ConfirmDialog } from './ConfirmDialog'
 type Props = {
   phase: Phase
   input: string
+  // 他の進行操作(出題・リセット等)と共有のロック。この投入自体が送信中とは限らない
+  // (→ OperationPanel の inFlight/busy 参照)
   busy: boolean
   // 直近の投入結果。新しく送信するまで、成功/失敗どちらの表示も残しておく
   result: ImportResult | null
@@ -117,7 +119,9 @@ export function ImportPanel({
         disabled={locked}
         className="mt-4 rounded-xl bg-brand px-6 py-3 text-admin-func-label text-white disabled:cursor-not-allowed disabled:opacity-40"
       >
-        {busy ? '取り込み中…' : '取り込む'}
+        {/* busy は他の進行操作(出題・リセット等)と共有のロックなので、
+            必ずしも「取り込み中」とは限らない。汎用的な文言にしておく */}
+        {busy ? '送信中…' : '取り込む'}
       </button>
 
       {result != null && (

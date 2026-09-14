@@ -1,5 +1,7 @@
 import { ReactNode, useState } from 'react'
 import { Link } from 'react-router-dom'
+import testSquareA from '../../assets/dev/test-square-a.svg'
+import testSquareB from '../../assets/dev/test-square-b.svg'
 import { CheckingView, UnreachableView } from '../admin/AdminPage'
 import { LoginForm } from '../admin/LoginView'
 import { NETWORK_ERROR_MESSAGE, toImportMessage, toMessage } from '../admin/errorMessages'
@@ -10,6 +12,7 @@ import { CurrentStatus } from '../admin/parts/CurrentStatus'
 import { ErrorBanner } from '../admin/parts/ErrorBanner'
 import { ImportPanel } from '../admin/parts/ImportPanel'
 import { RemainingTime } from '../admin/parts/RemainingTime'
+import { SelectedQuestion } from '../admin/parts/SelectedQuestion'
 import { ShowQuestionForm } from '../admin/parts/ShowQuestionForm'
 import type { ImportResult, QuestionListItem } from '../../types'
 import type { RowIssue } from '../../types/rowIssue'
@@ -235,6 +238,54 @@ const QUESTION_LIST_CASES = [
         onSelect={() => {}}
         currentQuestionId={null}
       />
+    ),
+  },
+] as const
+
+// 「選択中の問題(詳細)」(#116)の取りうる状態。
+//
+// #107 の PANEL_CASES と同じく、通信もトークンも無いこの場所で全状態を並べられる。
+// 通常ケースの Question は新規に作らず、既存の adminQuestionFour(lib/mock/admin)の
+// question をそのまま使い回す(架空データの二重管理を避けるため)。
+// 画像ありケースだけは、他のdevプレビュー(MonitorPreviewPage等)と同じく
+// assets/dev/ の架空画像で imageUrl を差し替える(サーバーが無い場所で画像表示を確認するため)。
+const SELECTED_QUESTION_CASES = [
+  {
+    title: '通常',
+    note: '取得済み。選択肢・正答まで表示される。問題文の区切りが番号付きで並ぶ',
+    node: <SelectedQuestion status="loaded" question={adminQuestionFour.question!} />,
+  },
+  {
+    title: '通常 / 画像あり',
+    note: '問題画像・選択肢画像が両方ある場合。一覧(#109)には出ない実体をここで確認する',
+    node: (
+      <SelectedQuestion
+        status="loaded"
+        question={{
+          ...adminQuestionFour.question!,
+          imageUrl: testSquareA,
+          choices: adminQuestionFour.question!.choices.map((c, i) =>
+            i === 0 ? { ...c, imageUrl: testSquareB } : c,
+          ),
+        }}
+      />
+    ),
+  },
+  {
+    title: '未選択',
+    note: '問題一覧(#109)でまだ何も選んでいない',
+    node: <SelectedQuestion status="empty" />,
+  },
+  {
+    title: '取得中',
+    note: 'GET /api/admin/questions/:id の応答待ち',
+    node: <SelectedQuestion status="loading" />,
+  },
+  {
+    title: '取得失敗',
+    note: '404 QUESTION_NOT_FOUND。「もう一度取得する」ボタンで再試行できる',
+    node: (
+      <SelectedQuestion status="error" message={toMessage('QUESTION_NOT_FOUND')} onRetry={noop} />
     ),
   },
 ] as const
@@ -794,6 +845,18 @@ function AdminPreviewPage() {
       </p>
       <div className="flex flex-col gap-10">
         {QUESTION_LIST_CASES.map((c) => (
+          <PreviewCase key={c.title} title={c.title} note={c.note} width={width.width}>
+            {c.node}
+          </PreviewCase>
+        ))}
+      </div>
+
+      <h2 className="mt-14 mb-2 text-xl font-bold">選択中の問題(詳細)(#116)</h2>
+      <p className="mb-4 text-sm text-neutral-600">
+        通信していない。「出題中の問題」(CurrentStatus)と見出しが違うことを確認する。
+      </p>
+      <div className="flex flex-col gap-10">
+        {SELECTED_QUESTION_CASES.map((c) => (
           <PreviewCase key={c.title} title={c.title} note={c.note} width={width.width}>
             {c.node}
           </PreviewCase>
