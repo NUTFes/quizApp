@@ -21,7 +21,7 @@ export function HayaoshiView({ state, showAnswer = false }: HayaoshiViewProps) {
     <MonitorLayout state={state} questionType="hayaoshi">
       <div
         className={`grid min-h-0 flex-1 gap-12 px-12 py-12 ${
-          showAnswer ? 'grid-rows-[461px_339px]' : 'grid-rows-1'
+          showAnswer ? 'grid-rows-[461fr_339fr]' : 'grid-rows-1'
         }`}
       >
         <section className="flex min-h-0 flex-col overflow-hidden rounded-[28px] border-2 border-border-soft bg-surface pt-4 pr-9 pb-9 pl-9 shadow-[0_10px_28px_0_rgba(25,32,133,0.1)]">
