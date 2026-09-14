@@ -10,6 +10,9 @@ const VALID_PHASES = [
   'revival-video',
   'revival-entry',
 ] as const
+
+const NO_QUESTION_PHASES = ['answer', 'finished', 'revival-video', 'revival-entry'] as const
+
 const VALID_QUESTION_TYPES = ['four_choice', 'two_choice', 'arunashi', 'hayaoshi'] as const
 
 const EXPECTED_CHOICE_COUNTS: Record<string, number> = {
@@ -68,7 +71,7 @@ export function assertStateContract(
   // 2. phase との整合
   // -------------------------------------------------------------
 
-  if (state.phase === 'waiting' || state.phase === 'finished') {
+  if (NO_QUESTION_PHASES.includes(state.phase as (typeof NO_QUESTION_PHASES)[number])) {
     if (state.question !== null && state.question !== undefined) {
       errors.push(`question must be null when phase is "${state.phase}".`)
     }
