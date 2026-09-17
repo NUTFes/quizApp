@@ -21,11 +21,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// StaticDir は画像などの静的ファイルの置き場所。
+// StaticDir は画像・動画などの静的ファイルの置き場所。
 //
 // ★ 環境変数で変えられるようにはしない。画像の「配信」(このファイル)・
-// 「投入」(internal/image)・「問題投入時の存在チェック」(internal/question)の
-// 3箇所が必ず同じ場所を指す必要があり、1箇所だけ別の値を読むと
+// 「投入」(internal/image, internal/video)・「問題投入時の存在チェック」
+// (internal/question)が必ず同じ場所を指す必要があり、1箇所だけ別の値を読むと
 // 「アップロードは 200 なのに /images/... が 404」になる(PR #113 のレビューで判明)。
 // 仕様書にも別の場所を使う要件は無い。
 //
@@ -57,7 +57,7 @@ func NewRouter(registers ...RegisterFunc) *gin.Engine {
 	r.Static("/images", filepath.Join(StaticDir, "images"))
 
 	// 敗者復活の動画を配信する(認証なし)。Issue #121。
-	// 投入経路は無い(CTへ scp で置く運用)。配信の作りだけ /images と同一にする。
+	// POST /api/admin/videos の保存先と同じ場所を配信する。
 	//
 	// ★ 本番の実行イメージ(alpine、Dockerfile.prod)には /etc/mime.types が無く、
 	// Goの組み込みMIMEテーブルにも .mp4 が無い。登録しないと拡張子では解決できず、
