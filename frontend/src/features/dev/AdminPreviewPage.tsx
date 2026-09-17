@@ -4,7 +4,12 @@ import testSquareA from '../../assets/dev/test-square-a.svg'
 import testSquareB from '../../assets/dev/test-square-b.svg'
 import { CheckingView, UnreachableView } from '../admin/AdminPage'
 import { LoginForm } from '../admin/LoginView'
-import { NETWORK_ERROR_MESSAGE, toImportMessage, toMessage } from '../admin/errorMessages'
+import {
+  NETWORK_ERROR_MESSAGE,
+  toImportMessage,
+  toMessage,
+  toVideoMessage,
+} from '../admin/errorMessages'
 import { ACTION_LABEL } from '../admin/labels'
 import { ConfirmDialogCard } from '../admin/parts/ConfirmDialog'
 import { ControlPanel } from '../admin/parts/ControlPanel'
@@ -26,6 +31,8 @@ import {
 } from '../../lib/mock/admin/index'
 import { DEV_QUESTION_LIST } from '../admin/parts/__devPreviewData'
 import { QuestionList } from '../admin/parts/QuestionList'
+import { RevivalVideoPanel } from '../admin/parts/RevivalVideoPanel'
+import { ApiError, uploadVideo } from '../../lib/api'
 
 // 管理者画面の全パターン確認用ページ（開発時のみ / パス: /dev/admin）
 //
@@ -836,6 +843,57 @@ const IMAGE_PANEL_CASES = [
   },
 ] as const
 
+// 実際のAPIまでつないだ開発用プレビュー。リポジトリにダミー動画を置かず、
+// 手元で用意した架空のMP4を選んで投入経路を確認できる。
+function RevivalVideoPreview() {
+  const [file, setFile] = useState<File | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [videoUrl, setVideoUrl] = useState<string | null>(null)
+
+  const handleUpload = async () => {
+    if (busy || file === null) return
+    setBusy(true)
+    setConfirming(false)
+    setError(null)
+    try {
+      const result = await uploadVideo(file)
+      setVideoUrl(result.videoUrl)
+    } catch (err) {
+      setError(err instanceof ApiError ? toVideoMessage(err) : NETWORK_ERROR_MESSAGE)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <RevivalVideoPanel
+      file={file}
+      busy={busy}
+      disabled={busy}
+      confirming={confirming}
+      error={error}
+      videoUrl={videoUrl}
+      onFileChange={(nextFile) => {
+        setFile(nextFile)
+        setError(null)
+      }}
+      onSubmit={() => setConfirming(true)}
+      onConfirm={() => void handleUpload()}
+      onCancel={() => setConfirming(false)}
+    />
+  )
+}
+
+const REVIVAL_VIDEO_CASES = [
+  {
+    title: '敗者復活動画の投入 / API接続あり',
+    note: '手元のダミーMP4で選択・確認・送信・配信リンクを確認できる',
+    node: <RevivalVideoPreview />,
+  },
+] as const
+
 function AdminPreviewPage() {
   const [width, setWidth] = useState<(typeof WIDTHS)[number]>(WIDTHS[0])
 
@@ -945,6 +1003,18 @@ function AdminPreviewPage() {
       </p>
       <div className="flex flex-col gap-10">
         {IMAGE_PANEL_CASES.map((c) => (
+          <PreviewCase key={c.title} title={c.title} note={c.note} width={width.width}>
+            {c.node}
+          </PreviewCase>
+        ))}
+      </div>
+
+      <h2 className="mt-14 mb-2 text-xl font-bold">敗者復活動画の投入(#158)</h2>
+      <p className="mb-4 text-sm text-neutral-600">
+        手元のダミーMP4を選ぶと、確認ポップアップを経て実際の投入APIへ送信する。
+      </p>
+      <div className="flex flex-col gap-10">
+        {REVIVAL_VIDEO_CASES.map((c) => (
           <PreviewCase key={c.title} title={c.title} note={c.note} width={width.width}>
             {c.node}
           </PreviewCase>
