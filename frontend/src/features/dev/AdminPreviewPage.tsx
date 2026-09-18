@@ -31,8 +31,9 @@ import {
 } from '../../lib/mock/admin/index'
 import { DEV_QUESTION_LIST } from '../admin/parts/__devPreviewData'
 import { QuestionList } from '../admin/parts/QuestionList'
-import { RevivalVideoPanel } from '../admin/parts/RevivalVideoPanel'
 import { ApiError, uploadVideo } from '../../lib/api'
+import { RevivalVideoPanel } from '../admin/parts/RevivalVideoPanel'
+import { ScreenPreviewPanel } from '../admin/parts/ScreenPreviewPanel'
 
 // 管理者画面の全パターン確認用ページ（開発時のみ / パス: /dev/admin）
 //
@@ -894,6 +895,33 @@ const REVIVAL_VIDEO_CASES = [
   },
 ] as const
 
+// 「画面プレビュー(#111)」は AdminState を公開用の形まで削り、モニタ・スマホ本体の
+// Viewへ渡す。同じ4 phaseを両方並べることで、未公開文や正答が漏れていないかも目で確認する。
+const SCREEN_PREVIEW_CASES = [
+  {
+    title: '待機中',
+    note: 'waiting・モニタとスマホの待機画面',
+    state: adminWaiting,
+  },
+  {
+    title: '出題中',
+    note: 'question・3区切り中2区切りだけ公開。正答と解説は表示しない',
+    state: adminQuestionTwo,
+  },
+  {
+    title: '正解発表',
+    note: 'answer・正答と解説を表示する',
+    state: adminAnswerAri,
+  },
+  {
+    title: '終了',
+    note: 'finished・問題情報を表示しない',
+    state: adminFinished,
+  },
+] as const
+
+const PREVIEW_JOIN_URL = 'https://example.com/quiz'
+
 function AdminPreviewPage() {
   const [width, setWidth] = useState<(typeof WIDTHS)[number]>(WIDTHS[0])
 
@@ -945,6 +973,18 @@ function AdminPreviewPage() {
         {PANEL_CASES.map((c) => (
           <PreviewCase key={c.title} title={c.title} note={c.note} width={width.width}>
             {c.node}
+          </PreviewCase>
+        ))}
+      </div>
+
+      <h2 className="mt-14 mb-2 text-xl font-bold">モニタ・スマホの画面プレビュー(#111)</h2>
+      <p className="mb-4 text-sm text-neutral-600">
+        通信していない。AdminStateを公開用の型へ削ってから、本体と同じViewで描画している。
+      </p>
+      <div className="flex flex-col gap-10">
+        {SCREEN_PREVIEW_CASES.map((c) => (
+          <PreviewCase key={c.title} title={c.title} note={c.note} width={width.width}>
+            <ScreenPreviewPanel state={c.state} joinUrl={PREVIEW_JOIN_URL} />
           </PreviewCase>
         ))}
       </div>
