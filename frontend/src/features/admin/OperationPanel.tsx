@@ -6,6 +6,7 @@
 //
 // ⚠️ ImagePanel(#105)だけこの原則の例外。内部でAPIを直接呼ぶ(→ ImagePanel.tsx 冒頭のコメント)。
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { BASE } from '../../lib/config'
 import { useAdminState } from '../../lib/useEventState'
 import { useRemainingTime } from '../../lib/useRemainingTime'
 import type {
@@ -49,6 +50,8 @@ type Props = {
   // (→ docs/実装要件/フロントエンド実装要件.md §4「どのAPIでも401ならトークン入力画面に戻す」)
   onAuthExpired: () => void
 }
+
+const REVIVAL_VIDEO_URL = '/videos/revival.mp4'
 
 export function OperationPanel({ onAuthExpired }: Props) {
   // SSE でつなぎっぱなしにする。状態が変わるたびに新しい state が届く
@@ -125,6 +128,23 @@ export function OperationPanel({ onAuthExpired }: Props) {
     return () => {
       cancelled = true
     }
+  }, [])
+
+  // 動画は固定名の1本だけなので一覧APIは作らず、認証不要の配信経路へHEADを送って存在を確認する。
+  useEffect(() => {
+    const controller = new AbortController()
+    fetch(`${BASE}${REVIVAL_VIDEO_URL}`, {
+      method: 'HEAD',
+      cache: 'no-store',
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (response.status === 200) setVideoUrl(REVIVAL_VIDEO_URL)
+      })
+      .catch(() => {
+        // 通信失敗でもアップロード操作を妨げない。動画未投入と同じ表示にする。
+      })
+    return () => controller.abort()
   }, [])
 
   // 直近に発行した refreshQuestions の世代。古い応答が後から返ってきても
