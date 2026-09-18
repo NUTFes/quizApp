@@ -1,33 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AdminState, MonitorState, ViewerState } from '../types'
 import { assertStateContract } from './assertStateContract'
-import {
-  adminWaiting,
-  adminQuestionFour,
-  adminQuestionArunashi,
-  adminAnswerAri,
-  adminAnswerNashi,
-  adminFinished,
-} from './mock/admin/index'
-import {
-  monitorWaiting,
-  monitorQuestionFour,
-  monitorQuestionArunashi,
-  monitorAnswerAri,
-  monitorAnswerNashi,
-  monitorFinished,
-  monitorRevivalVideo,
-} from './mock/monitor/index'
-import {
-  phoneWaiting,
-  phoneQuestionFour,
-  phoneQuestionArunashi,
-  phoneAnswerAri,
-  phoneAnswerNashi,
-  phoneRevivalEntry,
-  phoneRevivalVideo,
-  phoneFinished,
-} from './mock/phone/index'
 import { BASE, getAdminToken, USE_MOCK } from './config'
 import { ApiError, getAdminState, getMonitorState, getViewerState } from './api'
 
@@ -37,7 +10,7 @@ type MockStep<Type extends EventState> = { at: number; mock: Type }
 type Opts<Type extends EventState> = {
   path: string
   getState: () => Promise<Type>
-  loadMockSteps: () => Promise<MockStep<Type>[]>
+  loadMockSteps?: () => Promise<MockStep<Type>[]>
   view?: 'phone' | 'monitor' | 'admin'
   // 認証が切れていることが分かったときに呼ぶ(管理者画面だけが渡す)。
   // EventSource は失敗理由(ステータスコード)を教えてくれないので、
@@ -67,7 +40,7 @@ function useEventState<Type extends EventState>({
       setState(nextState)
     }
 
-    if (USE_MOCK) {
+    if (loadMockSteps !== undefined) {
       let closed = false
       const ts: ReturnType<typeof setTimeout>[] = []
       loadMockSteps()
@@ -149,60 +122,114 @@ function useEventState<Type extends EventState>({
   return state
 }
 
-const ADMIN_STEPS = [
-  { at: 300, mock: adminWaiting },
-  { at: 2000, mock: adminQuestionFour },
-  { at: 5000, mock: adminAnswerAri },
-  { at: 8000, mock: adminQuestionArunashi },
-  { at: 11000, mock: adminAnswerNashi },
-  { at: 14000, mock: adminFinished },
-]
-const loadAdminMockSteps = async () => ADMIN_STEPS
+export const useAdminState = (onUnauthorized?: () => void) => {
+  const loadMockSteps = useMemo<Opts<AdminState>['loadMockSteps']>(
+    () =>
+      USE_MOCK
+        ? async () => {
+            const {
+              adminWaiting,
+              adminQuestionFour,
+              adminQuestionArunashi,
+              adminAnswerAri,
+              adminAnswerNashi,
+              adminFinished,
+            } = await import('./mock/admin/index')
 
-export const useAdminState = (onUnauthorized?: () => void) =>
-  useEventState<AdminState>({
+            return [
+              { at: 300, mock: adminWaiting },
+              { at: 2000, mock: adminQuestionFour },
+              { at: 5000, mock: adminAnswerAri },
+              { at: 8000, mock: adminQuestionArunashi },
+              { at: 11000, mock: adminAnswerNashi },
+              { at: 14000, mock: adminFinished },
+            ]
+          }
+        : undefined,
+    [],
+  )
+
+  return useEventState<AdminState>({
     path: `/api/admin/events?token=${encodeURIComponent(getAdminToken())}`,
     getState: getAdminState,
-    loadMockSteps: loadAdminMockSteps,
+    loadMockSteps,
     view: 'admin',
     onUnauthorized,
   })
+}
 
-const MONITOR_STEPS = [
-  { at: 300, mock: monitorWaiting },
-  { at: 2000, mock: monitorQuestionFour },
-  { at: 5000, mock: monitorAnswerAri },
-  { at: 8000, mock: monitorQuestionArunashi },
-  { at: 11000, mock: monitorAnswerNashi },
-  { at: 14000, mock: monitorRevivalVideo },
-  { at: 17000, mock: monitorFinished },
-]
-const loadMonitorMockSteps = async () => MONITOR_STEPS
+export const useMonitorState = () => {
+  const loadMockSteps = useMemo<Opts<MonitorState>['loadMockSteps']>(
+    () =>
+      USE_MOCK
+        ? async () => {
+            const {
+              monitorWaiting,
+              monitorQuestionFour,
+              monitorQuestionArunashi,
+              monitorAnswerAri,
+              monitorAnswerNashi,
+              monitorFinished,
+              monitorRevivalVideo,
+            } = await import('./mock/monitor/index')
 
-export const useMonitorState = () =>
-  useEventState<MonitorState>({
+            return [
+              { at: 300, mock: monitorWaiting },
+              { at: 2000, mock: monitorQuestionFour },
+              { at: 5000, mock: monitorAnswerAri },
+              { at: 8000, mock: monitorQuestionArunashi },
+              { at: 11000, mock: monitorAnswerNashi },
+              { at: 14000, mock: monitorRevivalVideo },
+              { at: 17000, mock: monitorFinished },
+            ]
+          }
+        : undefined,
+    [],
+  )
+
+  return useEventState<MonitorState>({
     path: '/api/events?view=monitor',
     getState: getMonitorState,
-    loadMockSteps: loadMonitorMockSteps,
+    loadMockSteps,
     view: 'monitor',
   })
+}
 
-const VIEWER_STEP = [
-  { at: 300, mock: phoneWaiting },
-  { at: 2000, mock: phoneQuestionFour },
-  { at: 5000, mock: phoneAnswerAri },
-  { at: 8000, mock: phoneQuestionArunashi },
-  { at: 11000, mock: phoneAnswerNashi },
-  { at: 14000, mock: phoneRevivalVideo },
-  { at: 17000, mock: phoneRevivalEntry },
-  { at: 20000, mock: phoneFinished },
-]
-const loadViewerMockSteps = async () => VIEWER_STEP
+export const useViewerState = () => {
+  const loadMockSteps = useMemo<Opts<ViewerState>['loadMockSteps']>(
+    () =>
+      USE_MOCK
+        ? async () => {
+            const {
+              phoneWaiting,
+              phoneQuestionFour,
+              phoneQuestionArunashi,
+              phoneAnswerAri,
+              phoneAnswerNashi,
+              phoneRevivalEntry,
+              phoneRevivalVideo,
+              phoneFinished,
+            } = await import('./mock/phone/index')
 
-export const useViewerState = () =>
-  useEventState<ViewerState>({
+            return [
+              { at: 300, mock: phoneWaiting },
+              { at: 2000, mock: phoneQuestionFour },
+              { at: 5000, mock: phoneAnswerAri },
+              { at: 8000, mock: phoneQuestionArunashi },
+              { at: 11000, mock: phoneAnswerNashi },
+              { at: 14000, mock: phoneRevivalVideo },
+              { at: 17000, mock: phoneRevivalEntry },
+              { at: 20000, mock: phoneFinished },
+            ]
+          }
+        : undefined,
+    [],
+  )
+
+  return useEventState<ViewerState>({
     path: '/api/events?view=phone',
     getState: getViewerState,
-    loadMockSteps: loadViewerMockSteps,
+    loadMockSteps,
     view: 'phone',
   })
+}
