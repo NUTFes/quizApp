@@ -85,8 +85,7 @@ func buildState(es EventState, q *question.Question, askedCount int) State {
 	}
 
 	// question か answer の時の処理
-	tls := es.TimeLimitSec // ポインタに代入するには、変数のポインタとしてしか渡せない
-	s.TimeLimitSec = &tls
+	s.TimeLimitSec = es.TimeLimitSec
 	s.QuestionStartedAt = es.QuestionStartedAt
 	s.RevealedSegments = es.RevealedSegments
 	s.Question = q

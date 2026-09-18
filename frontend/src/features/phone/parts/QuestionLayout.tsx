@@ -18,7 +18,7 @@ const STATUS = {
 type QuestionLayoutProps = {
   state: ViewerState
   status: Status
-  remainingTime: number
+  remainingTime: number | null
   footMessage?: string
   children: ReactNode
 }
@@ -51,7 +51,9 @@ export function QuestionLayout({
             </p>
           </div>
           <QuestionText segments={state.question.textSegments} />
-          <RemainingTime remainingTime={remainingTime} timeLimitSec={state.timeLimitSec} />
+          {remainingTime !== null && (
+            <RemainingTime remainingTime={remainingTime} timeLimitSec={state.timeLimitSec} />
+          )}
         </div>
         <div className="w-full px-5">
           <ChoiceList

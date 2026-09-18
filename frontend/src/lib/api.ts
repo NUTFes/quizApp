@@ -63,12 +63,12 @@ export const getAdminState = () =>
   request<AdminState>('/api/admin/state', {
     auth: true,
   })
-export const showQuestion = (questionId: number, timeLimitSec?: number) =>
+export const showQuestion = (questionId: number, timeLimitSec: number | null) =>
   request<AdminState>('/api/admin/show-question', {
     method: 'POST',
     body: {
       questionId,
-      timeLimitSec, // undefined の時、自動的にキーは削除される（JSON.stringfy()）ため、そのまま書く
+      timeLimitSec,
     },
     auth: true,
   })

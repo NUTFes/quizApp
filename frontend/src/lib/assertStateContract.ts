@@ -43,11 +43,6 @@ export function assertStateContract(
 
   const isTimeLimitNull = state.timeLimitSec === null || state.timeLimitSec === undefined
   const isStartedAtNull = state.questionStartedAt === null || state.questionStartedAt === undefined
-  if (isTimeLimitNull !== isStartedAtNull) {
-    errors.push(
-      `timeLimitSec (${state.timeLimitSec}) and questionStartedAt (${state.questionStartedAt}) must both be null or both have values.`,
-    )
-  }
 
   if (!VALID_PHASES.includes(state.phase as (typeof VALID_PHASES)[number])) {
     errors.push(`Unknown phase: "${state.phase}"`)
@@ -83,6 +78,9 @@ export function assertStateContract(
   if (state.phase === 'question' || state.phase === 'answer') {
     if (state.question === null || state.question === undefined) {
       errors.push(`question must not be null when phase is "${state.phase}".`)
+    }
+    if (isStartedAtNull) {
+      errors.push(`questionStartedAt must not be null when phase is "${state.phase}".`)
     }
   }
 

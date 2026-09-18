@@ -9,7 +9,7 @@ import { StatusPanel, type MonitorQuestionStatus } from './StatusPanel'
 type QuestionLayoutProps = {
   state: MonitorState
   status: MonitorQuestionStatus
-  remainingTime: number
+  remainingTime: number | null
 }
 
 export function QuestionLayout({ state, status, remainingTime }: QuestionLayoutProps) {

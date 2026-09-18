@@ -5,9 +5,10 @@ import { LoadingView } from './LoadingView'
 type HayaoshiViewProps = {
   state: MonitorState
   showAnswer?: boolean
+  isClosed?: boolean
 }
 
-export function HayaoshiView({ state, showAnswer = false }: HayaoshiViewProps) {
+export function HayaoshiView({ state, showAnswer = false, isClosed = false }: HayaoshiViewProps) {
   const question = state.question
 
   if (question === null) return <LoadingView />
@@ -21,7 +22,7 @@ export function HayaoshiView({ state, showAnswer = false }: HayaoshiViewProps) {
     <MonitorLayout state={state} questionType="hayaoshi">
       <div
         className={`grid min-h-0 flex-1 gap-12 px-12 py-12 ${
-          showAnswer ? 'grid-rows-[461fr_339fr]' : 'grid-rows-1'
+          showAnswer || isClosed ? 'grid-rows-[461fr_339fr]' : 'grid-rows-1'
         }`}
       >
         <section className="flex min-h-0 flex-col overflow-hidden rounded-[28px] border-2 border-border-soft bg-surface pt-4 pr-9 pb-9 pl-9 shadow-[0_10px_28px_0_rgba(25,32,133,0.1)]">
@@ -40,6 +41,12 @@ export function HayaoshiView({ state, showAnswer = false }: HayaoshiViewProps) {
           <section className="flex items-center gap-20 overflow-hidden rounded-[28px] border-2 border-border-soft bg-info px-20 pt-4 pb-9 shadow-[0_10px_28px_0_rgba(25,32,133,0.1)]">
             <p className="w-48 shrink-0 text-p-answer">正解</p>
             <p className="min-w-0 flex-1 text-center text-p-answer">{correctAnswer}</p>
+          </section>
+        )}
+
+        {isClosed && (
+          <section className="flex items-center justify-center overflow-hidden rounded-[28px] border-2 border-border-soft bg-closed-answer px-20 pt-4 pb-9 shadow-[0_10px_28px_0_rgba(25,32,133,0.1)]">
+            <p className="text-p-answer">回答締切</p>
           </section>
         )}
       </div>

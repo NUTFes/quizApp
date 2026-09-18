@@ -16,7 +16,7 @@ export function AnswerView({ state }: props) {
     <QuestionLayout
       state={state}
       status="answer"
-      remainingTime={0}
+      remainingTime={state.timeLimitSec === null ? null : 0}
       footMessage="次の問題までその場でお待ちください"
     >
       <AnswerText

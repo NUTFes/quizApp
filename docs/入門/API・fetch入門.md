@@ -230,20 +230,18 @@ export const getState = (view: 'monitor' | 'phone') =>
 
 `correctChoiceId` を含むフル形が返る。**プレビュー表示に使う。**
 
-#### `showQuestion(questionId, timeLimitSec?)` — 問題を出す
+#### `showQuestion(questionId, timeLimitSec)` — 問題を出す
 
-一番よく押されるボタン。`timeLimitSec` は**任意**で、省略するとサーバーが30秒を適用する(§3.1)。
+一番よく押されるボタン。`timeLimitSec` は5〜120の数値、または制限時間なしを表す `null` を明示する(§3.1)。
 
 ```ts
-export const showQuestion = (questionId: number, timeLimitSec?: number) =>
+export const showQuestion = (questionId: number, timeLimitSec: number | null) =>
   request<AdminState>('/api/admin/show-question', {
     method: 'POST',
-    body: { questionId, ...(timeLimitSec !== undefined && { timeLimitSec }) },
+    body: { questionId, timeLimitSec },
     auth: true,
   })
 ```
-
-`...(x !== undefined && { x })` は「値があるときだけキーを足す」書き方。`timeLimitSec: undefined` を送らないためのもの。
 
 | エラー | code |
 | --- | --- |

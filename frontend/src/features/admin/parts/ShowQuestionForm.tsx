@@ -9,9 +9,11 @@ type Props = {
   selected: QuestionListItem | null // 未選択は null
   currentQuestionId: number | null // 今出している問題のid 今何も出してないなら null
   timeLimitInput: string // 入力欄の文字列
+  unlimited: boolean
   busy: boolean
   onTimeLimitInputChange: (value: string) => void
-  onSubmit: (questionId: number, timeLimitSec: number) => void
+  onUnlimitedChange: (value: boolean) => void
+  onSubmit: (questionId: number, timeLimitSec: number | null) => void
 }
 
 // 入力欄の文字列を検査 何もなければ null
@@ -28,13 +30,16 @@ export function ShowQuestionForm({
   selected,
   currentQuestionId,
   timeLimitInput,
+  unlimited,
   busy,
   onTimeLimitInputChange,
+  onUnlimitedChange,
   onSubmit,
 }: Props) {
   const inputId = useId()
+  const unlimitedId = useId()
   const errorId = useId()
-  const inputError = checkTimeLimit(timeLimitInput)
+  const inputError = unlimited ? null : checkTimeLimit(timeLimitInput)
   const canSubmit = !busy && selected !== null && inputError === null
 
   return (
@@ -68,10 +73,10 @@ export function ShowQuestionForm({
         onSubmit={(e) => {
           e.preventDefault() //  何もせず送信したときの強制再リロードを防ぐ
           if (!canSubmit || selected === null) return // これ以降の行で、selected が nullでないことを保証して、TS の型チェックでのエラーを防ぐ
-          onSubmit(selected.id, Number(timeLimitInput))
+          onSubmit(selected.id, unlimited ? null : Number(timeLimitInput))
         }}
       >
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center justify-center gap-3">
           <div className="relative flex w-40 justify-center pt-6 pb-8">
             {/* 入力欄の幅に左右されず、常に中央上に固定する */}
             <label htmlFor={inputId} className="absolute inset-x-0 top-0 text-center text-sm">
@@ -85,7 +90,7 @@ export function ShowQuestionForm({
               max={MAX_SEC}
               step={1}
               value={timeLimitInput}
-              disabled={busy}
+              disabled={busy || unlimited}
               aria-invalid={inputError !== null}
               aria-describedby={inputError === null ? undefined : errorId}
               onChange={(e) => onTimeLimitInputChange(e.target.value)}
@@ -99,6 +104,16 @@ export function ShowQuestionForm({
               {inputError}
             </p>
           </div>
+          <label htmlFor={unlimitedId} className="flex items-center gap-2 text-sm">
+            <input
+              id={unlimitedId}
+              type="checkbox"
+              checked={unlimited}
+              disabled={busy}
+              onChange={(e) => onUnlimitedChange(e.target.checked)}
+            />
+            制限時間なし
+          </label>
         </div>
         <div className="flex justify-center">
           <button

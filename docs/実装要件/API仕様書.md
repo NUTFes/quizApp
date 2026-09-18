@@ -22,6 +22,7 @@
 - 状態変更系API(§3.1〜§3.4、§3.8)の成功レスポンスは、**すべて「更新後のstate(管理者向け・§2.1の形)」**。個別の形を覚える必要はない。
 - **残り時間の計算**: サーバーは残り秒数を送らない。クライアントが `serverTime` と `questionStartedAt` + `timeLimitSec` から計算する(端末時計のずれを `serverTime` で補正)。
   - **「締切」も同じ計算で出す**。残り0秒になったらクライアントが締切表示に切り替える(→ `画面・要件.md` §4)。**`close` のようなphaseは無く、APIも増えない**。サーバーは最後まで `phase: "question"` を配り続ける。
+  - `timeLimitSec` が `null` なら制限時間なし。カウントダウンを表示せず、残り0秒や締切として扱わない。
   - 判断基準: **配ったデータから計算で復元できるものはクライアントに任せ、復元できないものはサーバーが配る。** 締切は `questionStartedAt` から復元できるのでクライアント側、`askedCount`(今何問目)は復元できないのでサーバー側。
 - **認証**: Cookie・セッションは使わない。管理者APIはすべて **`Authorization: Bearer <トークン>` ヘッダ**で認証する。閲覧系(モニタ/スマホ)は認証なし。
   - トークンはサーバーの環境変数に置いた固定文字列2つ。ログイン処理・セッション管理・有効期限は無い。
@@ -127,8 +128,8 @@
 | --- | --- | --- |
 | `phase` | `"waiting"` \| `"question"` \| `"answer"` \| `"revival-video"` \| `"revival-entry"` \| `"finished"` | 現在の進行状態。遷移は**すべて管理者の操作**で、時間切れによる自動遷移は無い(→§0の遷移図) |
 | `serverTime` | `string` | サーバーの現在時刻(ISO 8601)。**端末時計のずれを補正する基準**。state を受け取るたびに更新する(→§0) |
-| `timeLimitSec` | `number \| null` | 制限時間の秒数。既定30、範囲5〜120(→§3.1)。**`waiting` / `revival-video` / `revival-entry` / `finished` では `null`** |
-| `questionStartedAt` | `string \| null` | タイマーの起点(ISO 8601)。`waiting` / `revival-video` / `revival-entry` / `finished` では `null` |
+| `timeLimitSec` | `number \| null` | 制限時間の秒数。数値なら5〜120、`null` なら制限時間なし(→§3.1)。**`waiting` / `revival-video` / `revival-entry` / `finished` でも `null`** |
+| `questionStartedAt` | `string \| null` | 出題開始時刻(ISO 8601)。制限時間なしでも `question` / `answer` では値を持つ。`waiting` / `revival-video` / `revival-entry` / `finished` では `null` |
 | `revealedSegments` | `number` | 現在何セグメントまで公開しているか。`waiting` / `revival-video` / `revival-entry` / `finished` では `0` |
 | `totalSegments` | `number` | 出題中の問題のセグメント総数。`waiting` / `revival-video` / `revival-entry` / `finished` では `0`。**閲覧者には送らない**(§2.2) |
 | `askedCount` | `number` | 今何問目か。詳細は下記 |
@@ -136,6 +137,7 @@
 
 - **キーは消えない。** `waiting` / `revival-video` / `revival-entry` / `finished` でも上記8つのキーはすべて存在し、問題関連の値が `null` / `0` になるだけ(→§0)。
 - `phase` が `waiting` / `revival-video` / `revival-entry` / `finished` のとき: `question` `questionStartedAt` `timeLimitSec` は `null`、`revealedSegments` `totalSegments` は `0`。**キーは残る**。
+- `phase` が `question` / `answer` のときも、制限時間なしなら `timeLimitSec` は `null`。この場合も `questionStartedAt` は出題開始時刻を持つ。
 - `askedCount` は**「今何問目か」**。`asked` が `true` の問題を数えた値で、`asked` から**毎回導出する**(この数を別途保存しない。二重管理を避けるため)。**出題中の問題自身を含む**ので、1問目を出している最中は `1`(`0` ではない)。画面には「第1問」と出る。
   - **同じ問題を `show-question` し直しても増えない**(`asked` が既に `true` のため)。`reset` すると `0` に戻る。
   - **`waiting` / `finished` では必ず `0`**(`reset` が全問題の `asked` を `false` にするため)。一方、**`revival-video` / `revival-entry` では直前の値を保持する**。敗者復活を挟んでも「第8問 → 第9問」を維持するため。ただし敗者復活画面には問題番号を表示しない(→ `画面・要件.md` §4)。
@@ -298,14 +300,16 @@ type MonitorState = ViewerState & { joinUrl: string }   // view=monitor
 
 ### 3.1 POST /api/admin/show-question
 
-指定した問題を出題状態にする。phaseを `question` にし、`revealedSegments=1`、タイマー起点(`questionStartedAt`)を現在時刻にセットする。制限時間は `timeLimitSec` で上書きでき、**省略時はサーバーが30秒を適用**する(スプシに秒数列は持たない。2026-08-07決定)。
+指定した問題を出題状態にする。phaseを `question` にし、`revealedSegments=1`、タイマー起点(`questionStartedAt`)を現在時刻にセットする。`timeLimitSec` は**数値(5〜120秒)か `null` を必ず明示**し、`null` は制限時間なしを表す。スプシに秒数列は持たず、管理者画面で指定する。
 
-**リクエスト**: `{ "questionId": 5, "timeLimitSec": 45 }`(`timeLimitSec` は任意。省略時30)
+**リクエスト(45秒)**: `{ "questionId": 5, "timeLimitSec": 45 }`
+
+**リクエスト(制限時間なし)**: `{ "questionId": 5, "timeLimitSec": null }`
 
 | 状況 | ステータス | code |
 | --- | --- | --- |
 | questionId が存在しない | 404 | `QUESTION_NOT_FOUND` |
-| timeLimitSec が範囲外(5〜120秒以外・数値以外) | 400 | `INVALID_REQUEST` |
+| timeLimitSec が範囲外(`null` 以外で5〜120秒でない・数値でない) | 400 | `INVALID_REQUEST` |
 
 - **連打・再実行**: すでに同じ問題を出題中でも 200(その問題を最初からやり直す)。別問題なら即座に切り替わる。`answer` phase から呼べば次の問題へ進む操作になる。
 - **その問題の `asked` を `true` にする。** これにより `askedCount`(§1)が1つ進む。すでに `true` の問題を出し直した場合は**変化しない**ので、やり直しで「第4問」に飛ぶことはない。
@@ -744,7 +748,7 @@ nginxが先に返す413はJSONではないため、フロントは画像投入�
 | `state` | 宛先ごとのstate JSON(§2.1 / §2.2 とまったく同じ形) | §3の状態変更API成功のたび |
 | `ping` | `{}` | 30秒ごと(接続維持・切断検知用) |
 
-- **タイマー専用イベントは無い**。カウントダウンは各クライアントが `serverTime` / `questionStartedAt` / `timeLimitSec` から自前で描画する(§0)。
+- **タイマー専用イベントは無い**。`timeLimitSec` が数値のときだけ、各クライアントが `serverTime` / `questionStartedAt` / `timeLimitSec` からカウントダウンを自前で描画する(§0)。
 - `state` イベントのdataは、同じ宛先が `GET /api/state` で取るものと**同一スキーマ**。フロントは「stateを受け取って画面全体を再描画する」1関数だけ書けばよい(差分適用は不要)。
 
 ### 出し分けの実例(同じ瞬間・phase=question)
@@ -802,6 +806,7 @@ nginxが先に返す413はJSONではないため、フロントは画像投入�
 
 ## 変更履歴(新しい順)
 
+- 2026-09-19 第19版。**制限時間なしの出題を追加**した(#132)。①`POST /api/admin/show-question` の `timeLimitSec` は数値か `null` を必ず明示し、従来の「省略時はサーバーが30秒」を廃止 ②`question` / `answer` 中も `timeLimitSec: null` を許可し、この場合はカウントダウンも締切表示も出さない ③`questionStartedAt` は制限時間の有無にかかわらず出題開始時刻を保持する
 - 2026-09-19 第18版。**音響連携をスコープ外から外した**(#133)。効果音は音響スタッフが別途手動操作するのではなく、管理者画面の操作APIが成功した後に管理者PCで再生する。音を鳴らす処理はフロント内で完結し、バックエンドAPI・SSEの契約追加はない。担当範囲と失敗時の扱いは `画面・要件.md` §3「音響の担当範囲」に記載した
 - 2026-09-18 第17版。**敗者復活動画の投入API `POST /api/admin/videos` を追加**した(#158)。①#121の「CTへscpで直接置く」は、CTへのSSH経路が無いQ6と「当日運営はCT・サーバーに触らない」方針に矛盾するため廃止し、画像投入と同じく管理者画面から投入する ②動画は1本だけなので保存名を常に `revival.mp4` とし、再投入は確認後に同名上書きする ③動画本体は500MB、nginxとバックエンドのリクエスト全体はmultipartの包み分として64KBの余裕を持たせた `512064k` とし、他APIの5184k上限は維持する ④拡張子ではなく先頭の `ftyp` ボックスとMP4用major brandで判定し、AVIF・HEIC・QuickTime MOVは拒否する。途中失敗時は既存動画を残す
 - 2026-09-14 第16版。**hayaoshiの問題投入を解放**した(#156)。①`choices: []` / `correctChoiceId: null` / `textSegments` 2要素以上 / `explanation` 必須を投入時に検証する ②早押しの正解は `explanation` に入稿し、answer phase のモニタに表示する ③phone向けの `textSegments` は公開済み数にかかわらず常に `[]`、monitor向けは従来どおり段階配信する

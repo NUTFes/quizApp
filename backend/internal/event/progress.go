@@ -18,7 +18,7 @@ func showQuestion(c *gin.Context, db *gorm.DB, joinURL string, b *sse.Broadcaste
 	// リクエスト を取得するためのリクエストの型を定義
 	var req struct {
 		QuestionID   uint `json:"questionId" binding:"required"`                // 必須条件を gin で設定
-		TimeLimitSec *int `json:"timeLimitSec" binding:"omitnil,gte=5,lte=120"` // これは任意 , 無くてもいいを omitnil 、最低、最少も設定
+		TimeLimitSec *int `json:"timeLimitSec" binding:"omitnil,gte=5,lte=120"` // null は制限時間なし。数値の場合だけ範囲を検証する
 	}
 
 	// 指定したリクエストの型でリクエストが来ているかのチェック
@@ -26,12 +26,6 @@ func showQuestion(c *gin.Context, db *gorm.DB, joinURL string, b *sse.Broadcaste
 		log.Printf("show-question invalid request: %v", err) // エラーが一本化されているので、デバッグのためにフィールド情報を渡す
 		platform.RespondError(c, http.StatusBadRequest, "INVALID_REQUEST", "リクエストの形が不正です")
 		return
-	}
-
-	// timeLimitSec が正しい範囲内で設定されているか
-	timeLimitSec := 30 // timeLimitSec を省略するときは規定値 30 に設定
-	if req.TimeLimitSec != nil {
-		timeLimitSec = *req.TimeLimitSec
 	}
 
 	// questionId の question が実際に存在するか
@@ -57,7 +51,7 @@ func showQuestion(c *gin.Context, db *gorm.DB, joinURL string, b *sse.Broadcaste
 	es.Phase = "question"
 	es.QuestionStartedAt = &now
 	es.CurrentQuestionID = &req.QuestionID
-	es.TimeLimitSec = timeLimitSec
+	es.TimeLimitSec = req.TimeLimitSec
 	es.RevealedSegments = 1
 	// svevt_states への書き込みと questiona の asked の書き換えをトランザクションで行う
 	// 片方だけエラーで止まると、不正な状態でDBが保存される可能性がある
@@ -189,9 +183,8 @@ func reset(c *gin.Context, db *gorm.DB, joinURL string, b *sse.Broadcaster) {
 	}
 
 	es := EventState{
-		ID:           1, // UPDATEにするために、id を指定
-		Phase:        to,
-		TimeLimitSec: 30, // これもデフォ値が 0 で設定されているため明示的に設定
+		ID:    1, // UPDATEにするために、id を指定
+		Phase: to,
 		// 指定している要素以外は、ゼロ値代入となる
 	}
 

@@ -7,7 +7,7 @@ export type MonitorQuestionStatus = 'accepting' | 'closed' | 'answer'
 type StatusPanelProps = {
   state: MonitorState
   status: MonitorQuestionStatus
-  remainingTime: number
+  remainingTime: number | null
 }
 
 const STATUS = {
@@ -61,12 +61,14 @@ export function StatusPanel({ state, status, remainingTime }: StatusPanelProps) 
         </>
       ) : (
         <>
-          <div className="flex h-[335px] shrink-0 flex-col rounded-3xl border-2 border-border-soft bg-surface p-12 shadow-[0_10px_28px_0_rgba(25,32,133,0.1)]">
-            <p className="text-p-pre-timelimit">残り時間</p>
-            <div className="flex min-h-0 flex-1 items-center justify-center">
-              <RemainingTime remainingTime={remainingTime} />
+          {remainingTime !== null && (
+            <div className="flex h-[335px] shrink-0 flex-col rounded-3xl border-2 border-border-soft bg-surface p-12 shadow-[0_10px_28px_0_rgba(25,32,133,0.1)]">
+              <p className="text-p-pre-timelimit">残り時間</p>
+              <div className="flex min-h-0 flex-1 items-center justify-center">
+                <RemainingTime remainingTime={remainingTime} />
+              </div>
             </div>
-          </div>
+          )}
           <InstructionCard>
             {status === 'accepting' ? (
               <>
