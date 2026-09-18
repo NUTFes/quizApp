@@ -23,6 +23,7 @@ export function QuestionList({ items, selectedId, onSelect, currentQuestionId }:
       <thead>
         <tr>
           <th className="px-3 py-2 text-left">選ぶ（出題）</th>
+          <th className="px-3 py-2 text-left">番号</th>
           <th className="px-3 py-2 text-left">ID</th>
           <th className="px-3 py-2 text-left">問題文</th>
           <th className="px-3 py-2 text-left">形式</th>
@@ -50,6 +51,9 @@ export function QuestionList({ items, selectedId, onSelect, currentQuestionId }:
                 />
               </label>
             </td>
+            {/* ID は投入のたびに振り直される内部値(全置換がDELETE+INSERTのため)。
+                運営が見るべき並び順は number。 */}
+            <td className="px-3 py-2">{item.number}</td>
             <td className="px-3 py-2">{item.id}</td>
             <td className="px-3 py-2">{item.textPreview}</td>
             <td className="px-3 py-2">
