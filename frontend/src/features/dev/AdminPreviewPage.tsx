@@ -185,12 +185,7 @@ const PANEL_CASES = [
   {
     title: '出題中 / 制限時間なし',
     note: 'timeLimitSec が null。「なし」と出て、締切にはならない',
-    node: (
-      <CurrentStatus
-        state={{ ...adminQuestionFour, timeLimitSec: null, questionStartedAt: null }}
-        status="accepting"
-      />
-    ),
+    node: <CurrentStatus state={{ ...adminQuestionFour, timeLimitSec: null }} status="accepting" />,
   },
   {
     title: '出題中 / まだ1区切りも公開していない',
