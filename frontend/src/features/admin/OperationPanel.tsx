@@ -316,7 +316,9 @@ export function OperationPanel({ onAuthExpired }: Props) {
           />
         </div>
 
-        <div className="overflow-x-auto lg:col-start-2 lg:row-span-2 lg:row-start-2">
+        {/* 問題数が増えても列の高さが際限なく伸びないよう、ここで上限を決めて
+            内部スクロールにする(#118)。ヘッダ行も含めてスクロールする。 */}
+        <div className="max-h-[600px] overflow-x-auto overflow-y-auto lg:col-start-2 lg:row-span-2 lg:row-start-2">
           {questionListError !== null && <p>{questionListError}</p>}
           {questions !== null && (
             <QuestionList
