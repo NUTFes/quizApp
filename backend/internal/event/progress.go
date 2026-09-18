@@ -18,7 +18,7 @@ func showQuestion(c *gin.Context, db *gorm.DB, joinURL string, b *sse.Broadcaste
 	// リクエスト を取得するためのリクエストの型を定義
 	var req struct {
 		QuestionID   uint `json:"questionId" binding:"required"`                // 必須条件を gin で設定
-		TimeLimitSec *int `json:"timeLimitSec" binding:"omitnil,gte=5,lte=120"` // これは任意 , 無くてもいいを omitnil 、最低、最少も設定
+		TimeLimitSec *int `json:"timeLimitSec" binding:"omitnil,gte=5,lte=120"` // null は制限時間なし。数値の場合だけ範囲を検証する
 	}
 
 	// 指定したリクエストの型でリクエストが来ているかのチェック
