@@ -111,6 +111,13 @@ function sendQuestionsToServer() {
     }
 
     const config = getServerConfig();
+    const confirm = ui.alert(
+      result.questions.length + '件の問題をサーバーへ送信します。\n' +
+      '現在の問題一覧はすべて置き換えられます。よろしいですか?',
+      ui.ButtonSet.OK_CANCEL
+    );
+    if (confirm !== ui.Button.OK) return;
+
     const response = UrlFetchApp.fetch(config.questionsUrl, {
       method: 'put',
       contentType: 'application/json',
@@ -119,6 +126,7 @@ function sendQuestionsToServer() {
       },
       payload: JSON.stringify({ questions: result.questions }),
       muteHttpExceptions: true,
+      followRedirects: false,
     });
 
     handleImportResponse(response);
@@ -245,13 +253,14 @@ function handleImportResponse(response) {
   const apiError = body && body.error && typeof body.error === 'object' ? body.error : null;
 
   if (status === 200) {
-    if (!body || !Number.isInteger(body.imported)) {
+    if (!body || !Number.isInteger(body.imported) ||
+        typeof body.importedAt !== 'string' || body.importedAt === '') {
       ui.alert('送信先から予想していない形式の応答が返りました。サーバー管理者に確認してください。');
       return;
     }
 
     const warnings = Array.isArray(body.warnings) ? body.warnings : [];
-    let message = body.imported + '件を投入しました';
+    let message = body.imported + '件を投入しました\n最終投入日時: ' + body.importedAt;
     if (warnings.length > 0) {
       message += '\n\n警告(' + warnings.length + '件):\n' + warnings.map(formatServerDetail).join('\n');
     }
@@ -263,12 +272,17 @@ function handleImportResponse(response) {
     const details = Array.isArray(apiError.details) ? apiError.details : [];
     const errors = details.length > 0
       ? details.map(formatServerDetail)
-      : [apiError.message || '問題データの内容が不正です。'];
+      : ['問題データの内容が不正です。入力内容を確認してください。'];
     showErrorsDialog(errors, 'サーバーの検証エラー');
     return;
   }
 
-  if (status === 401) {
+  if (status === 400 && apiError && apiError.code === 'INVALID_REQUEST') {
+    ui.alert('送信する問題データの形式が正しくありません。サーバー管理者に確認してください。');
+    return;
+  }
+
+  if (status === 401 && apiError && apiError.code === 'UNAUTHORIZED') {
     ui.alert('トークンが違います');
     return;
   }
@@ -278,8 +292,20 @@ function handleImportResponse(response) {
     return;
   }
 
-  const serverMessage = apiError && apiError.message ? '\n' + apiError.message : '';
-  ui.alert('送信に失敗しました(HTTP ' + status + ')' + serverMessage);
+  if (status >= 300 && status < 400) {
+    ui.alert(
+      '送信先からリダイレクト応答が返されました(HTTP ' + status + ')。\n' +
+      '安全のため送信を中止しました。SERVER_URLを確認してください。'
+    );
+    return;
+  }
+
+  if (status >= 500) {
+    ui.alert('サーバー側でエラーが発生しました(HTTP ' + status + ')。サーバー管理者に確認してください。');
+    return;
+  }
+
+  ui.alert('送信に失敗しました(HTTP ' + status + ')。サーバー管理者に確認してください。');
 }
 
 function parseJsonResponse(text) {
