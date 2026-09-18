@@ -12,7 +12,7 @@ export function QuestionView({ state }: Props) {
     timeLimitSec: state.timeLimitSec,
     questionStartedAt: state.questionStartedAt,
   })
-  const isAccepting = remainingTime > 0
+  const isAccepting = remainingTime === null || remainingTime > 0
 
   if (state.question?.type === 'hayaoshi') {
     return <HayaoshiView state={state} />
