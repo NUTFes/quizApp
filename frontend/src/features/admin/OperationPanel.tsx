@@ -26,8 +26,9 @@ import {
   revival,
   showAnswer,
   showQuestion,
+  uploadVideo,
 } from '../../lib/api'
-import { NETWORK_ERROR_MESSAGE, toImportMessage, toMessage } from './errorMessages'
+import { NETWORK_ERROR_MESSAGE, toImportMessage, toMessage, toVideoMessage } from './errorMessages'
 import { ACTION_LABEL, ActionLabel } from './labels'
 import { ControlPanel } from './parts/ControlPanel'
 import { CurrentStatus } from './parts/CurrentStatus'
@@ -35,6 +36,7 @@ import { ErrorBanner, OperationFailure } from './parts/ErrorBanner'
 import { ImagePanel } from './parts/ImagePanel'
 import { ImportPanel } from './parts/ImportPanel'
 import { QuestionList } from './parts/QuestionList'
+import { RevivalVideoPanel } from './parts/RevivalVideoPanel'
 import { ScreenPreviewPanel } from './parts/ScreenPreviewPanel'
 import { SelectedQuestion, type SelectedQuestionProps } from './parts/SelectedQuestion'
 import { ShowQuestionForm } from './parts/ShowQuestionForm'
@@ -82,6 +84,12 @@ export function OperationPanel({ onAuthExpired }: Props) {
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
   const [importIssues, setImportIssues] = useState<RowIssue[]>([])
+
+  const [videoFile, setVideoFile] = useState<File | null>(null)
+  const [videoBusy, setVideoBusy] = useState(false)
+  const [videoConfirming, setVideoConfirming] = useState(false)
+  const [videoError, setVideoError] = useState<string | null>(null)
+  const [videoUrl, setVideoUrl] = useState<string | null>(null)
 
   // 呼び出し側がその場で作った関数を渡しても、依存配列に入れずに済むようにする
   // (lib/useEventState.ts の onUnauthorizedRef と同じ理由)
@@ -243,6 +251,29 @@ export function OperationPanel({ onAuthExpired }: Props) {
     }
   }
 
+  const handleVideoUpload = async () => {
+    if (inFlight.current || videoFile === null) return
+    inFlight.current = true
+    setBusy(true)
+    setVideoBusy(true)
+    setVideoConfirming(false)
+    setVideoError(null)
+    try {
+      const result = await uploadVideo(videoFile)
+      setVideoUrl(result.videoUrl)
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onAuthExpired()
+        return
+      }
+      setVideoError(err instanceof ApiError ? toVideoMessage(err) : NETWORK_ERROR_MESSAGE)
+    } finally {
+      inFlight.current = false
+      setBusy(false)
+      setVideoBusy(false)
+    }
+  }
+
   const remainingSec =
     state.phase === 'question' && state.timeLimitSec !== null ? remainingTime : null
   // ShowQuestionForm は id ではなく QuestionListItem そのものを欲しがる(問題文・出題済みの警告表示に使うため)
@@ -337,6 +368,21 @@ export function OperationPanel({ onAuthExpired }: Props) {
         onSubmit={(questionsToImport) => void handleImport(questionsToImport)}
       />
       <ImagePanel onAuthExpired={onAuthExpired} />
+      <RevivalVideoPanel
+        file={videoFile}
+        busy={videoBusy}
+        disabled={busy}
+        confirming={videoConfirming}
+        error={videoError}
+        videoUrl={videoUrl}
+        onFileChange={(file) => {
+          setVideoFile(file)
+          setVideoError(null)
+        }}
+        onSubmit={() => setVideoConfirming(true)}
+        onConfirm={() => void handleVideoUpload()}
+        onCancel={() => setVideoConfirming(false)}
+      />
       {/*ここからは、以降のイシューで足していく */}
     </div>
   )

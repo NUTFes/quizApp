@@ -26,6 +26,15 @@ export const toMessage = (code: string): string =>
 export const toImageMessage = (err: ApiError): string =>
   err.status === 413 ? toMessage('FILE_TOO_LARGE') : toMessage(err.code)
 
+// 敗者復活動画の投入専用。同じerror.codeでも画像とは上限・許可形式が違うため訳し分ける。
+// nginxが先に413を返す場合はJSONではなくcodeがUNKNOWNになるので、statusを先に見る。
+export const toVideoMessage = (err: ApiError): string => {
+  if (err.status === 413) return '動画が大きすぎます(500MBまで)。'
+  if (err.code === 'INVALID_FILE_TYPE') return 'MP4形式の動画を選んでください。'
+  if (err.code === 'INVALID_REQUEST') return '動画ファイルを選び直して、もう一度お試しください。'
+  return toMessage(err.code)
+}
+
 // 問題データの投入(PUT /api/admin/questions)専用の文言。
 //
 // INVALID_REQUEST は show-question の秒数エラーと同じ code だが、

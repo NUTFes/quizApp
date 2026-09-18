@@ -18,6 +18,7 @@ import (
 	"github.com/naoto-anzai/quizApp/backend/internal/platform"
 	"github.com/naoto-anzai/quizApp/backend/internal/question"
 	"github.com/naoto-anzai/quizApp/backend/internal/sse"
+	"github.com/naoto-anzai/quizApp/backend/internal/video"
 )
 
 func main() {
@@ -50,6 +51,8 @@ func main() {
 		question.RegisterRoutes(db, adminToken, importToken),
 		// 画像の投入は ADMIN_TOKEN のみ(IMPORT_TOKEN は通さない。§3.6)
 		image.RegisterRoutes(adminToken, platform.StaticDir),
+		// 敗者復活動画の投入も ADMIN_TOKEN のみ
+		video.RegisterRoutes(adminToken, platform.StaticDir),
 	)
 
 	// #63(GASからの問題投入)で SSE 配信を足すかどうかは保留。
