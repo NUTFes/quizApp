@@ -3,10 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import AdminPage from './features/admin/AdminPage'
 import MonitorPage from './features/monitor/MonitorPage'
 import PhonePage from './features/phone/PhonePage'
-import DevIndexPage from './features/dev/DevIndexPage'
-import PhonePreviewPage from './features/dev/PhonePreviewPage'
-import MonitorPreviewPage from './features/dev/MonitorPreviewPage'
-import TokenPreviewPage from './features/dev/TokenPreviewPage'
 
 // 開発用ページ(/dev 以下)は開発時だけ出す。
 // import.meta.env.DEV は本番ビルドで false に置き換えられるので、この分岐ごと消える。
@@ -15,9 +11,18 @@ import TokenPreviewPage from './features/dev/TokenPreviewPage'
 // モジュールの一番上でJSXを組み立てている箇所(配列の中で <Foo .../> を作るなど)は、
 // Rollupから見ると「呼び出しに副作用があるかもしれない」ので、
 // コンポーネント自体が使われていなくても削除できずファイルに残ってしまう。
-// AdminPreviewPage はこの形(CONTROL_CASES 等)で書かれているため、
-// lazy(動的 import)にしてチャンクを分ける。さらに import 自体をDEV分岐の中へ置き、
-// 本番ビルドでは開発用チャンクも生成されないようにする。
+// 開発用ページはlazy(動的 import)にしてチャンクを分ける。さらに import 自体を
+// DEV分岐の中へ置き、本番ビルドでは開発用チャンクも生成されないようにする。
+const DevIndexPage = import.meta.env.DEV ? lazy(() => import('./features/dev/DevIndexPage')) : null
+const TokenPreviewPage = import.meta.env.DEV
+  ? lazy(() => import('./features/dev/TokenPreviewPage'))
+  : null
+const PhonePreviewPage = import.meta.env.DEV
+  ? lazy(() => import('./features/dev/PhonePreviewPage'))
+  : null
+const MonitorPreviewPage = import.meta.env.DEV
+  ? lazy(() => import('./features/dev/MonitorPreviewPage'))
+  : null
 const AdminPreviewPage = import.meta.env.DEV
   ? lazy(() => import('./features/dev/AdminPreviewPage'))
   : null
@@ -31,20 +36,55 @@ function App() {
         <Route path="/" element={<PhonePage />} />
         <Route path="/monitor" element={<MonitorPage />} />
         <Route path="/backstage-0248" element={<AdminPage />} />
-        {isDev && <Route path="/dev" element={<DevIndexPage />} />}
-        {isDev && <Route path="/dev/tokens" element={<TokenPreviewPage />} />}
-        {isDev && <Route path="/dev/phone" element={<PhonePreviewPage />} />}
-        {isDev && <Route path="/dev/monitor" element={<MonitorPreviewPage />} />}
-        {isDev && AdminPreviewPage !== null && (
-          <Route
-            path="/dev/admin"
-            element={
-              <Suspense fallback={null}>
-                <AdminPreviewPage />
-              </Suspense>
-            }
-          />
-        )}
+        {isDev &&
+          DevIndexPage !== null &&
+          TokenPreviewPage !== null &&
+          PhonePreviewPage !== null &&
+          MonitorPreviewPage !== null &&
+          AdminPreviewPage !== null && (
+            <>
+              <Route
+                path="/dev"
+                element={
+                  <Suspense fallback={null}>
+                    <DevIndexPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/dev/tokens"
+                element={
+                  <Suspense fallback={null}>
+                    <TokenPreviewPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/dev/phone"
+                element={
+                  <Suspense fallback={null}>
+                    <PhonePreviewPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/dev/monitor"
+                element={
+                  <Suspense fallback={null}>
+                    <MonitorPreviewPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/dev/admin"
+                element={
+                  <Suspense fallback={null}>
+                    <AdminPreviewPage />
+                  </Suspense>
+                }
+              />
+            </>
+          )}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

@@ -35,7 +35,8 @@ const MaxRequestBytes = MaxVideoBytes + 64<<10
 // 通常のボックスは16バイト、拡張サイズを使う場合は最低24バイト必要になる。
 const sniffLen = 24
 
-// checkMP4 は、ファイル先頭がMP4で使われる ftyp ボックスかを調べる。
+// checkMP4 は、ファイル先頭がMP4で使われる ftyp ボックスで、
+// major brand もMP4として扱えるものかを調べる。
 // 拡張子やブラウザが申告するContent-Typeは偽装できるため、判定には使わない。
 func checkMP4(head []byte) error {
 	if len(head) < 16 || !bytes.Equal(head[4:8], []byte("ftyp")) {
@@ -43,22 +44,36 @@ func checkMP4(head []byte) error {
 	}
 
 	boxSize := binary.BigEndian.Uint32(head[:4])
+	majorBrandOffset := 8
 	switch boxSize {
 	case 0:
 		// 0はファイル末尾まで続くボックスを表す。
-		return nil
 	case 1:
 		// 1は後続8バイトで64bitのサイズを表す。
 		if len(head) < 24 || binary.BigEndian.Uint64(head[8:16]) < 24 {
 			return errors.New("MP4のftypボックスサイズが不正です")
 		}
-		return nil
+		majorBrandOffset = 16
 	default:
 		// ftypには major_brand と minor_version が必須なので最小16バイト。
 		if boxSize < 16 {
 			return errors.New("MP4のftypボックスサイズが不正です")
 		}
-		return nil
+	}
+
+	if !isMP4MajorBrand(head[majorBrandOffset : majorBrandOffset+4]) {
+		return errors.New("MP4として認識できないmajor brandです")
+	}
+	return nil
+}
+
+func isMP4MajorBrand(brand []byte) bool {
+	switch string(brand) {
+	case "isom", "iso2", "iso3", "iso4", "iso5", "iso6",
+		"mp41", "mp42", "avc1", "M4V ", "M4A ":
+		return true
+	default:
+		return false
 	}
 }
 

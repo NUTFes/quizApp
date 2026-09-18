@@ -26,6 +26,16 @@ func TestCheckMP4(t *testing.T) {
 	copy(extended[4:8], "ftyp")
 	binary.BigEndian.PutUint64(extended[8:16], 24)
 	copy(extended[16:20], "isom")
+	copy(extended[20:24], []byte{0, 0, 0, 0})
+
+	avif := append([]byte{}, mp4Bytes...)
+	copy(avif[8:12], "avif")
+	heic := append([]byte{}, mp4Bytes...)
+	copy(heic[8:12], "heic")
+	mov := append([]byte{}, mp4Bytes...)
+	copy(mov[8:12], "qt  ")
+	extendedAVIF := append([]byte{}, extended...)
+	copy(extendedAVIF[16:20], "avif")
 
 	tests := []struct {
 		name    string
@@ -35,6 +45,10 @@ func TestCheckMP4(t *testing.T) {
 		{"通常のftyp", mp4Bytes, false},
 		{"末尾まで続くftyp", append([]byte{0, 0, 0, 0}, mp4Bytes[4:]...), false},
 		{"64bitサイズのftyp", extended, false},
+		{"AVIFのmajor brand", avif, true},
+		{"HEICのmajor brand", heic, true},
+		{"QuickTime MOVのmajor brand", mov, true},
+		{"64bitサイズのAVIF major brand", extendedAVIF, true},
 		{"HTML", []byte("<!DOCTYPE html><html></html>"), true},
 		{"ftypが先頭ではない", append([]byte("01234567"), mp4Bytes...), true},
 		{"短すぎる", []byte("....ftyp"), true},
@@ -48,6 +62,22 @@ func TestCheckMP4(t *testing.T) {
 			}
 			if !tt.wantErr && err != nil {
 				t.Errorf("正しいftypが拒否された: %v", err)
+			}
+		})
+	}
+}
+
+func TestCheckMP4AcceptsCommonMajorBrands(t *testing.T) {
+	brands := []string{
+		"isom", "iso2", "iso3", "iso4", "iso5", "iso6",
+		"mp41", "mp42", "avc1", "M4V ", "M4A ",
+	}
+	for _, brand := range brands {
+		t.Run(brand, func(t *testing.T) {
+			head := append([]byte{}, mp4Bytes...)
+			copy(head[8:12], brand)
+			if err := checkMP4(head); err != nil {
+				t.Errorf("major brand %q が拒否された: %v", brand, err)
 			}
 		})
 	}
