@@ -24,7 +24,11 @@ function SoundPreviewPage() {
       }),
     )
 
-    return () => unsubscribe.forEach((removeListener) => removeListener())
+    return () => {
+      stop('tickTock')
+      stop('drumroll')
+      unsubscribe.forEach((removeListener) => removeListener())
+    }
   }, [])
 
   function handlePlay(name: SoundName) {
@@ -50,8 +54,8 @@ function SoundPreviewPage() {
       </Link>
       <h1 className="mt-4 text-2xl font-bold">効果音の動作確認</h1>
       <p className="mt-2 text-sm text-neutral-600">
-        現在は全て約1秒の無音プレースホルダです。状態表示で再生・終了を確認できます。
-        ループ音は「停止」を押すまで再生を続けます。
+        チックタックは可聴プレースホルダ、それ以外は約1秒の無音プレースホルダです。
+        ループ音は「停止」を押すか、この画面を離れるまで再生を続けます。
       </p>
       <p className="mt-1 text-sm text-neutral-600">
         「再生」を続けて押すと、そのたびに音源の先頭から鳴り直します。
