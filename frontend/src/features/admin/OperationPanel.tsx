@@ -5,7 +5,7 @@
 // (トークンも fetch も無い場所で全状態を並べたいため)。
 //
 // ⚠️ ImagePanel(#105)だけこの原則の例外。内部でAPIを直接呼ぶ(→ ImagePanel.tsx 冒頭のコメント)。
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { BASE } from '../../lib/config'
 import { useAdminState } from '../../lib/useEventState'
 import { useRemainingTime } from '../../lib/useRemainingTime'
@@ -62,6 +62,18 @@ export function OperationPanel({ onAuthExpired }: Props) {
     timeLimitSec: state?.timeLimitSec ?? null,
     questionStartedAt: state?.questionStartedAt ?? null,
   })
+
+  // API応答を待っている間に別タブがフェーズを進めたか判断できるよう、
+  // 最新のSSEフェーズと、フェーズが変わった回数を画面反映時に同期する。
+  const latestPhase = useRef<AdminState['phase'] | null>(state?.phase ?? null)
+  const phaseRevision = useRef(0)
+  useLayoutEffect(() => {
+    const nextPhase = state?.phase ?? null
+    if (latestPhase.current === nextPhase) return
+
+    latestPhase.current = nextPhase
+    phaseRevision.current += 1
+  }, [state?.phase])
 
   const [failure, setFailure] = useState<OperationFailure | null>(null)
   const [busy, setBusy] = useState(false) // 連続で操作できないようにするための排他処理のためのロック
@@ -239,18 +251,18 @@ export function OperationPanel({ onAuthExpired }: Props) {
 
   if (state === null) return <p>接続中...</p>
 
-  const run = async (
+  const run = async <Result,>(
     action: ActionLabel,
-    request: () => Promise<unknown>,
-    onSuccess?: () => void,
+    request: () => Promise<Result>,
+    onSuccess?: (result: Result) => void,
   ) => {
     if (inFlight.current) return
     inFlight.current = true
     setBusy(true)
     setFailure(null)
     try {
-      await request()
-      onSuccess?.()
+      const result = await request()
+      onSuccess?.(result)
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         onAuthExpired()
@@ -276,8 +288,18 @@ export function OperationPanel({ onAuthExpired }: Props) {
     }
   }
 
-  const playRevivalAudio = () => {
+  const playRevivalAudio = (response: AdminState, phaseRevisionAtRequest: number) => {
     if (playsAudioOnMonitor) return
+    if (response.phase !== 'revival-video') return
+
+    // リクエスト後にSSEで別フェーズを受け取っていたら、遅れて届いたHTTP応答では
+    // 再生を始めない。同じrevival-videoへの更新なら再生してよい。
+    if (
+      phaseRevision.current !== phaseRevisionAtRequest &&
+      latestPhase.current !== 'revival-video'
+    ) {
+      return
+    }
 
     void import('../../lib/sound')
       .then(({ play }) => play('revival'))
@@ -288,10 +310,10 @@ export function OperationPanel({ onAuthExpired }: Props) {
 
   // フェーズ変更ボタンは、どれを押しても敗者復活音声を先に止める。
   // APIが失敗しても「押したのに音だけ鳴り続ける」状態を作らない。
-  const runPhaseChange = (
+  const runPhaseChange = <Result,>(
     action: ActionLabel,
-    request: () => Promise<unknown>,
-    onSuccess?: () => void,
+    request: () => Promise<Result>,
+    onSuccess?: (result: Result) => void,
   ) =>
     run(
       action,
@@ -442,13 +464,16 @@ export function OperationPanel({ onAuthExpired }: Props) {
             busy={busy}
             onAdvanceText={() => run(ACTION_LABEL.advanceText, advanceText)}
             onShowAnswer={() => runPhaseChange(ACTION_LABEL.showAnswer, showAnswer)}
-            onRevival={(to) =>
-              runPhaseChange(
+            onRevival={(to) => {
+              const phaseRevisionAtRequest = phaseRevision.current
+              return runPhaseChange(
                 to === 'video' ? ACTION_LABEL.revivalVideo : ACTION_LABEL.revivalEntry,
                 () => revival(to),
-                to === 'video' ? playRevivalAudio : undefined,
+                to === 'video'
+                  ? (response) => playRevivalAudio(response, phaseRevisionAtRequest)
+                  : undefined,
               )
-            }
+            }}
             onReset={(to) =>
               runPhaseChange(
                 to == 'finished' ? ACTION_LABEL.resetFinished : ACTION_LABEL.resetWaiting,
