@@ -26,6 +26,9 @@ const MonitorPreviewPage = import.meta.env.DEV
 const AdminPreviewPage = import.meta.env.DEV
   ? lazy(() => import('./features/dev/AdminPreviewPage'))
   : null
+const SoundPreviewPage = import.meta.env.DEV
+  ? lazy(() => import('./features/dev/SoundPreviewPage'))
+  : null
 
 const isDev = import.meta.env.DEV
 
@@ -41,7 +44,8 @@ function App() {
           TokenPreviewPage !== null &&
           PhonePreviewPage !== null &&
           MonitorPreviewPage !== null &&
-          AdminPreviewPage !== null && (
+          AdminPreviewPage !== null &&
+          SoundPreviewPage !== null && (
             <>
               <Route
                 path="/dev"
@@ -80,6 +84,14 @@ function App() {
                 element={
                   <Suspense fallback={null}>
                     <AdminPreviewPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/dev/sounds"
+                element={
+                  <Suspense fallback={null}>
+                    <SoundPreviewPage />
                   </Suspense>
                 }
               />

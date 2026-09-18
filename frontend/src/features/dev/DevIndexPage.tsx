@@ -13,6 +13,7 @@ const PAGES = [
   { to: '/dev/phone', title: 'スマホ画面プレビュー', note: '4形式 × フェーズを並べて確認' },
   { to: '/dev/monitor', title: 'モニタ画面プレビュー', note: '4形式 × フェーズを並べて確認' },
   { to: '/dev/admin', title: '管理者画面プレビュー', note: '各パーツの状態を並べて確認' },
+  { to: '/dev/sounds', title: '効果音', note: '再生・鳴らし直し・停止・終了通知の確認' },
 ] as const
 
 function DevIndexPage() {

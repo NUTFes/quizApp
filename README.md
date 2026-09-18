@@ -110,6 +110,12 @@ quizApp/
 5. `mise run lint`、`mise run fix`は`mise run up`でコンテナが起動している状態で実行すること
 6. ホスト側の`pnpm install`は エディタ(VSCode)の補完・ESLint表示のために任意で実行するもの
 
+### 開発用の仮音源
+
+`frontend/src/assets/sounds/tick-tock.wav` は、効果音の再生・停止・ループを耳で確認するための可聴プレースホルダです。
+開発環境にMP3へ変換できる `ffmpeg` / `sox` などがないため、Python標準ライブラリだけで生成でき、ブラウザで再生できるWAV形式にしています。
+それ以外の仮音源は無音MP3のままで、本番用音源への差し替えは別作業です。
+
 
 詳しい手順 → [`docs/ガイドライン/開発フローガイド.md`](docs/ガイドライン/開発フローガイド.md)
 
