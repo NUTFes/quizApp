@@ -252,52 +252,80 @@ export function OperationPanel({ onAuthExpired }: Props) {
   const participantUrl = new URL('/', window.location.href).toString()
 
   return (
-    <div>
-      <CurrentStatus state={state} status={toStatus(state, remainingSec)} />
-      <ScreenPreviewPanel state={state} joinUrl={participantUrl} />
-      {questionListError !== null && <p>{questionListError}</p>}
-      {questions !== null && (
-        <QuestionList
-          items={questions}
-          selectedId={selectedId}
-          onSelect={(id) => {
-            setSelectedId(id)
-            setRetryCount(0) // 選び直したら、前の問題のリトライ回数を引き継がない
-          }}
-          currentQuestionId={state.question?.id ?? null}
-        />
-      )}
-      <SelectedQuestion {...selectedQuestionState} />
-      <ShowQuestionForm
-        selected={selectedQuestion}
-        currentQuestionId={state.phase === 'question' ? (state.question?.id ?? null) : null}
-        timeLimitInput={timeLimitInput}
-        busy={busy}
-        onTimeLimitInputChange={setTimelimitInput}
-        onSubmit={(id, sec) =>
-          run(ACTION_LABEL.showQuestion, () => showQuestion(id, sec), refreshQuestions)
-        }
-      />
-      <ControlPanel
-        state={state}
-        remainingSec={remainingSec}
-        busy={busy}
-        onAdvanceText={() => run(ACTION_LABEL.advanceText, advanceText)}
-        onShowAnswer={() => run(ACTION_LABEL.showAnswer, showAnswer)}
-        onRevival={(to) =>
-          run(to === 'video' ? ACTION_LABEL.revivalVideo : ACTION_LABEL.revivalEntry, () =>
-            revival(to),
-          )
-        }
-        onReset={(to) =>
-          run(
-            to == 'finished' ? ACTION_LABEL.resetFinished : ACTION_LABEL.resetWaiting,
-            () => reset(to),
-            refreshQuestions,
-          )
-        }
-      />
+    <div className="flex flex-col gap-6">
+      {/* Figmaの配置(左: 出題中の問題/選択中の問題2枚、中央: 問題一覧、右: 各画面プレビュー/操作パネル)を
+          CSS Gridで組む。1024px未満(lg未満)は grid-cols-1 に落ちて縦一列になる(#118 受け入れ条件)。
+          各パネル自体のマークアップ(w-full max-w-[440px]の card 等)は変更していない。
+          ここではラップした div の側で列・行を指定するだけにとどめる。 */}
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+        <div className="lg:col-start-1 lg:row-start-1">
+          <CurrentStatus state={state} status={toStatus(state, remainingSec)} />
+        </div>
+
+        <div className="lg:col-start-2 lg:col-span-2 lg:row-start-1">
+          <ScreenPreviewPanel state={state} joinUrl={participantUrl} />
+        </div>
+
+        <div className="lg:col-start-1 lg:row-start-2">
+          <SelectedQuestion {...selectedQuestionState} />
+        </div>
+
+        {/* 進行ボタン(出題操作)は当日3秒以内に押せる必要があるため、
+            問題一覧・操作パネルと横並びの位置(スクロール不要な高さ)に置く */}
+        <div className="lg:col-start-1 lg:row-start-3">
+          <ShowQuestionForm
+            selected={selectedQuestion}
+            currentQuestionId={state.phase === 'question' ? (state.question?.id ?? null) : null}
+            timeLimitInput={timeLimitInput}
+            busy={busy}
+            onTimeLimitInputChange={setTimelimitInput}
+            onSubmit={(id, sec) =>
+              run(ACTION_LABEL.showQuestion, () => showQuestion(id, sec), refreshQuestions)
+            }
+          />
+        </div>
+
+        <div className="overflow-x-auto lg:col-start-2 lg:row-span-2 lg:row-start-2">
+          {questionListError !== null && <p>{questionListError}</p>}
+          {questions !== null && (
+            <QuestionList
+              items={questions}
+              selectedId={selectedId}
+              onSelect={(id) => {
+                setSelectedId(id)
+                setRetryCount(0) // 選び直したら、前の問題のリトライ回数を引き継がない
+              }}
+              currentQuestionId={state.question?.id ?? null}
+            />
+          )}
+        </div>
+
+        <div className="lg:col-start-3 lg:row-span-2 lg:row-start-2">
+          <ControlPanel
+            state={state}
+            remainingSec={remainingSec}
+            busy={busy}
+            onAdvanceText={() => run(ACTION_LABEL.advanceText, advanceText)}
+            onShowAnswer={() => run(ACTION_LABEL.showAnswer, showAnswer)}
+            onRevival={(to) =>
+              run(to === 'video' ? ACTION_LABEL.revivalVideo : ACTION_LABEL.revivalEntry, () =>
+                revival(to),
+              )
+            }
+            onReset={(to) =>
+              run(
+                to == 'finished' ? ACTION_LABEL.resetFinished : ACTION_LABEL.resetWaiting,
+                () => reset(to),
+                refreshQuestions,
+              )
+            }
+          />
+        </div>
+      </div>
+
       <ErrorBanner failure={failure} onDismiss={() => setFailure(null)} />
+
+      {/* 貼り付け投入・画像投入は準備作業なので、進行ボタンより下に置く(#118) */}
       <ImportPanel
         phase={state.phase}
         input={importInput}
