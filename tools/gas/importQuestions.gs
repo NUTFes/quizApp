@@ -10,7 +10,7 @@
  *   - 2択/あるなしの choiceC/D 空欄チェック(choices は2個で送る)
  *   - correct(列名) → correctChoiceId 変換、該当選択肢の非空チェック
  *   - hayaoshi 行のエラー化(v1未対応・フェーズ2で解放)
- * 送信は行わない(→ #63)。JSONをダイアログに出すところまで。
+ * #63 のサーバー送信でも、ここの変換結果をそのまま使う。
  *
  * シートレイアウト:
  *   1行目ヘッダ、2行目からデータ。A列から開始。
@@ -87,44 +87,26 @@ function generateQuestionsJson() {
   ui = SpreadsheetApp.getUi();  // メニュー以外からの実行にも対応
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    const values = sheet.getDataRange().getValues();
+    const result = buildQuestionsFromSheet(sheet);
 
-    if (values.length < DATA_START_ROW) {
+    if (result.rowCount < DATA_START_ROW) {
       ui.alert('データがありません。2行目以降に問題を入力してください。');
       return;
     }
 
-    const questions = [];
-    const errors = [];
-
-    for (let i = DATA_START_ROW - 1; i < values.length; i++) {
-      const row = values[i];
-      const sourceRow = i + 1;  // 1-indexed のシート行番号(ヘッダが1行目、最初のデータは2)
-
-      // 全セル空の行はスキップ(運営メンバーが行間隔をあけるケース対応)
-      if (isEmptyRow(row)) continue;
-
-      const result = convertRow(row, sourceRow);
-      if (result.errors.length > 0) {
-        Array.prototype.push.apply(errors, result.errors);
-      } else {
-        questions.push(result.question);
-      }
-    }
-
     // エラーが1件でもあれば JSON を出さずにエラー一覧を表示
-    if (errors.length > 0) {
-      showErrorsDialog(errors);
+    if (result.errors.length > 0) {
+      showErrorsDialog(result.errors);
       return;
     }
 
-    if (questions.length === 0) {
+    if (result.questions.length === 0) {
       ui.alert('変換できる問題がありませんでした。2行目以降に問題を入力してください。');
       return;
     }
 
-    const json = JSON.stringify({ questions: questions }, null, 2);
-    showJsonDialog(json, questions.length);
+    const json = JSON.stringify({ questions: result.questions }, null, 2);
+    showJsonDialog(json, result.questions.length);
 
   } catch (error) {
     ui.alert(
@@ -135,6 +117,38 @@ function generateQuestionsJson() {
     );
     Logger.log('Error: ' + error.message + '\n' + error.stack);
   }
+}
+
+/**
+ * シートの2行目以降を読み、送信できる問題と変換エラーを返す
+ * JSON表示とサーバー送信が同じ変換結果を使うための共通処理。
+ * @return {{questions: Object[], errors: string[], rowCount: number}}
+ */
+function buildQuestionsFromSheet(sheet) {
+  const values = sheet.getDataRange().getValues();
+  const questions = [];
+  const errors = [];
+
+  for (let i = DATA_START_ROW - 1; i < values.length; i++) {
+    const row = values[i];
+    const sourceRow = i + 1;  // 1-indexed のシート行番号(ヘッダが1行目、最初のデータは2)
+
+    // 全セル空の行はスキップ(運営メンバーが行間隔をあけるケース対応)
+    if (isEmptyRow(row)) continue;
+
+    const converted = convertRow(row, sourceRow);
+    if (converted.errors.length > 0) {
+      Array.prototype.push.apply(errors, converted.errors);
+    } else {
+      questions.push(converted.question);
+    }
+  }
+
+  return {
+    questions: questions,
+    errors: errors,
+    rowCount: values.length,
+  };
 }
 
 // ===== 変換ロジック =====
