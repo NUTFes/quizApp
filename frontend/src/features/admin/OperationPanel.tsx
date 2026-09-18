@@ -61,6 +61,11 @@ type PendingQuestionRetry = {
   timeLimitSec: number | null
 }
 
+type DeadlineObservation = {
+  questionInstanceKey: string | null
+  remainingTime: number | null
+}
+
 // ブラウザの自動再生制限などで音が拒否されても、クイズの進行は成功扱いのまま続ける。
 function playSafely(name: SoundName): void {
   void play(name).catch(() => {})
@@ -82,6 +87,11 @@ export function OperationPanel({ onAuthExpired }: Props) {
     timeLimitSec: state?.timeLimitSec ?? null,
     questionStartedAt: state?.questionStartedAt ?? null,
   })
+  // 問題idに開始時刻も足し、同じ問題の「やり直し」を別の出題として区別する。
+  const currentQuestionInstanceKey =
+    state?.phase === 'question' && state.question !== null
+      ? `${state.question.id}:${state.questionStartedAt}`
+      : null
 
   // API応答を待っている間に別タブがフェーズを進めたか判断できるよう、
   // 最新のSSEフェーズと、フェーズが変わった回数を画面反映時に同期する。
@@ -109,6 +119,8 @@ export function OperationPanel({ onAuthExpired }: Props) {
   )
   // deden の終了後に tickTock を始める購読。再出題や画面離脱時に古い購読を残さない。
   const dedenEndedCleanup = useRef<(() => void) | null>(null)
+  // 最初から締切済みの状態では鳴らさず、同じ出題の残り時間が0を跨いだときだけ鳴らす。
+  const previousDeadlineObservation = useRef<DeadlineObservation | null>(null)
 
   const [questions, setQuestions] = useState<QuestionListItem[] | null>(null)
   const [questionListError, setQuestionListError] = useState<string | null>(null)
@@ -151,15 +163,28 @@ export function OperationPanel({ onAuthExpired }: Props) {
   })
 
   // 締切または question 以外へ移ったら、あとから古い deden が終わって
-  // tickTock を始めないようにする。
+  // tickTock を始めないようにする。締切音は同じ出題で正数から0になった瞬間だけ鳴らす。
   useEffect(() => {
+    const previous = previousDeadlineObservation.current
     const deadlinePassed =
       state?.phase === 'question' && state.timeLimitSec !== null && remainingTime === 0
+    const crossedDeadline =
+      deadlinePassed &&
+      previous?.questionInstanceKey === currentQuestionInstanceKey &&
+      previous.remainingTime !== null &&
+      previous.remainingTime > 0
+
+    previousDeadlineObservation.current = {
+      questionInstanceKey: currentQuestionInstanceKey,
+      remainingTime,
+    }
+
     if (state?.phase === 'question' && !deadlinePassed) return
     dedenEndedCleanup.current?.()
     dedenEndedCleanup.current = null
     stop('tickTock')
-  }, [remainingTime, state?.phase, state?.timeLimitSec])
+    if (crossedDeadline) playSafely('chime')
+  }, [currentQuestionInstanceKey, remainingTime, state?.phase, state?.timeLimitSec])
 
   // 管理者画面を離れたあとまでループ音を残さない。
   useEffect(
@@ -299,11 +324,6 @@ export function OperationPanel({ onAuthExpired }: Props) {
             }
           : selectedQuestionResult.result
 
-  // 問題idに開始時刻も足し、同じ問題の「やり直し」を別の出題として区別する。
-  const currentQuestionInstanceKey =
-    state?.phase === 'question' && state.question !== null
-      ? `${state.question.id}:${state.questionStartedAt}`
-      : null
   const showAnswerDialogOpen =
     confirmingAnswerInstanceKey !== null &&
     confirmingAnswerInstanceKey === currentQuestionInstanceKey
@@ -491,6 +511,8 @@ export function OperationPanel({ onAuthExpired }: Props) {
 
   const submitQuestion = (questionId: number, timeLimitSec: number | null, withSound: boolean) => {
     setPendingQuestionRetry(null)
+    // チャイムは時間経過で鳴らすため、出題操作中に先に自動再生制限を解除しておく。
+    if (timeLimitSec !== null) unlockSound('chime')
     if (withSound) {
       unlockSound('deden')
       if (timeLimitSec !== null) unlockSound('tickTock')
