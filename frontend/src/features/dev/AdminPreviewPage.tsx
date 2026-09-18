@@ -18,6 +18,7 @@ import { ErrorBanner } from '../admin/parts/ErrorBanner'
 import { ImagePanel } from '../admin/parts/ImagePanel'
 import { ImportPanel } from '../admin/parts/ImportPanel'
 import { RemainingTime } from '../admin/parts/RemainingTime'
+import { RetrySoundDialogCard } from '../admin/parts/RetrySoundDialog'
 import { SelectedQuestion } from '../admin/parts/SelectedQuestion'
 import { ShowQuestionForm } from '../admin/parts/ShowQuestionForm'
 import type { AdminState, ImportResult, QuestionListItem } from '../../types'
@@ -586,6 +587,11 @@ const CONTROL_CASES = [
         onCancel={noop}
       />
     ),
+  },
+  {
+    title: 'やり直しの音 / 選択中',
+    note: '危険操作ではないため、正答確認とは色・文言・ボタン配置が異なる',
+    node: <RetrySoundDialogCard onWithSound={noop} onWithoutSound={noop} onClose={noop} />,
   },
   {
     title: 'エラー / 出ていない',
