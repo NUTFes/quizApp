@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { AdminState } from '../../../types'
 import { RemainingTime } from './RemainingTime'
 import { ACTION_LABEL } from '../labels'
@@ -8,8 +7,11 @@ type Props = {
   state: AdminState
   remainingSec: number | null
   busy: boolean
+  showAnswerDialogOpen: boolean
   onAdvanceText: () => void
-  onShowAnswer: () => void
+  onShowAnswerDialogOpen: () => void
+  onShowAnswerConfirm: () => void
+  onShowAnswerCancel: () => void
   onRevival: (to: 'video' | 'entry') => void
   onReset: (to: 'waiting' | 'finished') => void
 }
@@ -18,29 +20,19 @@ export function ControlPanel({
   state,
   remainingSec,
   busy,
+  showAnswerDialogOpen,
   onAdvanceText,
-  onShowAnswer,
+  onShowAnswerDialogOpen,
+  onShowAnswerConfirm,
+  onShowAnswerCancel,
   onRevival,
   onReset,
 }: Props) {
   const isQuestion = state.phase === 'question'
   const isRevivalVideo = state.phase === 'revival-video'
   const isRevivalEntry = state.phase === 'revival-entry'
-  // 問題idだけでなく questionStartedAt も含める。
-  // 「やり直し」は同じ問題idのままタイマーだけリセットされるので、id だけの比較だと
-  // 「やり直した直後の別インスタンス」を「さっきと同じ出題」と誤認してしまう
-  const currentInstanceKey =
-    isQuestion && state.question !== null ? `${state.question.id}:${state.questionStartedAt}` : null
-  // 確認を開いた時点の出題インスタンス。null は「確認していない」
-  const [confirmingInstanceKey, setConfirmingInstanceKey] = useState<string | null>(null)
-
-  // 開いた時点のインスタンスと、今のインスタンスが一致しているときだけ表示する。
-  // (SSEで届いた新しい state を反映するこの描画そのものの中で判定するので、
-  //  古い確認を「開いたまま」表示し続けて、その一瞬に確定操作を許してしまう隙が無い。
-  //  別タブ操作・やり直しで一致しなくなれば、この式だけで自動的に閉じる)
-  const dialogOpen = confirmingInstanceKey !== null && confirmingInstanceKey === currentInstanceKey
   // ロック操作をして、排他的制御する
-  const locked = busy || dialogOpen
+  const locked = busy || showAnswerDialogOpen
 
   const canAdvance = isQuestion && state.revealedSegments < state.totalSegments
 
@@ -63,7 +55,7 @@ export function ControlPanel({
         <ControlButton
           label={ACTION_LABEL.showAnswer}
           disabled={locked || !isQuestion}
-          onClick={() => setConfirmingInstanceKey(currentInstanceKey)}
+          onClick={onShowAnswerDialogOpen}
         />
       </div>
 
@@ -112,16 +104,13 @@ export function ControlPanel({
         </div>
       </div>
 
-      {dialogOpen && (
+      {showAnswerDialogOpen && (
         <ConfirmDialog
           title="正答を表示しますか?"
           message="モニタと参加者のスマホに、正答が表示されます。表示すると取り消せません。"
           confirmLabel="正答を表示する"
-          onConfirm={() => {
-            setConfirmingInstanceKey(null)
-            onShowAnswer()
-          }}
-          onCancel={() => setConfirmingInstanceKey(null)}
+          onConfirm={onShowAnswerConfirm}
+          onCancel={onShowAnswerCancel}
         />
       )}
     </section>

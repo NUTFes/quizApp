@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { BASE } from '../../lib/config'
 import { useAdminState } from '../../lib/useEventState'
 import { useRemainingTime } from '../../lib/useRemainingTime'
+import { onEnded, play, stop, type SoundName } from '../../lib/sound'
 import type {
   AdminState,
   ImageInfo,
@@ -40,6 +41,7 @@ import { ImagePanel } from './parts/ImagePanel'
 import { ImportPanel } from './parts/ImportPanel'
 import { QuestionList } from './parts/QuestionList'
 import { RevivalVideoPanel } from './parts/RevivalVideoPanel'
+import { RetrySoundDialog } from './parts/RetrySoundDialog'
 import { ScreenPreviewPanel } from './parts/ScreenPreviewPanel'
 import { SelectedQuestion, type SelectedQuestionProps } from './parts/SelectedQuestion'
 import { ShowQuestionForm } from './parts/ShowQuestionForm'
@@ -52,6 +54,24 @@ type Props = {
 }
 
 const REVIVAL_VIDEO_URL = '/videos/revival.mp4'
+
+type PendingQuestionRetry = {
+  questionId: number
+  timeLimitSec: number | null
+}
+
+// ブラウザの自動再生制限などで音が拒否されても、クイズの進行は成功扱いのまま続ける。
+function playSafely(name: SoundName): void {
+  void play(name).catch(() => {})
+}
+
+// Safari などでは、ユーザー操作から離れた非同期処理内の初回 play() が拒否される。
+// クリック処理の中で再生を要求してすぐ止め、API成功後に使う音声要素を先にアンロックする。
+function unlockSound(name: SoundName): void {
+  const unlockAttempt = play(name)
+  stop(name)
+  void unlockAttempt.catch(() => {})
+}
 
 export function OperationPanel({ onAuthExpired }: Props) {
   // SSE でつなぎっぱなしにする。状態が変わるたびに新しい state が届く
@@ -67,6 +87,15 @@ export function OperationPanel({ onAuthExpired }: Props) {
   const inFlight = useRef(false)
   const [timeLimitInput, setTimelimitInput] = useState('30') // 制限時間のための箱 state
   const [unlimited, setUnlimited] = useState(false)
+  const [pendingQuestionRetry, setPendingQuestionRetry] = useState<PendingQuestionRetry | null>(
+    null,
+  )
+  // 正答確認を開いた出題を識別する。別タブから状態が変わった場合は、古い確認を表示しない。
+  const [confirmingAnswerInstanceKey, setConfirmingAnswerInstanceKey] = useState<string | null>(
+    null,
+  )
+  // deden の終了後に tickTock を始める購読。再出題や画面離脱時に古い購読を残さない。
+  const dedenEndedCleanup = useRef<(() => void) | null>(null)
 
   const [questions, setQuestions] = useState<QuestionListItem[] | null>(null)
   const [questionListError, setQuestionListError] = useState<string | null>(null)
@@ -106,6 +135,27 @@ export function OperationPanel({ onAuthExpired }: Props) {
   useEffect(() => {
     onAuthExpiredRef.current = onAuthExpired
   })
+
+  // 締切または question 以外へ移ったら、あとから古い deden が終わって
+  // tickTock を始めないようにする。
+  useEffect(() => {
+    const deadlinePassed =
+      state?.phase === 'question' && state.timeLimitSec !== null && remainingTime === 0
+    if (state?.phase === 'question' && !deadlinePassed) return
+    dedenEndedCleanup.current?.()
+    dedenEndedCleanup.current = null
+    stop('tickTock')
+  }, [remainingTime, state?.phase, state?.timeLimitSec])
+
+  // 管理者画面を離れたあとまでループ音を残さない。
+  useEffect(
+    () => () => {
+      dedenEndedCleanup.current?.()
+      stop('tickTock')
+      stop('drumroll')
+    },
+    [],
+  )
 
   // ページを開き直しても投入済み画像を確認できるよう、初回表示時に一覧を取得する。
   useEffect(() => {
@@ -228,6 +278,20 @@ export function OperationPanel({ onAuthExpired }: Props) {
             }
           : selectedQuestionResult.result
 
+  // 問題idに開始時刻も足し、同じ問題の「やり直し」を別の出題として区別する。
+  const currentQuestionInstanceKey =
+    state?.phase === 'question' && state.question !== null
+      ? `${state.question.id}:${state.questionStartedAt}`
+      : null
+  const showAnswerDialogOpen =
+    confirmingAnswerInstanceKey !== null &&
+    confirmingAnswerInstanceKey === currentQuestionInstanceKey
+
+  // 別タブ操作などで確認対象の出題が変わった場合、見えなくなったドラムロールも止める。
+  useEffect(() => {
+    if (confirmingAnswerInstanceKey !== null && !showAnswerDialogOpen) stop('drumroll')
+  }, [confirmingAnswerInstanceKey, showAnswerDialogOpen])
+
   if (state === null) return <p>接続中...</p>
 
   const run = async (
@@ -333,6 +397,90 @@ export function OperationPanel({ onAuthExpired }: Props) {
   // QRを含むモニタ本体の表示部品へ渡すURLだけ、ここで明示的に補う。
   const participantUrl = new URL('/', window.location.href).toString()
 
+  const playQuestionSounds = (timeLimitSec: number | null) => {
+    // やり直しでは、いま鳴っているチックタックを止めて出題SEから始め直す。
+    // 別問題へ直接切り替えた場合も、前の問題のループ音を残さない。
+    dedenEndedCleanup.current?.()
+    dedenEndedCleanup.current = null
+    stop('deden')
+    stop('tickTock')
+
+    if (timeLimitSec !== null) {
+      const removeEndedListener = onEnded('deden', () => {
+        removeEndedListener()
+        if (dedenEndedCleanup.current === removeEndedListener) dedenEndedCleanup.current = null
+        playSafely('tickTock')
+      })
+      dedenEndedCleanup.current = removeEndedListener
+      void play('deden').catch(() => {
+        removeEndedListener()
+        if (dedenEndedCleanup.current === removeEndedListener) dedenEndedCleanup.current = null
+      })
+      return
+    }
+
+    // 制限時間なしでも、出題そのものの合図である deden は鳴らす。
+    playSafely('deden')
+  }
+
+  const submitQuestion = (questionId: number, timeLimitSec: number | null, withSound: boolean) => {
+    setPendingQuestionRetry(null)
+    if (withSound) {
+      unlockSound('deden')
+      if (timeLimitSec !== null) unlockSound('tickTock')
+    }
+    void run(
+      ACTION_LABEL.showQuestion,
+      () => showQuestion(questionId, timeLimitSec),
+      () => {
+        refreshQuestions()
+        if (withSound) {
+          playQuestionSounds(timeLimitSec)
+          return
+        }
+
+        // 「音を出さない」で同じ問題を出し直した場合も、前回の出題音を残さない。
+        dedenEndedCleanup.current?.()
+        dedenEndedCleanup.current = null
+        stop('deden')
+        stop('tickTock')
+      },
+    )
+  }
+
+  const handleShowAnswerDialogOpen = () => {
+    if (currentQuestionInstanceKey === null) return
+    setConfirmingAnswerInstanceKey(currentQuestionInstanceKey)
+    // 正答確認だけは、APIより前の「ダイアログを開く瞬間」に音を切り替える。
+    dedenEndedCleanup.current?.()
+    dedenEndedCleanup.current = null
+    stop('deden')
+    stop('tickTock')
+    playSafely('drumroll')
+  }
+
+  const handleShowAnswerConfirm = () => {
+    unlockSound('tada')
+    setConfirmingAnswerInstanceKey(null)
+    void run(
+      ACTION_LABEL.showAnswer,
+      async () => {
+        try {
+          return await showAnswer()
+        } finally {
+          // 成功・通信失敗・APIエラーのどの場合でもドラムロールは止める。
+          stop('drumroll')
+        }
+      },
+      () => playSafely('tada'),
+    )
+  }
+
+  const handleShowAnswerCancel = () => {
+    setConfirmingAnswerInstanceKey(null)
+    stop('drumroll')
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {/* Figmaの配置(左: 出題中の問題/選択中の問題2枚、中央: 問題一覧、右: 各画面プレビュー/操作パネル)を
@@ -357,15 +505,26 @@ export function OperationPanel({ onAuthExpired }: Props) {
         <div className="lg:col-start-1 lg:row-start-3">
           <ShowQuestionForm
             selected={selectedQuestion}
-            currentQuestionId={state.phase === 'question' ? (state.question?.id ?? null) : null}
+            currentQuestionId={
+              state.phase === 'question' || state.phase === 'answer'
+                ? (state.question?.id ?? null)
+                : null
+            }
             timeLimitInput={timeLimitInput}
             unlimited={unlimited}
             busy={busy}
             onTimeLimitInputChange={setTimelimitInput}
             onUnlimitedChange={setUnlimited}
-            onSubmit={(id, sec) =>
-              run(ACTION_LABEL.showQuestion, () => showQuestion(id, sec), refreshQuestions)
-            }
+            onSubmit={(id, sec) => {
+              if (
+                id === state.question?.id &&
+                (state.phase === 'question' || state.phase === 'answer')
+              ) {
+                setPendingQuestionRetry({ questionId: id, timeLimitSec: sec })
+                return
+              }
+              submitQuestion(id, sec, true)
+            }}
           />
         </div>
 
@@ -392,8 +551,11 @@ export function OperationPanel({ onAuthExpired }: Props) {
             state={state}
             remainingSec={remainingSec}
             busy={busy}
+            showAnswerDialogOpen={showAnswerDialogOpen}
             onAdvanceText={() => run(ACTION_LABEL.advanceText, advanceText)}
-            onShowAnswer={() => run(ACTION_LABEL.showAnswer, showAnswer)}
+            onShowAnswerDialogOpen={handleShowAnswerDialogOpen}
+            onShowAnswerConfirm={handleShowAnswerConfirm}
+            onShowAnswerCancel={handleShowAnswerCancel}
             onRevival={(to) =>
               run(to === 'video' ? ACTION_LABEL.revivalVideo : ACTION_LABEL.revivalEntry, () =>
                 revival(to),
@@ -409,6 +571,22 @@ export function OperationPanel({ onAuthExpired }: Props) {
           />
         </div>
       </div>
+
+      {pendingQuestionRetry !== null && (
+        <RetrySoundDialog
+          onWithSound={() =>
+            submitQuestion(pendingQuestionRetry.questionId, pendingQuestionRetry.timeLimitSec, true)
+          }
+          onWithoutSound={() =>
+            submitQuestion(
+              pendingQuestionRetry.questionId,
+              pendingQuestionRetry.timeLimitSec,
+              false,
+            )
+          }
+          onClose={() => setPendingQuestionRetry(null)}
+        />
+      )}
 
       <ErrorBanner failure={failure} onDismiss={() => setFailure(null)} />
 
