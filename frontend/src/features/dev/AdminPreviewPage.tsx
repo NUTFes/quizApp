@@ -443,8 +443,10 @@ const CONTROL_CASES = [
         selected={null}
         currentQuestionId={null}
         timeLimitInput="30"
+        unlimited={false}
         busy={false}
         onTimeLimitInputChange={noop}
+        onUnlimitedChange={noop}
         onSubmit={noop}
       />
     ),
@@ -457,8 +459,10 @@ const CONTROL_CASES = [
         selected={PREVIEW_SELECTED}
         currentQuestionId={null}
         timeLimitInput="30"
+        unlimited={false}
         busy={false}
         onTimeLimitInputChange={noop}
+        onUnlimitedChange={noop}
         onSubmit={noop}
       />
     ),
@@ -471,8 +475,26 @@ const CONTROL_CASES = [
         selected={PREVIEW_SELECTED}
         currentQuestionId={PREVIEW_SELECTED.id}
         timeLimitInput="30"
+        unlimited={false}
         busy={false}
         onTimeLimitInputChange={noop}
+        onUnlimitedChange={noop}
+        onSubmit={noop}
+      />
+    ),
+  },
+  {
+    title: '選択中の問題 / 早押し・制限時間なし',
+    note: '早押しを選んだ直後の状態。チェックを外せば秒数も指定できる',
+    node: (
+      <ShowQuestionForm
+        selected={{ ...PREVIEW_SELECTED, type: 'hayaoshi' }}
+        currentQuestionId={null}
+        timeLimitInput="30"
+        unlimited
+        busy={false}
+        onTimeLimitInputChange={noop}
+        onUnlimitedChange={noop}
         onSubmit={noop}
       />
     ),
@@ -485,8 +507,10 @@ const CONTROL_CASES = [
         selected={{ ...PREVIEW_SELECTED, asked: true }}
         currentQuestionId={null}
         timeLimitInput="30"
+        unlimited={false}
         busy={false}
         onTimeLimitInputChange={noop}
+        onUnlimitedChange={noop}
         onSubmit={noop}
       />
     ),
@@ -499,8 +523,10 @@ const CONTROL_CASES = [
         selected={PREVIEW_SELECTED}
         currentQuestionId={null}
         timeLimitInput="3"
+        unlimited={false}
         busy={false}
         onTimeLimitInputChange={noop}
+        onUnlimitedChange={noop}
         onSubmit={noop}
       />
     ),
@@ -513,8 +539,10 @@ const CONTROL_CASES = [
         selected={PREVIEW_SELECTED}
         currentQuestionId={null}
         timeLimitInput="30.5"
+        unlimited={false}
         busy={false}
         onTimeLimitInputChange={noop}
+        onUnlimitedChange={noop}
         onSubmit={noop}
       />
     ),
@@ -527,8 +555,10 @@ const CONTROL_CASES = [
         selected={PREVIEW_SELECTED}
         currentQuestionId={null}
         timeLimitInput=""
+        unlimited={false}
         busy={false}
         onTimeLimitInputChange={noop}
+        onUnlimitedChange={noop}
         onSubmit={noop}
       />
     ),
@@ -541,8 +571,10 @@ const CONTROL_CASES = [
         selected={PREVIEW_SELECTED}
         currentQuestionId={null}
         timeLimitInput="30"
+        unlimited={false}
         busy={true}
         onTimeLimitInputChange={noop}
+        onUnlimitedChange={noop}
         onSubmit={noop}
       />
     ),

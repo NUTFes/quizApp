@@ -61,6 +61,7 @@ export function OperationPanel({ onAuthExpired }: Props) {
   const [busy, setBusy] = useState(false) // 連続で操作できないようにするための排他処理のためのロック
   const inFlight = useRef(false)
   const [timeLimitInput, setTimelimitInput] = useState('30') // 制限時間のための箱 state
+  const [unlimited, setUnlimited] = useState(false)
 
   const [questions, setQuestions] = useState<QuestionListItem[] | null>(null)
   const [questionListError, setQuestionListError] = useState<string | null>(null)
@@ -225,6 +226,7 @@ export function OperationPanel({ onAuthExpired }: Props) {
       //  もう存在しないidを show-question に送って 404 になる)
       setQuestions(null)
       setSelectedId(null)
+      setUnlimited(false)
       refreshQuestions() // 問題一覧を取り直す
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -308,8 +310,10 @@ export function OperationPanel({ onAuthExpired }: Props) {
             selected={selectedQuestion}
             currentQuestionId={state.phase === 'question' ? (state.question?.id ?? null) : null}
             timeLimitInput={timeLimitInput}
+            unlimited={unlimited}
             busy={busy}
             onTimeLimitInputChange={setTimelimitInput}
+            onUnlimitedChange={setUnlimited}
             onSubmit={(id, sec) =>
               run(ACTION_LABEL.showQuestion, () => showQuestion(id, sec), refreshQuestions)
             }
@@ -326,6 +330,7 @@ export function OperationPanel({ onAuthExpired }: Props) {
               selectedId={selectedId}
               onSelect={(id) => {
                 setSelectedId(id)
+                setUnlimited(questions.find((question) => question.id === id)?.type === 'hayaoshi')
                 setRetryCount(0) // 選び直したら、前の問題のリトライ回数を引き継がない
               }}
               currentQuestionId={state.question?.id ?? null}
