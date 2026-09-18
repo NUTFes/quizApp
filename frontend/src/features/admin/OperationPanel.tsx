@@ -65,6 +65,14 @@ function playSafely(name: SoundName): void {
   void play(name).catch(() => {})
 }
 
+// Safari などでは、ユーザー操作から離れた非同期処理内の初回 play() が拒否される。
+// クリック処理の中で再生を要求してすぐ止め、API成功後に使う音声要素を先にアンロックする。
+function unlockSound(name: SoundName): void {
+  const unlockAttempt = play(name)
+  stop(name)
+  void unlockAttempt.catch(() => {})
+}
+
 export function OperationPanel({ onAuthExpired }: Props) {
   // SSE でつなぎっぱなしにする。状態が変わるたびに新しい state が届く
   const state = useAdminState(onAuthExpired)
@@ -392,9 +400,10 @@ export function OperationPanel({ onAuthExpired }: Props) {
   const playQuestionSounds = (timeLimitSec: number | null) => {
     // やり直しでは、いま鳴っているチックタックを止めて出題SEから始め直す。
     // 別問題へ直接切り替えた場合も、前の問題のループ音を残さない。
-    stop('tickTock')
     dedenEndedCleanup.current?.()
     dedenEndedCleanup.current = null
+    stop('deden')
+    stop('tickTock')
 
     if (timeLimitSec !== null) {
       const removeEndedListener = onEnded('deden', () => {
@@ -416,12 +425,25 @@ export function OperationPanel({ onAuthExpired }: Props) {
 
   const submitQuestion = (questionId: number, timeLimitSec: number | null, withSound: boolean) => {
     setPendingQuestionRetry(null)
+    if (withSound) {
+      unlockSound('deden')
+      if (timeLimitSec !== null) unlockSound('tickTock')
+    }
     void run(
       ACTION_LABEL.showQuestion,
       () => showQuestion(questionId, timeLimitSec),
       () => {
         refreshQuestions()
-        if (withSound) playQuestionSounds(timeLimitSec)
+        if (withSound) {
+          playQuestionSounds(timeLimitSec)
+          return
+        }
+
+        // 「音を出さない」で同じ問題を出し直した場合も、前回の出題音を残さない。
+        dedenEndedCleanup.current?.()
+        dedenEndedCleanup.current = null
+        stop('deden')
+        stop('tickTock')
       },
     )
   }
@@ -432,11 +454,13 @@ export function OperationPanel({ onAuthExpired }: Props) {
     // 正答確認だけは、APIより前の「ダイアログを開く瞬間」に音を切り替える。
     dedenEndedCleanup.current?.()
     dedenEndedCleanup.current = null
+    stop('deden')
     stop('tickTock')
     playSafely('drumroll')
   }
 
   const handleShowAnswerConfirm = () => {
+    unlockSound('tada')
     setConfirmingAnswerInstanceKey(null)
     void run(
       ACTION_LABEL.showAnswer,
