@@ -42,7 +42,8 @@ export function QuestionLayout({
       <div className="w-full">
         <div className="mx-5 my-7 rounded-[20px] border border-border-soft bg-surface shadow-[0_6px_16px_0_rgba(25,32,133,0.08)]">
           <div className="flex">
-            <QuestionNumber count={state.askedCount} />
+            {/* 最初に出す例題をQ0にするため、askedCountから1引いて渡す */}
+            <QuestionNumber count={state.askedCount - 1} />
             <p
               className={`m-2 ml-auto flex items-center justify-center rounded-[20px] px-5 py-2 text-status-answer shadow-[0_6px_16px_0_rgba(25,32,133,0.08)] ${STATUS[status].style}`}
             >
