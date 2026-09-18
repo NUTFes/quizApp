@@ -8,15 +8,15 @@ type UseRemainingTimeProps = {
 
 type RemainingTimeState = {
   timingKey: string
-  seconds: number
+  seconds: number | null
 }
 
 function calculateRemainingTimeAtReceipt({
   serverTime,
   timeLimitSec,
   questionStartedAt,
-}: UseRemainingTimeProps): number {
-  if (timeLimitSec === null || questionStartedAt === null) return 0
+}: UseRemainingTimeProps): number | null {
+  if (timeLimitSec === null || questionStartedAt === null) return null
 
   const elapsed = new Date(serverTime).getTime() - new Date(questionStartedAt).getTime()
   return Math.max(0, Math.ceil((timeLimitSec * 1000 - elapsed) / 1000))
@@ -26,7 +26,7 @@ export function useRemainingTime({
   serverTime,
   timeLimitSec,
   questionStartedAt,
-}: UseRemainingTimeProps): number {
+}: UseRemainingTimeProps): number | null {
   const timingKey = `${serverTime}|${timeLimitSec}|${questionStartedAt}`
   const receivedRemainingTime = calculateRemainingTimeAtReceipt({
     serverTime,
@@ -72,9 +72,9 @@ export function useRemainingTime({
     }
   }, [serverTime, timeLimitSec, questionStartedAt, timingKey])
 
-  // 問題フェーズではないときは前の値が残った remainigTime を読まない
+  // 問題フェーズではないときや制限時間がないときは、0秒と区別して null を返す
   if (timeLimitSec === null || questionStartedAt === null) {
-    return 0
+    return null
   }
   // 残り時間を返す
   // 受け取った時刻が変わった最初の描画では、前の問題の state ではなく、
