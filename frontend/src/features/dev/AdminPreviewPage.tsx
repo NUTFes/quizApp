@@ -18,6 +18,7 @@ import { ErrorBanner } from '../admin/parts/ErrorBanner'
 import { ImagePanel } from '../admin/parts/ImagePanel'
 import { ImportPanel } from '../admin/parts/ImportPanel'
 import { RemainingTime } from '../admin/parts/RemainingTime'
+import { RetrySoundDialogCard } from '../admin/parts/RetrySoundDialog'
 import { SelectedQuestion } from '../admin/parts/SelectedQuestion'
 import { ShowQuestionForm } from '../admin/parts/ShowQuestionForm'
 import type { AdminState, ImportResult, QuestionListItem } from '../../types'
@@ -334,8 +335,11 @@ const PREVIEW_FAILED_AT = new Date('2026-09-13T13:05:12+09:00')
 
 // ボタンを押しても何もしない。CONTROL_CASES より上に書く(const は宣言より前で使えない)
 const noopHandlers = {
+  showAnswerDialogOpen: false,
   onAdvanceText: noop,
-  onShowAnswer: noop,
+  onShowAnswerDialogOpen: noop,
+  onShowAnswerConfirm: noop,
+  onShowAnswerCancel: noop,
   onRevival: noop,
   onReset: noop,
 }
@@ -586,6 +590,11 @@ const CONTROL_CASES = [
         onCancel={noop}
       />
     ),
+  },
+  {
+    title: 'やり直しの音 / 選択中',
+    note: '危険操作ではないため、正答確認とは色・文言・ボタン配置が異なる',
+    node: <RetrySoundDialogCard onWithSound={noop} onWithoutSound={noop} onClose={noop} />,
   },
   {
     title: 'エラー / 出ていない',
