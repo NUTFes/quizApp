@@ -10,6 +10,7 @@ import { useAdminState } from '../../lib/useEventState'
 import { useRemainingTime } from '../../lib/useRemainingTime'
 import type {
   AdminState,
+  ImageInfo,
   ImportResult,
   Question,
   QuestionImport,
@@ -19,6 +20,7 @@ import type { RowIssue } from '../../types/rowIssue'
 import {
   advanceText,
   ApiError,
+  getImages,
   getQuestionById,
   getQuestions,
   putQuestions,
@@ -85,6 +87,9 @@ export function OperationPanel({ onAuthExpired }: Props) {
   const [importError, setImportError] = useState<string | null>(null)
   const [importIssues, setImportIssues] = useState<RowIssue[]>([])
 
+  const [existingImages, setExistingImages] = useState<ImageInfo[] | null>(null)
+  const [existingImagesError, setExistingImagesError] = useState<string | null>(null)
+
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [videoBusy, setVideoBusy] = useState(false)
   const [videoConfirming, setVideoConfirming] = useState(false)
@@ -97,6 +102,30 @@ export function OperationPanel({ onAuthExpired }: Props) {
   useEffect(() => {
     onAuthExpiredRef.current = onAuthExpired
   })
+
+  // ページを開き直しても投入済み画像を確認できるよう、初回表示時に一覧を取得する。
+  useEffect(() => {
+    let cancelled = false
+    getImages()
+      .then(({ images }) => {
+        if (cancelled) return
+        setExistingImages(images)
+        setExistingImagesError(null)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        if (err instanceof ApiError && err.status === 401) {
+          onAuthExpiredRef.current()
+          return
+        }
+        setExistingImagesError(
+          err instanceof ApiError ? toMessage(err.code) : NETWORK_ERROR_MESSAGE,
+        )
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // 直近に発行した refreshQuestions の世代。古い応答が後から返ってきても
   // 上書きさせないために使う(→ lib/useEventState.ts の revision と同じ考え方)。
@@ -371,7 +400,11 @@ export function OperationPanel({ onAuthExpired }: Props) {
           onInputChange={setImportInput}
           onSubmit={(questionsToImport) => void handleImport(questionsToImport)}
         />
-        <ImagePanel onAuthExpired={onAuthExpired} />
+        <ImagePanel
+          existingImages={existingImages}
+          existingImagesError={existingImagesError}
+          onAuthExpired={onAuthExpired}
+        />
         <RevivalVideoPanel
           file={videoFile}
           busy={videoBusy}
