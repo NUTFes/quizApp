@@ -1,5 +1,5 @@
 /**
- * quizApp #61: 【入稿STEP1】GASでスプレッドシートを読み、投入用JSONを作る
+ * quizApp #61 / #63: スプレッドシートから投入用JSONを作り、サーバーへ送る
  *
  * 責務(API仕様書 §3.5.1): 列 → JSON の変換のみ。内容の妥当性はサーバーが見る。
  * ただしGASにしかできない変換・検証はここでやる:
@@ -16,8 +16,8 @@
  *   1行目ヘッダ、2行目からデータ。A列から開始。
  *
  * ★セキュリティ★
- * IMPORT_TOKEN 等のシークレットはコードに直書きしない。
- * #63 で必要になったら PropertiesService.getScriptProperties() に置く(§3.5.6)。
+ * SERVER_URL と IMPORT_TOKEN はコードに直書きしない。
+ * GASのスクリプトプロパティに置く(§3.5.6)。
  * このファイルを tools/gas/ にコミットするときはトークンが埋まっていないか目視確認する。
  */
 
@@ -67,11 +67,16 @@ const DIFFICULTY_MAP = {
 
 const CHOICE_IDS = ['A', 'B', 'C', 'D'];
 
+// 値自体はコードではなく、GASのスクリプトプロパティに保存する
+const SERVER_URL_PROPERTY = 'SERVER_URL';
+const IMPORT_TOKEN_PROPERTY = 'IMPORT_TOKEN';
+
 // ===== メニュー =====
 
 function onOpen() {
   ui = SpreadsheetApp.getUi();
   ui.createMenu('quizApp')
+    .addItem('サーバーに送る', 'sendQuestionsToServer')
     .addItem('JSONを作る', 'generateQuestionsJson')
     .addSeparator()
     .addItem('ヘッダ行とプルダウンを作る(テンプレート用)', 'writeTemplateHeader')
@@ -79,6 +84,54 @@ function onOpen() {
 }
 
 // ===== メイン処理 =====
+
+/**
+ * アクティブシートを変換し、問題投入APIにPUTする
+ */
+function sendQuestionsToServer() {
+  ui = SpreadsheetApp.getUi();
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    const result = buildQuestionsFromSheet(sheet);
+
+    if (result.rowCount < DATA_START_ROW) {
+      ui.alert('データがありません。2行目以降に問題を入力してください。');
+      return;
+    }
+
+    // GAS側で検出できる変換エラーがある場合は、一部だけ送らない
+    if (result.errors.length > 0) {
+      showErrorsDialog(result.errors, '送信前の入力エラー');
+      return;
+    }
+
+    if (result.questions.length === 0) {
+      ui.alert('送信できる問題がありませんでした。2行目以降に問題を入力してください。');
+      return;
+    }
+
+    const config = getServerConfig();
+    const response = UrlFetchApp.fetch(config.questionsUrl, {
+      method: 'put',
+      contentType: 'application/json',
+      headers: {
+        Authorization: 'Bearer ' + config.importToken,
+      },
+      payload: JSON.stringify({ questions: result.questions }),
+      muteHttpExceptions: true,
+    });
+
+    handleImportResponse(response);
+  } catch (error) {
+    // リクエスト設定や例外の内容はログ出力しない(トークン漏えい防止)
+    ui.alert(
+      'サーバーへ送信できませんでした\n' +
+      '----- エラー内容 -----\n' +
+      error.message + '\n' +
+      '--------------------------'
+    );
+  }
+}
 
 /**
  * アクティブシートを読み、§3.5.1 形式のJSONを生成してダイアログに表示する
@@ -149,6 +202,109 @@ function buildQuestionsFromSheet(sheet) {
     errors: errors,
     rowCount: values.length,
   };
+}
+
+// ===== サーバー送信 =====
+
+/**
+ * GASのスクリプトプロパティから送信先とトークンを読む
+ * SERVER_URL は https://quiz.example.com のようにオリジンまでを設定する。
+ */
+function getServerConfig() {
+  const properties = PropertiesService.getScriptProperties();
+  const serverUrl = String(properties.getProperty(SERVER_URL_PROPERTY) || '').trim();
+  const importToken = String(properties.getProperty(IMPORT_TOKEN_PROPERTY) || '').trim();
+  const missing = [];
+
+  if (serverUrl === '') missing.push(SERVER_URL_PROPERTY);
+  if (importToken === '') missing.push(IMPORT_TOKEN_PROPERTY);
+  if (missing.length > 0) {
+    throw new Error(
+      'GASのスクリプトプロパティに ' +
+      missing.join(' と ') +
+      ' を設定してください。'
+    );
+  }
+
+  if (!/^https:\/\//i.test(serverUrl)) {
+    throw new Error('SERVER_URL には https:// で始まる公開URLを設定してください。');
+  }
+
+  return {
+    questionsUrl: serverUrl.replace(/\/+$/, '') + '/api/admin/questions',
+    importToken: importToken,
+  };
+}
+
+/**
+ * 問題投入APIのHTTPステータスとJSONを、運営メンバー向けの表示に変換する
+ */
+function handleImportResponse(response) {
+  const status = response.getResponseCode();
+  const body = parseJsonResponse(response.getContentText());
+  const apiError = body && body.error && typeof body.error === 'object' ? body.error : null;
+
+  if (status === 200) {
+    if (!body || !Number.isInteger(body.imported)) {
+      ui.alert('送信先から予想していない形式の応答が返りました。サーバー管理者に確認してください。');
+      return;
+    }
+
+    const warnings = Array.isArray(body.warnings) ? body.warnings : [];
+    let message = body.imported + '件を投入しました';
+    if (warnings.length > 0) {
+      message += '\n\n警告(' + warnings.length + '件):\n' + warnings.map(formatServerDetail).join('\n');
+    }
+    ui.alert(message);
+    return;
+  }
+
+  if (status === 400 && apiError && apiError.code === 'SYNC_VALIDATION_ERROR') {
+    const details = Array.isArray(apiError.details) ? apiError.details : [];
+    const errors = details.length > 0
+      ? details.map(formatServerDetail)
+      : [apiError.message || '問題データの内容が不正です。'];
+    showErrorsDialog(errors, 'サーバーの検証エラー');
+    return;
+  }
+
+  if (status === 401) {
+    ui.alert('トークンが違います');
+    return;
+  }
+
+  if (status === 409 && apiError && apiError.code === 'INVALID_PHASE') {
+    ui.alert('本番進行中は投入できません。管理者画面でリセットしてください');
+    return;
+  }
+
+  const serverMessage = apiError && apiError.message ? '\n' + apiError.message : '';
+  ui.alert('送信に失敗しました(HTTP ' + status + ')' + serverMessage);
+}
+
+function parseJsonResponse(text) {
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
+ * APIが返す sourceRow と reason を「何行目がダメか」分かる文言にする
+ */
+function formatServerDetail(detail) {
+  if (!detail || typeof detail !== 'object') return String(detail);
+
+  const sourceRow = Number(detail.sourceRow);
+  const rowPrefix = Number.isInteger(sourceRow) && sourceRow >= DATA_START_ROW
+    ? sourceRow + '行目: '
+    : '';
+  const reason = typeof detail.reason === 'string' && detail.reason !== ''
+    ? detail.reason
+    : '内容を確認してください';
+  return rowPrefix + reason;
 }
 
 // ===== 変換ロジック =====
@@ -350,7 +506,7 @@ function writeTemplateHeader() {
 /**
  * エラー一覧をダイアログで表示(運営メンバーが自分で直せる文言で)
  */
-function showErrorsDialog(errors) {
+function showErrorsDialog(errors, title) {
   const items = errors.map(function (e) {
     return '<li style="margin: 4px 0;">' + escapeHtml(e) + '</li>';
   }).join('');
@@ -362,7 +518,7 @@ function showErrorsDialog(errors) {
       '<ul style="padding-left: 20px;">' + items + '</ul>' +
     '</div>'
   ).setWidth(650).setHeight(450);
-  ui.showModalDialog(html, 'JSON変換エラー');
+  ui.showModalDialog(html, title || 'JSON変換エラー');
 }
 
 /**
