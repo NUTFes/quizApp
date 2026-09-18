@@ -27,6 +27,9 @@ function AdminPage() {
 
   // 認証判定は起動時に一度だけ（依存配列には [] を指定）
   useEffect(() => {
+    // 効果音は管理者PCだけで事前読み込みする。読み込み失敗で進行は止めない。
+    void import('../../lib/sound').catch(() => {})
+
     // 応答のラグによって、変な読み込みが起きるのを防ぐためのフラグ
     let cancelled = false
     if (getAdminToken() === '') {
