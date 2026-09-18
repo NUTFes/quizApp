@@ -25,7 +25,8 @@ export function HayaoshiView({ state, showAnswer = false }: HayaoshiViewProps) {
         }`}
       >
         <section className="flex min-h-0 flex-col overflow-hidden rounded-[28px] border-2 border-border-soft bg-surface pt-4 pr-9 pb-9 pl-9 shadow-[0_10px_28px_0_rgba(25,32,133,0.1)]">
-          <p className="w-[75px] shrink-0 text-p-count-number-alt">Q{state.askedCount}</p>
+          {/* 最初に出す例題をQ0にするため、askedCountから1引く */}
+          <p className="w-[75px] shrink-0 text-p-count-number-alt">Q{state.askedCount - 1}</p>
           <p
             className={`flex min-h-0 flex-1 px-20 py-2.5 text-brand ${
               showAnswer ? 'items-center text-p-question-body-m' : 'text-p-question-body-l'

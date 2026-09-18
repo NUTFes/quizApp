@@ -24,7 +24,8 @@ export function CurrentStatus({ state, status }: Props) {
         </p>
       ) : (
         <dl className="grid min-h-[365px] grid-cols-[minmax(62px,0.2fr)_minmax(0,1fr)] content-start gap-2.5 py-3 pl-2 text-current-question leading-[normal]">
-          <Row label="第何問">第{state.askedCount}問</Row>
+          {/* 最初に出す例題をQ0にするため、askedCountから1引く */}
+          <Row label="第何問">第{state.askedCount - 1}問</Row>
           <Row label="ID">{question.id}</Row>
           <Row label="問題形式">{questionTypeLabel(question.type)}</Row>
           <Row label="難易度">{difficultyLabel(question.difficulty)}</Row>
