@@ -78,7 +78,7 @@ type CorrectBadgeProps = {
 function CorrectBadge({ isVisible, className = 'absolute top-6 left-10' }: CorrectBadgeProps) {
   return (
     <span
-      className={`${className} flex h-8 w-15 items-center justify-center rounded-[10px] bg-live text-p-correct-label text-brand shadow-[0_6px_8px_0_rgba(25,32,133,0.08)] ${
+      className={`${className} flex h-28 w-53 items-center justify-center rounded-[35px] bg-live text-p-count-number text-brand shadow-[0_6px_8px_0_rgba(25,32,133,0.08)] ${
         isVisible ? 'visible' : 'invisible'
       }`}
     >
