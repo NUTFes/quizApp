@@ -35,6 +35,7 @@ import { ErrorBanner, OperationFailure } from './parts/ErrorBanner'
 import { ImagePanel } from './parts/ImagePanel'
 import { ImportPanel } from './parts/ImportPanel'
 import { QuestionList } from './parts/QuestionList'
+import { ScreenPreviewPanel } from './parts/ScreenPreviewPanel'
 import { SelectedQuestion, type SelectedQuestionProps } from './parts/SelectedQuestion'
 import { ShowQuestionForm } from './parts/ShowQuestionForm'
 import type { AdminStatus } from './parts/StatusBadge'
@@ -246,10 +247,14 @@ export function OperationPanel({ onAuthExpired }: Props) {
     state.phase === 'question' && state.timeLimitSec !== null ? remainingTime : null
   // ShowQuestionForm は id ではなく QuestionListItem そのものを欲しがる(問題文・出題済みの警告表示に使うため)
   const selectedQuestion = questions?.find((q) => q.id === selectedId) ?? null
+  // 管理者向け state には joinUrl が無い。同一サイトの参加者画面は / なので、
+  // QRを含むモニタ本体の表示部品へ渡すURLだけ、ここで明示的に補う。
+  const participantUrl = new URL('/', window.location.href).toString()
 
   return (
     <div>
       <CurrentStatus state={state} status={toStatus(state, remainingSec)} />
+      <ScreenPreviewPanel state={state} joinUrl={participantUrl} />
       {questionListError !== null && <p>{questionListError}</p>}
       {questions !== null && (
         <QuestionList
