@@ -1,9 +1,12 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { ApiError, getImages, uploadImage } from '../../../lib/api'
+import type { ImageInfo } from '../../../types'
 import { NETWORK_ERROR_MESSAGE, toImageMessage } from '../errorMessages'
 import { ConfirmDialog } from './ConfirmDialog'
 
 type Props = {
+  existingImages: ImageInfo[] | null
+  existingImagesError: string | null
   onAuthExpired: () => void
 }
 
@@ -15,7 +18,12 @@ type UploadOutcome =
 const imageFileName = (imageUrl: string) =>
   imageUrl.startsWith('/images/') ? imageUrl.slice('/images/'.length) : imageUrl
 
-export function ImagePanel({ onAuthExpired }: Props) {
+const formatUpdatedAt = (iso: string) => {
+  const date = new Date(iso)
+  return Number.isNaN(date.getTime()) ? iso : date.toLocaleString('ja-JP')
+}
+
+export function ImagePanel({ existingImages, existingImagesError, onAuthExpired }: Props) {
   const inputId = useId()
   const [files, setFiles] = useState<File[]>([])
   const [names, setNames] = useState<string[]>([])
@@ -140,6 +148,44 @@ export function ImagePanel({ onAuthExpired }: Props) {
         PNG・JPEG画像を選び、スプレッドシートに記入する名前で保存します。
       </p>
 
+      <div className="mt-4">
+        <h3 className="text-admin-func-label font-bold">投入済みの画像</h3>
+        {existingImagesError !== null ? (
+          <p className="mt-2 text-sm text-red-700">
+            画像一覧の取得に失敗しました: {existingImagesError}
+          </p>
+        ) : existingImages === null ? (
+          <p className="mt-2 text-sm">確認中…</p>
+        ) : existingImages.length === 0 ? (
+          <p className="mt-2 text-sm">投入済みの画像はまだありません。</p>
+        ) : (
+          <div className="mt-2 overflow-x-auto">
+            <table className="w-full min-w-[390px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-border-soft">
+                  <th className="px-2 py-2">ファイル名</th>
+                  <th className="px-2 py-2">サイズ</th>
+                  <th className="px-2 py-2">更新日時</th>
+                </tr>
+              </thead>
+              <tbody>
+                {existingImages.map((image) => (
+                  <tr key={image.imageUrl} className="border-b border-border-soft align-top">
+                    <td className="px-2 py-3 break-all">{imageFileName(image.imageUrl)}</td>
+                    <td className="px-2 py-3 whitespace-nowrap">
+                      {image.size.toLocaleString('ja-JP')} バイト
+                    </td>
+                    <td className="px-2 py-3 whitespace-nowrap">
+                      {formatUpdatedAt(image.updatedAt)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       <label htmlFor={inputId} className="mt-4 block text-admin-func-label">
         画像ファイル
       </label>
@@ -164,6 +210,7 @@ export function ImagePanel({ onAuthExpired }: Props) {
 
       {files.length > 0 && (
         <div className="mt-4 overflow-x-auto">
+          <h3 className="mb-2 text-admin-func-label font-bold">今回の投入結果</h3>
           <table className="w-full min-w-[390px] text-left text-sm">
             <thead>
               <tr className="border-b border-border-soft">

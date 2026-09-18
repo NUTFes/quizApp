@@ -60,7 +60,7 @@ export function RevivalVideoPanel({
 
       {error !== null && <p className="mt-4 text-sm text-red-700">失敗: {error}</p>}
 
-      {videoUrl !== null && (
+      {videoUrl !== null ? (
         <p className="mt-4 text-admin-func-label">
           現在アップロードされている動画:{' '}
           <a
@@ -71,6 +71,10 @@ export function RevivalVideoPanel({
           >
             {videoUrl}
           </a>
+        </p>
+      ) : (
+        <p className="mt-4 text-admin-func-label">
+          現在アップロードされている動画はまだありません。
         </p>
       )}
 

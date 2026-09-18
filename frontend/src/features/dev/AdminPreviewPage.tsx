@@ -840,7 +840,19 @@ const IMAGE_PANEL_CASES = [
   {
     title: '画像投入 / 初期状態',
     note: '内部 state で完結するパネル。画像選択後のプレビューと名前入力もここで確認できる',
-    node: <ImagePanel onAuthExpired={noop} />,
+    node: (
+      <ImagePanel
+        existingImages={[
+          {
+            imageUrl: '/images/q5.png',
+            size: 123456,
+            updatedAt: '2026-09-13T12:30:00+09:00',
+          },
+        ]}
+        existingImagesError={null}
+        onAuthExpired={noop}
+      />
+    ),
   },
 ] as const
 
