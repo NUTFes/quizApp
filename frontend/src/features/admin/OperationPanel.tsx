@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { BASE } from '../../lib/config'
 import { useAdminState } from '../../lib/useEventState'
 import { useRemainingTime } from '../../lib/useRemainingTime'
+import { playsRevivalAudioOnMonitor } from '../../lib/revivalAudio'
 import type {
   AdminState,
   ImageInfo,
@@ -99,6 +100,7 @@ export function OperationPanel({ onAuthExpired }: Props) {
   const [videoConfirming, setVideoConfirming] = useState(false)
   const [videoError, setVideoError] = useState<string | null>(null)
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
+  const playsAudioOnMonitor = playsRevivalAudioOnMonitor(window.location.search)
 
   // 呼び出し側がその場で作った関数を渡しても、依存配列に入れずに済むようにする
   // (lib/useEventState.ts の onUnauthorizedRef と同じ理由)
@@ -130,6 +132,13 @@ export function OperationPanel({ onAuthExpired }: Props) {
       cancelled = true
     }
   }, [])
+
+  // 別タブなどからフェーズが切り替わった場合も、管理者PCの音だけが残らないようにする。
+  useEffect(() => {
+    if (state?.phase === 'revival-video') return
+
+    void import('../../lib/sound').then(({ stop }) => stop('revival')).catch(() => {})
+  }, [state?.phase])
 
   // 動画は固定名の1本だけなので一覧APIは作らず、認証不要の配信経路へHEADを送って存在を確認する。
   useEffect(() => {
@@ -258,6 +267,41 @@ export function OperationPanel({ onAuthExpired }: Props) {
     }
   }
 
+  const stopRevivalAudio = async () => {
+    try {
+      const { stop } = await import('../../lib/sound')
+      stop('revival')
+    } catch {
+      // 音声の停止に失敗しても、画面の進行操作は止めない。
+    }
+  }
+
+  const playRevivalAudio = () => {
+    if (playsAudioOnMonitor) return
+
+    void import('../../lib/sound')
+      .then(({ play }) => play('revival'))
+      .catch(() => {
+        // ファイルが無い・ブラウザに拒否された場合も、映像と進行は止めない。
+      })
+  }
+
+  // フェーズ変更ボタンは、どれを押しても敗者復活音声を先に止める。
+  // APIが失敗しても「押したのに音だけ鳴り続ける」状態を作らない。
+  const runPhaseChange = (
+    action: ActionLabel,
+    request: () => Promise<unknown>,
+    onSuccess?: () => void,
+  ) =>
+    run(
+      action,
+      async () => {
+        await stopRevivalAudio()
+        return request()
+      },
+      onSuccess,
+    )
+
   // 問題データの投入(#110)。件数・行番号つきの詳細を画面に残す必要があり、
   // 「失敗時にだけ failure を出す」共通処理(run)とは形が違うので専用に書く。
   // ただし排他ロック(inFlight/busy)は run と共有する(上のコメント参照)
@@ -364,7 +408,11 @@ export function OperationPanel({ onAuthExpired }: Props) {
             onTimeLimitInputChange={setTimelimitInput}
             onUnlimitedChange={setUnlimited}
             onSubmit={(id, sec) =>
-              run(ACTION_LABEL.showQuestion, () => showQuestion(id, sec), refreshQuestions)
+              runPhaseChange(
+                ACTION_LABEL.showQuestion,
+                () => showQuestion(id, sec),
+                refreshQuestions,
+              )
             }
           />
         </div>
@@ -393,14 +441,16 @@ export function OperationPanel({ onAuthExpired }: Props) {
             remainingSec={remainingSec}
             busy={busy}
             onAdvanceText={() => run(ACTION_LABEL.advanceText, advanceText)}
-            onShowAnswer={() => run(ACTION_LABEL.showAnswer, showAnswer)}
+            onShowAnswer={() => runPhaseChange(ACTION_LABEL.showAnswer, showAnswer)}
             onRevival={(to) =>
-              run(to === 'video' ? ACTION_LABEL.revivalVideo : ACTION_LABEL.revivalEntry, () =>
-                revival(to),
+              runPhaseChange(
+                to === 'video' ? ACTION_LABEL.revivalVideo : ACTION_LABEL.revivalEntry,
+                () => revival(to),
+                to === 'video' ? playRevivalAudio : undefined,
               )
             }
             onReset={(to) =>
-              run(
+              runPhaseChange(
                 to == 'finished' ? ACTION_LABEL.resetFinished : ACTION_LABEL.resetWaiting,
                 () => reset(to),
                 refreshQuestions,

@@ -3,6 +3,7 @@ import dedenSrc from '../assets/sounds/deden.mp3'
 import drumrollSrc from '../assets/sounds/drumroll.mp3'
 import tadaSrc from '../assets/sounds/tada.mp3'
 import tickTockSrc from '../assets/sounds/tick-tock.mp3'
+import { REVIVAL_AUDIO_SRC } from './revivalAudio'
 
 const DEFAULT_VOLUME = 0.7
 
@@ -20,6 +21,7 @@ const SOUNDS = {
   drumroll: { src: drumrollSrc, loop: true },
   tada: { src: tadaSrc, loop: false },
   chime: { src: chimeSrc, loop: false },
+  revival: { src: REVIVAL_AUDIO_SRC, loop: false },
 } as const satisfies Record<string, SoundDefinition>
 
 export type SoundName = keyof typeof SOUNDS

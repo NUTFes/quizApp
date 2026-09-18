@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useMonitorState } from '../../lib/useEventState'
 import type { MonitorState } from '../../types'
 import { REVIVAL_URL } from '../../lib/config'
+import { playsRevivalAudioOnMonitor } from '../../lib/revivalAudio'
 import { WaitingView } from './views/WaitingView'
 import { QuestionView } from './views/QuestionView'
 import { FinishedView } from './views/FinishedView'
@@ -39,6 +40,7 @@ function MonitorPage() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [hasVideoError, setHasVideoError] = useState(false)
   const isRevivalVideo = state?.phase === 'revival-video'
+  const playsAudio = playsRevivalAudioOnMonitor(window.location.search)
 
   useEffect(() => {
     const video = videoRef.current
@@ -47,13 +49,13 @@ function MonitorPage() {
     let cancelled = false
 
     const play = async () => {
-      video.muted = false
+      video.muted = !playsAudio
       try {
         await video.play()
       } catch {
         if (cancelled) return
 
-        // 音つきの自動再生がブラウザに拒否されても、映像だけは必ず流す。
+        // 保険モードで音つきの自動再生が拒否されても、映像だけは必ず流す。
         video.muted = true
         try {
           await video.play()
@@ -69,7 +71,7 @@ function MonitorPage() {
       cancelled = true
       video.pause()
     }
-  }, [hasVideoError, isRevivalVideo])
+  }, [hasVideoError, isRevivalVideo, playsAudio])
 
   return (
     <>
@@ -79,6 +81,7 @@ function MonitorPage() {
         src={REVIVAL_VIDEO_SRC}
         isActive={isRevivalVideo}
         hasError={hasVideoError}
+        muted={!playsAudio}
         onError={() => setHasVideoError(true)}
       />
     </>
