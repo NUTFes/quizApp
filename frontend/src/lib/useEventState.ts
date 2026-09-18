@@ -32,11 +32,12 @@ import { BASE, getAdminToken, USE_MOCK } from './config'
 import { ApiError, getAdminState, getMonitorState, getViewerState } from './api'
 
 type EventState = AdminState | MonitorState | ViewerState
+type MockStep<Type extends EventState> = { at: number; mock: Type }
 
 type Opts<Type extends EventState> = {
   path: string
   getState: () => Promise<Type>
-  testSteps: { at: number; mock: Type }[]
+  loadMockSteps: () => Promise<MockStep<Type>[]>
   view?: 'phone' | 'monitor' | 'admin'
   // 認証が切れていることが分かったときに呼ぶ(管理者画面だけが渡す)。
   // EventSource は失敗理由(ステータスコード)を教えてくれないので、
@@ -47,7 +48,7 @@ type Opts<Type extends EventState> = {
 function useEventState<Type extends EventState>({
   path,
   getState,
-  testSteps,
+  loadMockSteps,
   view,
   onUnauthorized,
 }: Opts<Type>): Type | null {
@@ -67,11 +68,20 @@ function useEventState<Type extends EventState>({
     }
 
     if (USE_MOCK) {
+      let closed = false
       const ts: ReturnType<typeof setTimeout>[] = []
-      for (const { at, mock } of testSteps) {
-        ts.push(setTimeout(() => updateState(mock), at))
-      }
+      loadMockSteps()
+        .then((steps) => {
+          if (closed) return
+          for (const { at, mock } of steps) {
+            ts.push(setTimeout(() => updateState(mock), at))
+          }
+        })
+        .catch((e: unknown) => {
+          if (!closed) console.error('モックデータを読み込めませんでした', e)
+        })
       return () => {
+        closed = true
         for (const t of ts) {
           clearTimeout(t)
         }
@@ -134,7 +144,7 @@ function useEventState<Type extends EventState>({
       closed = true
       es.close()
     }
-  }, [path, getState, testSteps, view])
+  }, [path, getState, loadMockSteps, view])
 
   return state
 }
@@ -147,12 +157,13 @@ const ADMIN_STEPS = [
   { at: 11000, mock: adminAnswerNashi },
   { at: 14000, mock: adminFinished },
 ]
+const loadAdminMockSteps = async () => ADMIN_STEPS
 
 export const useAdminState = (onUnauthorized?: () => void) =>
   useEventState<AdminState>({
     path: `/api/admin/events?token=${encodeURIComponent(getAdminToken())}`,
     getState: getAdminState,
-    testSteps: ADMIN_STEPS,
+    loadMockSteps: loadAdminMockSteps,
     view: 'admin',
     onUnauthorized,
   })
@@ -166,12 +177,13 @@ const MONITOR_STEPS = [
   { at: 14000, mock: monitorRevivalVideo },
   { at: 17000, mock: monitorFinished },
 ]
+const loadMonitorMockSteps = async () => MONITOR_STEPS
 
 export const useMonitorState = () =>
   useEventState<MonitorState>({
     path: '/api/events?view=monitor',
     getState: getMonitorState,
-    testSteps: MONITOR_STEPS,
+    loadMockSteps: loadMonitorMockSteps,
     view: 'monitor',
   })
 
@@ -185,11 +197,12 @@ const VIEWER_STEP = [
   { at: 17000, mock: phoneRevivalEntry },
   { at: 20000, mock: phoneFinished },
 ]
+const loadViewerMockSteps = async () => VIEWER_STEP
 
 export const useViewerState = () =>
   useEventState<ViewerState>({
     path: '/api/events?view=phone',
     getState: getViewerState,
-    testSteps: VIEWER_STEP,
+    loadMockSteps: loadViewerMockSteps,
     view: 'phone',
   })
