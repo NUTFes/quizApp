@@ -2,7 +2,7 @@ import chimeSrc from '../assets/sounds/chime.mp3'
 import dedenSrc from '../assets/sounds/deden.mp3'
 import drumrollSrc from '../assets/sounds/drumroll.mp3'
 import tadaSrc from '../assets/sounds/tada.mp3'
-import tickTockSrc from '../assets/sounds/tick-tock.wav'
+import tickTockSrc from '../assets/sounds/tick-tock.mp3'
 
 const DEFAULT_VOLUME = 0.7
 
