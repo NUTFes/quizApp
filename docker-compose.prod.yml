@@ -56,8 +56,8 @@ services:
       #
       # ★ イメージに焼かずボリュームで渡す。COPY にすると1枚足すたびに
       #   backend の再ビルドが要るうえ、up --build のたびに手で置いた分が消える。
-      #   CT では /opt/quizApp/backend/static/images/ と .../videos/ にそれぞれ scp で置く。
-      #   動画はアップロードAPIが無い(scpのみ。images/ のような投入APIは作らない)。
+      #   画像・動画の投入APIも、このマウント先へ保存する。
+      #   動画は /opt/quizApp/backend/static/videos/revival.mp4 の固定名で上書きする(#158)。
       - ./backend/static:/app/static
     ulimits:
       nofile:

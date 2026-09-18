@@ -8,7 +8,7 @@
 ## 0. 共通ルール(全APIに適用)
 
 - リクエスト/レスポンスはすべて JSON(UTF-8)。`Content-Type: application/json`。
-  - **唯一の例外: §3.6 `POST /api/admin/images`(画像の投入)のリクエストのみ `multipart/form-data`。** レスポンスはJSON。画像をJSONに載せるにはbase64にする必要があり、①転送量が1.33倍(5MB → 6.7MB)・サーバーのピークメモリも約2倍(エンコード後の文字列とデコード後のバイト列が同時に載る)②フロントは `FormData` に `append` するだけで済むのに `FileReader` の非同期処理が1段挟まる ③`curl -F` の1行でテストできなくなる(当日サーバーに触らない以上これは効く)、の3点で割に合わないため。**このAPI以外でmultipartを増やさないこと。**
+  - **例外: §3.6 `POST /api/admin/images`(画像の投入)と §3.9 `POST /api/admin/videos`(動画の投入)のリクエストは `multipart/form-data`。** レスポンスはJSON。バイナリをJSONに載せるにはbase64にする必要があり、①転送量が約1.33倍・サーバーのピークメモリも約2倍(エンコード後の文字列とデコード後のバイト列が同時に載る)②フロントは `FormData` に `append` するだけで済むのに `FileReader` の非同期処理が1段挟まる ③`curl -F` の1行でテストできなくなる(当日サーバーに触らない以上これは効く)、の3点で割に合わないため。**ファイル投入以外のAPIでmultipartを増やさないこと。**
 - **エラーの形は全API共通**:
 
   ```json
@@ -616,6 +616,52 @@ curl -F "file=@q5.png" -H "Authorization: Bearer $ADMIN_TOKEN" \
 - `revival-entry` から §3.1 `show-question` を呼べば、そのまま次の問題へ戻れる。
 - 待機・終了へ移る場合は従来どおり §3.4 `reset` を使う。新しい2フェーズからも呼べる。
 
+### 3.9 POST /api/admin/videos
+
+**敗者復活動画の投入API。** 管理者画面から動画1本をアップロードし、`GET /videos/revival.mp4`(§6.2)で配信される場所へ保存する。
+
+| 項目 | 内容 |
+| --- | --- |
+| Content-Type | `multipart/form-data` |
+| フィールド名 | `file`(1リクエストにつき1本) |
+| 認証 | `Authorization: Bearer <ADMIN_TOKEN>` |
+| 動画本体のサイズ上限 | **500MB** |
+| 保存名 | **常に `revival.mp4`**(元のファイル名は使わない) |
+
+```bash
+curl -F "file=@revival.mp4" -H "Authorization: Bearer $ADMIN_TOKEN" \
+  https://<host>/api/admin/videos
+```
+
+**認証は `ADMIN_TOKEN` のみ。`IMPORT_TOKEN` では401になる。** 動画はGASから投入せず、管理者画面の操作者だけが扱うため、トークンの通用範囲を広げない。
+
+#### 3.9.1 成功レスポンス `200 OK`
+
+```json
+{ "videoUrl": "/videos/revival.mp4" }
+```
+
+- 既に動画がある場合は同名で上書きする。動画は敗者復活用の1本だけなので、別名保存・重複チェック・一覧APIは持たない。
+- このAPIはstateを返さず、SSEも配信しない。管理者画面は成功後に返されたURLを表示し、実際の配信を確認できるようにする。
+
+#### 3.9.2 中身・サイズの検証
+
+- 拡張子やブラウザが申告するContent-Typeは信頼せず、**ファイル先頭がMP4の `ftyp` ボックスであること**を確認する。拡張子を `.mp4` に変えただけの別形式は400で拒否する。
+- バックエンドは「動画本体500MB」と「リクエスト全体500MB + 64KB」を分けて制限する。multipartの区切り・ヘッダ分を動画本体の上限に含めないため。
+- nginxはこのAPI専用の `location /api/admin/videos` だけ `client_max_body_size 500m`、`proxy_read_timeout 60s`、`proxy_send_timeout 60s` とする。通常の `/api/` は画像投入に合わせた `5184k` のまま変更しない。
+- 一時ファイルへ最後まで保存できてから `revival.mp4` へ置き換える。通信切断・上限超過・書き込み失敗時に、配信中の既存動画を壊さないため。
+
+#### 3.9.3 エラーレスポンス
+
+| 状況 | ステータス | code |
+| --- | --- | --- |
+| `Authorization` ヘッダが無い/トークン不一致/`IMPORT_TOKEN` | 401 | `UNAUTHORIZED` |
+| `multipart/form-data` でない / `file` フィールドが無い | 400 | `INVALID_REQUEST` |
+| 先頭がMP4の `ftyp` ボックスでない | 400 | `INVALID_FILE_TYPE` |
+| 動画が500MBを超える / リクエスト全体がバックエンドの上限を超える | 413 | `FILE_TOO_LARGE` |
+
+nginxが先に返す413はJSONではないため、フロントは画像投入と同じく `ApiError.code` ではなく **`ApiError.status`** で413を判定する。
+
 ---
 
 ## 4. 問題一覧・認証(管理者API)
@@ -739,9 +785,9 @@ curl -F "file=@q5.png" -H "Authorization: Bearer $ADMIN_TOKEN" \
 ### 6.2 動画(敗者復活用)
 
 - 敗者復活で流す動画はサーバーの `GET /videos/...` で配信する(認証なし)。画像と同じ `r.Static` の作りだが、**別ディレクトリ・別locationの独立した経路**(#121)。
-- **アップロードAPIは無い。入稿はCT(本番サーバー)へ scp で直接置く。** §6.1で画像のアップロードAPIに置き換えた「手動配置の廃止」は**画像だけの話であり、動画には適用しない**。
-  - 理由: 画像投入API(§3.6)は5MB上限。動画は確実に超えるためそもそも同じ経路に乗らない。動画は当日差し替える頻度が低く、準備期間中〜当日にCTへ scp する運用で足りると判断した。
-- ファイル名はアップロードする側(scpする人)が決める。同名での上書きに対応する(長期キャッシュしない設定のため、差し替えれば当日から反映される)。
+- **入稿は管理者画面から §3.9 `POST /api/admin/videos` で行う。** #121ではCTへscpで直接置く方針だったが、CTへのSSH経路が無い問題(Q6)と「当日運営はCT・サーバーに触らない」という方針に矛盾するため、#158で専用APIへ変更した。
+- 保存名は常に **`revival.mp4`**。アップロードした元のファイル名は使わず、再投入は同名上書きにする。
+- 動画本体は500MBまで。管理者画面は送信前に確認ポップアップを出し、成功後に `/videos/revival.mp4` へのリンクを表示する。
 - nginx の `location /videos/` も画像と同じく長期キャッシュせず(`max-age=300`)、`X-Content-Type-Options: nosniff` を付ける。
 - **`.mp4` は Content-Type を明示登録する。** 実行環境(alpine)に `/etc/mime.types` が無く、Goの組み込みMIMEテーブルにも `.mp4` が無いため、登録しないとファイル内容のスニッフィング任せになる。スマホで撮った動画をリネームしただけのファイルは `video/mp4` と判定されないことがあり、`nosniff` と組み合わさるとブラウザが再生を拒否する(`backend/internal/platform/router.go` の `mime.AddExtensionType`)。
 
@@ -756,6 +802,7 @@ curl -F "file=@q5.png" -H "Authorization: Bearer $ADMIN_TOKEN" \
 
 ## 変更履歴(新しい順)
 
+- 2026-09-18 第17版。**敗者復活動画の投入API `POST /api/admin/videos` を追加**した(#158)。①#121の「CTへscpで直接置く」は、CTへのSSH経路が無いQ6と「当日運営はCT・サーバーに触らない」方針に矛盾するため廃止し、画像投入と同じく管理者画面から投入する ②動画は1本だけなので保存名を常に `revival.mp4` とし、再投入は確認後に同名上書きする ③動画本体は500MB、バックエンドのリクエスト全体はmultipartの包み分として64KBの余裕を持たせる。nginxはこのAPI専用locationだけ500m・60秒へ広げ、他APIの5184k上限は維持する ④拡張子ではなく先頭の `ftyp` ボックスでMP4を判定し、途中失敗時は既存動画を残す
 - 2026-09-14 第16版。**hayaoshiの問題投入を解放**した(#156)。①`choices: []` / `correctChoiceId: null` / `textSegments` 2要素以上 / `explanation` 必須を投入時に検証する ②早押しの正解は `explanation` に入稿し、answer phase のモニタに表示する ③phone向けの `textSegments` は公開済み数にかかわらず常に `[]`、monitor向けは従来どおり段階配信する
 - 2026-09-14 第15版。**敗者復活用の `revival-video` / `revival-entry` フェーズと `POST /api/admin/revival` を追加**した(#120)。①敗者復活は動画と参加受付で画面全体が2回変わるため、1フェーズ内の表示値ではなく独立した2フェーズとして表す ②通常の流れは `answer → revival-video → revival-entry → question` だが、当日の復旧を妨げないよう `revival` 自体はどのphaseからでも呼べる ③`reset` は全問題の `asked` を消して `askedCount` を0に戻すため敗者復活には使わない。専用APIはphaseだけを更新し、「第8問 → 敗者復活 → 第9問」を維持する ④敗者復活中は出題していないので問題関連項目を `null` / `0` にする一方、`askedCount` は保持する ⑤動画配信・画面・フォームURL・管理者ボタンは後続Issue #121〜#126の範囲 ⑥問題の一括投入は全問題を作り直して `asked` を消すため、`waiting` / `finished` のときだけ許可し、敗者復活中を含む本番進行中は409で拒否する
 - 2026-09-14 第14版。**§6 を「静的ファイル(画像・動画)」に改め、§6.2として動画の配信経路 `GET /videos/...` を追記**した(#121)。①敗者復活の動画配信は `/images/` の配信の作りをそのまま真似るが、**アップロードAPIは持たない**(動画は5MB上限の画像投入APIに確実に収まらないため)。**入稿はCTへの scp 固定**で、§6.1で画像について書いた「手動配置の廃止(2026-09-09)」は画像だけの話であり動画には適用されないことを明記した(そのままでは同一節内で矛盾して見えるため) ②実行環境(alpine)にMIMEタイプ定義が無く `.mp4` が拡張子で解決できないため `mime.AddExtensionType` で明示登録する必要があることを明記。登録しないとファイル内容のスニッフィングに委ねられ、動画によっては `video/mp4` と判定されず、nginx の `nosniff` と組み合わさってブラウザが再生を拒否する事故につながる
