@@ -15,7 +15,7 @@ export function QuestionView({ state }: Props) {
   const isAccepting = remainingTime === null || remainingTime > 0
 
   if (state.question?.type === 'hayaoshi') {
-    return <HayaoshiView state={state} />
+    return <HayaoshiView state={state} isClosed={!isAccepting} />
   }
 
   return (
