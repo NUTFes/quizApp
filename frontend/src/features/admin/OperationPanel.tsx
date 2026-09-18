@@ -356,33 +356,36 @@ export function OperationPanel({ onAuthExpired }: Props) {
 
       <ErrorBanner failure={failure} onDismiss={() => setFailure(null)} />
 
-      {/* 貼り付け投入・画像投入は準備作業なので、進行ボタンより下に置く(#118) */}
-      <ImportPanel
-        phase={state.phase}
-        input={importInput}
-        busy={busy}
-        result={importResult}
-        error={importError}
-        issues={importIssues}
-        onInputChange={setImportInput}
-        onSubmit={(questionsToImport) => void handleImport(questionsToImport)}
-      />
-      <ImagePanel onAuthExpired={onAuthExpired} />
-      <RevivalVideoPanel
-        file={videoFile}
-        busy={videoBusy}
-        disabled={busy}
-        confirming={videoConfirming}
-        error={videoError}
-        videoUrl={videoUrl}
-        onFileChange={(file) => {
-          setVideoFile(file)
-          setVideoError(null)
-        }}
-        onSubmit={() => setVideoConfirming(true)}
-        onConfirm={() => void handleVideoUpload()}
-        onCancel={() => setVideoConfirming(false)}
-      />
+      {/* 貼り付け投入・画像投入・動画投入は準備作業なので、進行ボタンより下に
+          横並びで置く(#118)。1024px未満は縦一列に落ちる。 */}
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+        <ImportPanel
+          phase={state.phase}
+          input={importInput}
+          busy={busy}
+          result={importResult}
+          error={importError}
+          issues={importIssues}
+          onInputChange={setImportInput}
+          onSubmit={(questionsToImport) => void handleImport(questionsToImport)}
+        />
+        <ImagePanel onAuthExpired={onAuthExpired} />
+        <RevivalVideoPanel
+          file={videoFile}
+          busy={videoBusy}
+          disabled={busy}
+          confirming={videoConfirming}
+          error={videoError}
+          videoUrl={videoUrl}
+          onFileChange={(file) => {
+            setVideoFile(file)
+            setVideoError(null)
+          }}
+          onSubmit={() => setVideoConfirming(true)}
+          onConfirm={() => void handleVideoUpload()}
+          onCancel={() => setVideoConfirming(false)}
+        />
+      </div>
       {/*ここからは、以降のイシューで足していく */}
     </div>
   )
