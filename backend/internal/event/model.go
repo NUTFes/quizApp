@@ -11,7 +11,7 @@ type EventState struct {
 	ID                uint `gorm:"primaryKey"`
 	Phase             string
 	CurrentQuestionID *uint
-	TimeLimitSec      int
+	TimeLimitSec      *int
 	QuestionStartedAt *time.Time
 	RevealedSegments  int
 }

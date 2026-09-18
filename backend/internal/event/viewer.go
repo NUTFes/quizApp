@@ -46,6 +46,8 @@ func buildViewerState(es EventState, q *question.Question, askedCount int, view 
 	}
 
 	// question か answer の時の処理
+	vs.TimeLimitSec = es.TimeLimitSec
+	vs.QuestionStartedAt = es.QuestionStartedAt
 
 	// 問題文を、表示する部分まで切り取る
 	// revealedSegments は DB の値なので、そのまま信用しない
@@ -67,9 +69,6 @@ func buildViewerState(es EventState, q *question.Question, askedCount int, view 
 			TextSegments: vseg,
 		}
 
-		tls := es.TimeLimitSec // ポインタに代入するには、変数のポインタとしてしか渡せない
-		vs.TimeLimitSec = &tls
-		vs.QuestionStartedAt = es.QuestionStartedAt
 		vs.Question = &vq // vq は実体で宣言したので、& でポインタを渡す
 
 		// question の時は、 answer はゼロ値（nil -> null）で返す

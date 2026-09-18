@@ -12,6 +12,10 @@ import (
 	"github.com/naoto-anzai/quizApp/backend/internal/question"
 )
 
+func intPointer(value int) *int {
+	return &value
+}
+
 func TestBuildStateForRevivalPhase(t *testing.T) {
 	now := time.Now()
 	questionID := uint(1)
@@ -25,7 +29,7 @@ func TestBuildStateForRevivalPhase(t *testing.T) {
 			es := EventState{
 				Phase:             phase,
 				CurrentQuestionID: &questionID,
-				TimeLimitSec:      30,
+				TimeLimitSec:      intPointer(30),
 				QuestionStartedAt: &now,
 				RevealedSegments:  1,
 			}
@@ -63,7 +67,7 @@ func TestBuildViewerStateForRevivalPhase(t *testing.T) {
 			es := EventState{
 				Phase:             phase,
 				CurrentQuestionID: &questionID,
-				TimeLimitSec:      30,
+				TimeLimitSec:      intPointer(30),
 				QuestionStartedAt: &now,
 				RevealedSegments:  1,
 			}
@@ -83,6 +87,36 @@ func TestBuildViewerStateForRevivalPhase(t *testing.T) {
 	}
 }
 
+func TestBuildStatesPassThroughTimeLimit(t *testing.T) {
+	testQuestion := &question.Question{TextSegments: []string{"問題文"}}
+
+	for _, tt := range []struct {
+		name      string
+		timeLimit *int
+	}{
+		{name: "制限時間あり", timeLimit: intPointer(30)},
+		{name: "制限時間なし", timeLimit: nil},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			es := EventState{
+				Phase:            "question",
+				TimeLimitSec:     tt.timeLimit,
+				RevealedSegments: 1,
+			}
+
+			adminState := buildState(es, testQuestion, 1)
+			if adminState.TimeLimitSec != tt.timeLimit {
+				t.Errorf("admin timeLimitSec=%v, want %v", adminState.TimeLimitSec, tt.timeLimit)
+			}
+
+			viewerState := buildViewerState(es, testQuestion, 1, "phone")
+			if viewerState.TimeLimitSec != tt.timeLimit {
+				t.Errorf("viewer timeLimitSec=%v, want %v", viewerState.TimeLimitSec, tt.timeLimit)
+			}
+		})
+	}
+}
+
 func TestBuildViewerStateHayaoshiの問題文を宛先別に出し分ける(t *testing.T) {
 	testQuestion := &question.Question{
 		Number:       3,
@@ -92,7 +126,7 @@ func TestBuildViewerStateHayaoshiの問題文を宛先別に出し分ける(t *t
 	}
 	es := EventState{
 		Phase:            "question",
-		TimeLimitSec:     30,
+		TimeLimitSec:     intPointer(30),
 		RevealedSegments: 2,
 	}
 
@@ -132,7 +166,7 @@ func TestBuildPayloadsHayaoshiの問題文をSSEの宛先別に出し分ける(t
 	snap := snapshot{
 		es: EventState{
 			Phase:            "question",
-			TimeLimitSec:     30,
+			TimeLimitSec:     intPointer(30),
 			RevealedSegments: 2,
 		},
 		q:          testQuestion,
