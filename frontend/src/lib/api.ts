@@ -8,6 +8,7 @@ import type {
   QuestionImport,
   QuestionListItem,
   ViewerState,
+  VideoUploadResult,
 } from '../types'
 import { RowIssue } from '../types/rowIssue'
 import { BASE, getAdminToken } from './config'
@@ -139,6 +140,30 @@ export const uploadImage = async (file: File, name: string): Promise<ImageUpload
     )
   }
   return res.json() as Promise<ImageUploadResult>
+}
+export const uploadVideo = async (file: File): Promise<VideoUploadResult> => {
+  const body = new FormData()
+  // 保存名はサーバー側で revival.mp4 に固定する。ここで渡す元の名前には依存しない。
+  body.append('file', file)
+
+  const res = await fetch(`${BASE}/api/admin/videos`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${getAdminToken()}`,
+    },
+    // Content-Type は指定しない。multipart の boundary をブラウザに付けてもらう
+    body,
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => null)
+    throw new ApiError(
+      data?.error?.code ?? 'UNKNOWN',
+      res.status,
+      data?.error?.message ?? res.statusText,
+      data?.error?.details ?? [],
+    )
+  }
+  return res.json() as Promise<VideoUploadResult>
 }
 export const verify = () =>
   request<{ ok: true }>('/api/admin/verify', {
