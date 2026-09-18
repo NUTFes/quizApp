@@ -1,11 +1,16 @@
 // 管理者用ページ
 // このページでは、認証状態によるコンポーネントの切り替えのみを行う
 
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { clearAdminToken, getAdminToken } from '../../lib/config'
 import { ApiError, verify } from '../../lib/api'
 import { LoginView } from './LoginView'
-import { OperationPanel } from './OperationPanel'
+
+// 管理者だけが使う操作盤と音源を、参加者・モニタの初期読み込みへ混ぜない。
+// 認証成功後にこのチャンクを読む間だけ、トークン確認中と同じ表示を出す。
+const OperationPanel = lazy(() =>
+  import('./OperationPanel').then(({ OperationPanel: Component }) => ({ default: Component })),
+)
 
 // 認証状態
 type AuthStatus = 'ready' | 'needsLogin' | 'checking' | 'unreachable'
@@ -69,12 +74,14 @@ function AdminPage() {
       // SSE や API が 401 を返したら、起動時と同じようにトークンを消してログイン画面へ戻す
       // (→ docs/実装要件/フロントエンド実装要件.md §4)
       return (
-        <OperationPanel
-          onAuthExpired={() => {
-            clearAdminToken()
-            setAuthStatus('needsLogin')
-          }}
-        />
+        <Suspense fallback={<CheckingView />}>
+          <OperationPanel
+            onAuthExpired={() => {
+              clearAdminToken()
+              setAuthStatus('needsLogin')
+            }}
+          />
+        </Suspense>
       )
   }
 }

@@ -335,8 +335,11 @@ const PREVIEW_FAILED_AT = new Date('2026-09-13T13:05:12+09:00')
 
 // ボタンを押しても何もしない。CONTROL_CASES より上に書く(const は宣言より前で使えない)
 const noopHandlers = {
+  showAnswerDialogOpen: false,
   onAdvanceText: noop,
-  onShowAnswer: noop,
+  onShowAnswerDialogOpen: noop,
+  onShowAnswerConfirm: noop,
+  onShowAnswerCancel: noop,
   onRevival: noop,
   onReset: noop,
 }
