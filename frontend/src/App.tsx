@@ -16,8 +16,11 @@ import TokenPreviewPage from './features/dev/TokenPreviewPage'
 // Rollupから見ると「呼び出しに副作用があるかもしれない」ので、
 // コンポーネント自体が使われていなくても削除できずファイルに残ってしまう。
 // AdminPreviewPage はこの形(CONTROL_CASES 等)で書かれているため、
-// lazy(動的 import)にしてチャンクを分け、実際には読み込まれない状態にする。
-const AdminPreviewPage = lazy(() => import('./features/dev/AdminPreviewPage'))
+// lazy(動的 import)にしてチャンクを分ける。さらに import 自体をDEV分岐の中へ置き、
+// 本番ビルドでは開発用チャンクも生成されないようにする。
+const AdminPreviewPage = import.meta.env.DEV
+  ? lazy(() => import('./features/dev/AdminPreviewPage'))
+  : null
 
 const isDev = import.meta.env.DEV
 
@@ -32,7 +35,7 @@ function App() {
         {isDev && <Route path="/dev/tokens" element={<TokenPreviewPage />} />}
         {isDev && <Route path="/dev/phone" element={<PhonePreviewPage />} />}
         {isDev && <Route path="/dev/monitor" element={<MonitorPreviewPage />} />}
-        {isDev && (
+        {isDev && AdminPreviewPage !== null && (
           <Route
             path="/dev/admin"
             element={
