@@ -121,6 +121,14 @@ export function OperationPanel({ onAuthExpired }: Props) {
   const dedenEndedCleanup = useRef<(() => void) | null>(null)
   // 最初から締切済みの状態では鳴らさず、同じ出題の残り時間が0を跨いだときだけ鳴らす。
   const previousDeadlineObservation = useRef<DeadlineObservation | null>(null)
+  // drumrollがダイアログを開いてからAPI応答が返る(成功・失敗どちらも)までの間、
+  // 対象の出題インスタンスを保持する。ダイアログを閉じた瞬間(confirmingAnswerInstanceKey)
+  // より長く続くため、締切チャイムとの重複判定には別に持つ。
+  const drumrollActiveForInstance = useRef<string | null>(null)
+  // 同じ出題インスタンスでチャイムを1回だけ鳴らすための記録。
+  // SSEの遅延到着などでremainingTimeが正数へ戻ってから再び0になっても、
+  // 同じ出題インスタンスである限り2回目は鳴らさない。
+  const chimePlayedForInstance = useRef<string | null>(null)
 
   const [questions, setQuestions] = useState<QuestionListItem[] | null>(null)
   const [questionListError, setQuestionListError] = useState<string | null>(null)
@@ -168,8 +176,16 @@ export function OperationPanel({ onAuthExpired }: Props) {
     const previous = previousDeadlineObservation.current
     const deadlinePassed =
       state?.phase === 'question' && state.timeLimitSec !== null && remainingTime === 0
+    // drumrollが同じ出題インスタンスに対して、ダイアログを開いてからAPI応答が
+    // 返るまでの間(#134側の処理範囲)は、ここでチャイムを鳴らすと重なってしまう。
+    const drumrollActive = drumrollActiveForInstance.current === currentQuestionInstanceKey
+    // 同じ出題インスタンスでは一度鳴らしたら鳴らさない(SSEの遅延到着などで
+    // remainingTimeが正数へ戻ってから再び0になる経路への対策)。
+    const alreadyChimed = chimePlayedForInstance.current === currentQuestionInstanceKey
     const crossedDeadline =
       deadlinePassed &&
+      !drumrollActive &&
+      !alreadyChimed &&
       previous?.questionInstanceKey === currentQuestionInstanceKey &&
       previous.remainingTime !== null &&
       previous.remainingTime > 0
@@ -183,7 +199,10 @@ export function OperationPanel({ onAuthExpired }: Props) {
     dedenEndedCleanup.current?.()
     dedenEndedCleanup.current = null
     stop('tickTock')
-    if (crossedDeadline) playSafely('chime')
+    if (crossedDeadline) {
+      chimePlayedForInstance.current = currentQuestionInstanceKey
+      playSafely('chime')
+    }
   }, [currentQuestionInstanceKey, remainingTime, state?.phase, state?.timeLimitSec])
 
   // 管理者画面を離れたあとまでループ音を残さない。
@@ -192,6 +211,7 @@ export function OperationPanel({ onAuthExpired }: Props) {
       dedenEndedCleanup.current?.()
       stop('tickTock')
       stop('drumroll')
+      drumrollActiveForInstance.current = null
     },
     [],
   )
@@ -330,7 +350,10 @@ export function OperationPanel({ onAuthExpired }: Props) {
 
   // 別タブ操作などで確認対象の出題が変わった場合、見えなくなったドラムロールも止める。
   useEffect(() => {
-    if (confirmingAnswerInstanceKey !== null && !showAnswerDialogOpen) stop('drumroll')
+    if (confirmingAnswerInstanceKey !== null && !showAnswerDialogOpen) {
+      stop('drumroll')
+      drumrollActiveForInstance.current = null
+    }
   }, [confirmingAnswerInstanceKey, showAnswerDialogOpen])
 
   if (state === null) return <p>接続中...</p>
@@ -539,6 +562,8 @@ export function OperationPanel({ onAuthExpired }: Props) {
   const handleShowAnswerDialogOpen = () => {
     if (currentQuestionInstanceKey === null) return
     setConfirmingAnswerInstanceKey(currentQuestionInstanceKey)
+    // ダイアログを開いてからAPI応答が返るまでの間、締切チャイムと重ねないために覚えておく。
+    drumrollActiveForInstance.current = currentQuestionInstanceKey
     // 正答確認だけは、APIより前の「ダイアログを開く瞬間」に音を切り替える。
     dedenEndedCleanup.current?.()
     dedenEndedCleanup.current = null
@@ -558,6 +583,7 @@ export function OperationPanel({ onAuthExpired }: Props) {
         } finally {
           // 成功・通信失敗・APIエラーのどの場合でもドラムロールは止める。
           stop('drumroll')
+          drumrollActiveForInstance.current = null
         }
       },
       () => playSafely('tada'),
@@ -567,6 +593,7 @@ export function OperationPanel({ onAuthExpired }: Props) {
   const handleShowAnswerCancel = () => {
     setConfirmingAnswerInstanceKey(null)
     stop('drumroll')
+    drumrollActiveForInstance.current = null
   }
 
   return (
