@@ -673,6 +673,9 @@ export function OperationPanel({ onAuthExpired }: Props) {
             onShowAnswerCancel={handleShowAnswerCancel}
             onRevival={(to) => {
               const phaseRevisionAtRequest = phaseRevision.current
+              // 他の音と同様、API成功後(非同期)の再生がSafari等で拒否されないよう、
+              // クリック処理の中で先にアンロックしておく。モニタ出力時は再生自体が無いため不要。
+              if (to === 'video' && !playsAudioOnMonitor) unlockSound('revival')
               return runPhaseChange(
                 to === 'video' ? ACTION_LABEL.revivalVideo : ACTION_LABEL.revivalEntry,
                 () => revival(to),
