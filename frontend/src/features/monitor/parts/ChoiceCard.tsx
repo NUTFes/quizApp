@@ -76,9 +76,11 @@ type CorrectBadgeProps = {
 }
 
 function CorrectBadge({ isVisible, className = 'absolute top-6 left-10' }: CorrectBadgeProps) {
+  // 前回(text-p-count-number相当)が大きすぎたため、0.7×0.7(30%を2段階)で縮小。
+  // ぴったり合うトークンが無いため、フォントサイズだけ直書きの値にしている。
   return (
     <span
-      className={`${className} flex h-28 w-53 items-center justify-center rounded-[35px] bg-live text-p-count-number text-brand shadow-[0_6px_8px_0_rgba(25,32,133,0.08)] ${
+      className={`${className} flex h-14 w-26 items-center justify-center rounded-[17px] bg-live text-[27px] leading-none font-bold text-brand shadow-[0_6px_8px_0_rgba(25,32,133,0.08)] ${
         isVisible ? 'visible' : 'invisible'
       }`}
     >
