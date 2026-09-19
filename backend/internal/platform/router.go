@@ -56,8 +56,9 @@ func NewRouter(registers ...RegisterFunc) *gin.Engine {
 	// 問題・選択肢の画像を配信する(認証なし)。仕様書 §6。
 	r.Static("/images", filepath.Join(StaticDir, "images"))
 
-	// 敗者復活の動画と、そこから抽出した音声を配信する(認証なし)。Issue #121, #136。
+	// 敗者復活の動画を配信する(認証なし)。Issue #121, #136。
 	// POST /api/admin/videos の保存先と同じ場所を配信する。
+	// 管理者PCの音声再生も同じ revival.mp4 を使う(#136で音声だけの別ファイルは廃止した)。
 	//
 	// ★ 本番の実行イメージ(alpine、Dockerfile.prod)には /etc/mime.types が無く、
 	// Goの組み込みMIMEテーブルにも .mp4 が無い。登録しないと拡張子では解決できず、
@@ -68,7 +69,6 @@ func NewRouter(registers ...RegisterFunc) *gin.Engine {
 	// ブラウザが <video> の再生そのものを拒否する(当日「特定の動画だけ映らない」形で出る)。
 	// 拡張子で先に固定して、このスニッフィング任せを無くす。
 	mime.AddExtensionType(".mp4", "video/mp4")
-	mime.AddExtensionType(".m4a", "audio/mp4")
 	r.Static("/videos", filepath.Join(StaticDir, "videos"))
 
 	// 存在しないパスでも §0 の形でエラーを返す。

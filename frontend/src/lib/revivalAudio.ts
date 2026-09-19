@@ -1,4 +1,6 @@
-export const REVIVAL_AUDIO_SRC = '/videos/revival.m4a'
+// 音声だけの別ファイルは作らず、投入済みの revival.mp4 を <audio> で音声トラックだけ再生する。
+// 音声専用ファイルの手動抽出・配置(CTでの作業)を無くすため。
+export const REVIVAL_AUDIO_SRC = '/videos/revival.mp4'
 
 const AUDIO_TARGET_PARAM = 'revivalAudio'
 const MONITOR_TARGET = 'monitor'
