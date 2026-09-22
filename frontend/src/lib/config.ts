@@ -11,8 +11,6 @@
 export const BASE: string = import.meta.env.VITE_API_URL ?? ''
 export const SURVEY_URL: string = import.meta.env.VITE_SURVEY_URL ?? ''
 export const REVIVAL_URL: string = import.meta.env.VITE_REVIVAL_URL ?? ''
-export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
-
 // アンケート(Google Form)のURL。finished フェーズの導線に使う。
 // state には含まれない値なので、サーバーからではなくここから取る
 // (→ docs/実装要件/画面・要件.md §6)。
