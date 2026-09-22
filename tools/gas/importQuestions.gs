@@ -1,5 +1,5 @@
 /**
- * quizApp #61: 【入稿STEP1】GASでスプレッドシートを読み、投入用JSONを作る
+ * quizApp #61 / #63: スプレッドシートから投入用JSONを作り、サーバーへ送る
  *
  * 責務(API仕様書 §3.5.1): 列 → JSON の変換のみ。内容の妥当性はサーバーが見る。
  * ただしGASにしかできない変換・検証はここでやる:
@@ -10,14 +10,14 @@
  *   - 2択/あるなしの choiceC/D 空欄チェック(choices は2個で送る)
  *   - correct(列名) → correctChoiceId 変換、該当選択肢の非空チェック
  *   - hayaoshi 行のエラー化(v1未対応・フェーズ2で解放)
- * 送信は行わない(→ #63)。JSONをダイアログに出すところまで。
+ * #63 のサーバー送信でも、ここの変換結果をそのまま使う。
  *
  * シートレイアウト:
  *   1行目ヘッダ、2行目からデータ。A列から開始。
  *
  * ★セキュリティ★
- * IMPORT_TOKEN 等のシークレットはコードに直書きしない。
- * #63 で必要になったら PropertiesService.getScriptProperties() に置く(§3.5.6)。
+ * SERVER_URL と IMPORT_TOKEN はコードに直書きしない。
+ * GASのスクリプトプロパティに置く(§3.5.6)。
  * このファイルを tools/gas/ にコミットするときはトークンが埋まっていないか目視確認する。
  */
 
@@ -67,11 +67,16 @@ const DIFFICULTY_MAP = {
 
 const CHOICE_IDS = ['A', 'B', 'C', 'D'];
 
+// 値自体はコードではなく、GASのスクリプトプロパティに保存する
+const SERVER_URL_PROPERTY = 'SERVER_URL';
+const IMPORT_TOKEN_PROPERTY = 'IMPORT_TOKEN';
+
 // ===== メニュー =====
 
 function onOpen() {
   ui = SpreadsheetApp.getUi();
   ui.createMenu('quizApp')
+    .addItem('サーバーに送る', 'sendQuestionsToServer')
     .addItem('JSONを作る', 'generateQuestionsJson')
     .addSeparator()
     .addItem('ヘッダ行とプルダウンを作る(テンプレート用)', 'writeTemplateHeader')
@@ -81,50 +86,88 @@ function onOpen() {
 // ===== メイン処理 =====
 
 /**
+ * アクティブシートを変換し、問題投入APIにPUTする
+ */
+function sendQuestionsToServer() {
+  ui = SpreadsheetApp.getUi();
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    const result = buildQuestionsFromSheet(sheet);
+
+    if (result.rowCount < DATA_START_ROW) {
+      ui.alert('データがありません。2行目以降に問題を入力してください。');
+      return;
+    }
+
+    // GAS側で検出できる変換エラーがある場合は、一部だけ送らない
+    if (result.errors.length > 0) {
+      showErrorsDialog(result.errors, '送信前の入力エラー');
+      return;
+    }
+
+    if (result.questions.length === 0) {
+      ui.alert('送信できる問題がありませんでした。2行目以降に問題を入力してください。');
+      return;
+    }
+
+    const config = getServerConfig();
+    const confirm = ui.alert(
+      result.questions.length + '件の問題をサーバーへ送信します。\n' +
+      '現在の問題一覧はすべて置き換えられます。よろしいですか?',
+      ui.ButtonSet.OK_CANCEL
+    );
+    if (confirm !== ui.Button.OK) return;
+
+    const response = UrlFetchApp.fetch(config.questionsUrl, {
+      method: 'put',
+      contentType: 'application/json',
+      headers: {
+        Authorization: 'Bearer ' + config.importToken,
+      },
+      payload: JSON.stringify({ questions: result.questions }),
+      muteHttpExceptions: true,
+      followRedirects: false,
+    });
+
+    handleImportResponse(response);
+  } catch (error) {
+    // リクエスト設定や例外の内容はログ出力しない(トークン漏えい防止)
+    ui.alert(
+      'サーバーへ送信できませんでした\n' +
+      '----- エラー内容 -----\n' +
+      error.message + '\n' +
+      '--------------------------'
+    );
+  }
+}
+
+/**
  * アクティブシートを読み、§3.5.1 形式のJSONを生成してダイアログに表示する
  */
 function generateQuestionsJson() {
   ui = SpreadsheetApp.getUi();  // メニュー以外からの実行にも対応
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    const values = sheet.getDataRange().getValues();
+    const result = buildQuestionsFromSheet(sheet);
 
-    if (values.length < DATA_START_ROW) {
+    if (result.rowCount < DATA_START_ROW) {
       ui.alert('データがありません。2行目以降に問題を入力してください。');
       return;
     }
 
-    const questions = [];
-    const errors = [];
-
-    for (let i = DATA_START_ROW - 1; i < values.length; i++) {
-      const row = values[i];
-      const sourceRow = i + 1;  // 1-indexed のシート行番号(ヘッダが1行目、最初のデータは2)
-
-      // 全セル空の行はスキップ(運営メンバーが行間隔をあけるケース対応)
-      if (isEmptyRow(row)) continue;
-
-      const result = convertRow(row, sourceRow);
-      if (result.errors.length > 0) {
-        Array.prototype.push.apply(errors, result.errors);
-      } else {
-        questions.push(result.question);
-      }
-    }
-
     // エラーが1件でもあれば JSON を出さずにエラー一覧を表示
-    if (errors.length > 0) {
-      showErrorsDialog(errors);
+    if (result.errors.length > 0) {
+      showErrorsDialog(result.errors);
       return;
     }
 
-    if (questions.length === 0) {
+    if (result.questions.length === 0) {
       ui.alert('変換できる問題がありませんでした。2行目以降に問題を入力してください。');
       return;
     }
 
-    const json = JSON.stringify({ questions: questions }, null, 2);
-    showJsonDialog(json, questions.length);
+    const json = JSON.stringify({ questions: result.questions }, null, 2);
+    showJsonDialog(json, result.questions.length);
 
   } catch (error) {
     ui.alert(
@@ -135,6 +178,159 @@ function generateQuestionsJson() {
     );
     Logger.log('Error: ' + error.message + '\n' + error.stack);
   }
+}
+
+/**
+ * シートの2行目以降を読み、送信できる問題と変換エラーを返す
+ * JSON表示とサーバー送信が同じ変換結果を使うための共通処理。
+ * @return {{questions: Object[], errors: string[], rowCount: number}}
+ */
+function buildQuestionsFromSheet(sheet) {
+  const values = sheet.getDataRange().getValues();
+  const questions = [];
+  const errors = [];
+
+  for (let i = DATA_START_ROW - 1; i < values.length; i++) {
+    const row = values[i];
+    const sourceRow = i + 1;  // 1-indexed のシート行番号(ヘッダが1行目、最初のデータは2)
+
+    // 全セル空の行はスキップ(運営メンバーが行間隔をあけるケース対応)
+    if (isEmptyRow(row)) continue;
+
+    const converted = convertRow(row, sourceRow);
+    if (converted.errors.length > 0) {
+      Array.prototype.push.apply(errors, converted.errors);
+    } else {
+      questions.push(converted.question);
+    }
+  }
+
+  return {
+    questions: questions,
+    errors: errors,
+    rowCount: values.length,
+  };
+}
+
+// ===== サーバー送信 =====
+
+/**
+ * GASのスクリプトプロパティから送信先とトークンを読む
+ * SERVER_URL は https://quiz.example.com のようにオリジンまでを設定する。
+ */
+function getServerConfig() {
+  const properties = PropertiesService.getScriptProperties();
+  const serverUrl = String(properties.getProperty(SERVER_URL_PROPERTY) || '').trim();
+  const importToken = String(properties.getProperty(IMPORT_TOKEN_PROPERTY) || '').trim();
+  const missing = [];
+
+  if (serverUrl === '') missing.push(SERVER_URL_PROPERTY);
+  if (importToken === '') missing.push(IMPORT_TOKEN_PROPERTY);
+  if (missing.length > 0) {
+    throw new Error(
+      'GASのスクリプトプロパティに ' +
+      missing.join(' と ') +
+      ' を設定してください。'
+    );
+  }
+
+  if (!/^https:\/\//i.test(serverUrl)) {
+    throw new Error('SERVER_URL には https:// で始まる公開URLを設定してください。');
+  }
+
+  return {
+    questionsUrl: serverUrl.replace(/\/+$/, '') + '/api/admin/questions',
+    importToken: importToken,
+  };
+}
+
+/**
+ * 問題投入APIのHTTPステータスとJSONを、運営メンバー向けの表示に変換する
+ */
+function handleImportResponse(response) {
+  const status = response.getResponseCode();
+  const body = parseJsonResponse(response.getContentText());
+  const apiError = body && body.error && typeof body.error === 'object' ? body.error : null;
+
+  if (status === 200) {
+    if (!body || !Number.isInteger(body.imported) ||
+        typeof body.importedAt !== 'string' || body.importedAt === '') {
+      ui.alert('送信先から予想していない形式の応答が返りました。サーバー管理者に確認してください。');
+      return;
+    }
+
+    const warnings = Array.isArray(body.warnings) ? body.warnings : [];
+    let message = body.imported + '件を投入しました\n最終投入日時: ' + body.importedAt;
+    if (warnings.length > 0) {
+      message += '\n\n警告(' + warnings.length + '件):\n' + warnings.map(formatServerDetail).join('\n');
+    }
+    ui.alert(message);
+    return;
+  }
+
+  if (status === 400 && apiError && apiError.code === 'SYNC_VALIDATION_ERROR') {
+    const details = Array.isArray(apiError.details) ? apiError.details : [];
+    const errors = details.length > 0
+      ? details.map(formatServerDetail)
+      : ['問題データの内容が不正です。入力内容を確認してください。'];
+    showErrorsDialog(errors, 'サーバーの検証エラー');
+    return;
+  }
+
+  if (status === 400 && apiError && apiError.code === 'INVALID_REQUEST') {
+    ui.alert('送信する問題データの形式が正しくありません。サーバー管理者に確認してください。');
+    return;
+  }
+
+  if (status === 401 && apiError && apiError.code === 'UNAUTHORIZED') {
+    ui.alert('トークンが違います');
+    return;
+  }
+
+  if (status === 409 && apiError && apiError.code === 'INVALID_PHASE') {
+    ui.alert('本番進行中は投入できません。管理者画面でリセットしてください');
+    return;
+  }
+
+  if (status >= 300 && status < 400) {
+    ui.alert(
+      '送信先からリダイレクト応答が返されました(HTTP ' + status + ')。\n' +
+      '安全のため送信を中止しました。SERVER_URLを確認してください。'
+    );
+    return;
+  }
+
+  if (status >= 500) {
+    ui.alert('サーバー側でエラーが発生しました(HTTP ' + status + ')。サーバー管理者に確認してください。');
+    return;
+  }
+
+  ui.alert('送信に失敗しました(HTTP ' + status + ')。サーバー管理者に確認してください。');
+}
+
+function parseJsonResponse(text) {
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
+ * APIが返す sourceRow と reason を「何行目がダメか」分かる文言にする
+ */
+function formatServerDetail(detail) {
+  if (!detail || typeof detail !== 'object') return String(detail);
+
+  const sourceRow = Number(detail.sourceRow);
+  const rowPrefix = Number.isInteger(sourceRow) && sourceRow >= DATA_START_ROW
+    ? sourceRow + '行目: '
+    : '';
+  const reason = typeof detail.reason === 'string' && detail.reason !== ''
+    ? detail.reason
+    : '内容を確認してください';
+  return rowPrefix + reason;
 }
 
 // ===== 変換ロジック =====
@@ -336,7 +532,7 @@ function writeTemplateHeader() {
 /**
  * エラー一覧をダイアログで表示(運営メンバーが自分で直せる文言で)
  */
-function showErrorsDialog(errors) {
+function showErrorsDialog(errors, title) {
   const items = errors.map(function (e) {
     return '<li style="margin: 4px 0;">' + escapeHtml(e) + '</li>';
   }).join('');
@@ -348,7 +544,7 @@ function showErrorsDialog(errors) {
       '<ul style="padding-left: 20px;">' + items + '</ul>' +
     '</div>'
   ).setWidth(650).setHeight(450);
-  ui.showModalDialog(html, 'JSON変換エラー');
+  ui.showModalDialog(html, title || 'JSON変換エラー');
 }
 
 /**
